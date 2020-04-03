@@ -26,7 +26,7 @@ import (
 	"strings"
 
 	"github.com/blackducksoftware/synopsysctl/pkg/alert"
-	opssightv1 "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
+	alertctl "github.com/blackducksoftware/synopsysctl/pkg/alert"
 	"github.com/blackducksoftware/synopsysctl/pkg/bdba"
 	"github.com/blackducksoftware/synopsysctl/pkg/blackduck"
 	"github.com/blackducksoftware/synopsysctl/pkg/opssight"
@@ -34,17 +34,17 @@ import (
 	polarisreporting "github.com/blackducksoftware/synopsysctl/pkg/polaris-reporting"
 	polarisreportingctl "github.com/blackducksoftware/synopsysctl/pkg/polaris-reporting"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Create Command CRSpecBuilderFromCobraFlagsInterface
 var createAlertCobraHelper alert.HelmValuesFromCobraFlags
 var createBlackDuckCobraHelper blackduck.HelmValuesFromCobraFlags
-var createOpsSightCobraHelper CRSpecBuilderFromCobraFlagsInterface
+var createOpsSightCobraHelper opssight.HelmValuesFromCobraFlags
 var createPolarisCobraHelper polaris.HelmValuesFromCobraFlags
 var createPolarisReportingCobraHelper polarisreporting.HelmValuesFromCobraFlags
 var createBDBACobraHelper bdba.HelmValuesFromCobraFlags
@@ -404,49 +404,10 @@ var createBlackDuckNativeCmd = &cobra.Command{
 Create OpsSight Commands
 */
 
-var createOpsSightPreRun = func(cmd *cobra.Command, args []string) error {
-	// Set the base spec
-	if !cmd.Flags().Lookup("template").Changed {
-		baseOpsSightSpec = defaultBaseOpsSightSpec
-	}
-	log.Debugf("setting OpsSight's base spec to '%s'", baseOpsSightSpec)
-	err := createOpsSightCobraHelper.SetPredefinedCRSpec(baseOpsSightSpec)
-	if err != nil {
-		cmd.Help()
-		return err
-	}
-	return nil
-}
-
-func updateOpsSightSpecWithFlags(cmd *cobra.Command, opsSightName string, opsSightNamespace string) (*opssightv1.OpsSight, error) {
-	// Update Spec with user's flags
-	log.Debugf("updating spec with user's flags")
-	opsSightInterface, err := createOpsSightCobraHelper.GenerateCRSpecFromFlags(cmd.Flags())
-	if err != nil {
-		return nil, err
-	}
-
-	// Set Namespace in Spec
-	opsSightSpec, _ := opsSightInterface.(opssightv1.OpsSightSpec)
-	opsSightSpec.Namespace = opsSightNamespace
-
-	// Create and Deploy OpsSight CRD
-	opsSight := &opssightv1.OpsSight{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      opsSightName,
-			Namespace: opsSightNamespace,
-		},
-		Spec: opsSightSpec,
-	}
-	opsSight.Kind = "OpsSight"
-	opsSight.APIVersion = "synopsys.com/v1"
-	return opsSight, nil
-}
-
 // createOpsSightCmd creates an OpsSight instance
 var createOpsSightCmd = &cobra.Command{
-	Use:           "opssight NAME",
-	Example:       "synopsysctl create opssight <name>\nsynopsysctl create opssight <name> -n <namespace>",
+	Use:           "opssight NAME -n NAMESPACE",
+	Example:       "synopsysctl create opssight <name> -n <namespace>",
 	Short:         "Create an OpsSight instance",
 	SilenceUsage:  true,
 	SilenceErrors: true,
@@ -458,34 +419,50 @@ var createOpsSightCmd = &cobra.Command{
 		}
 		return nil
 	},
-	PreRunE: createOpsSightPreRun,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		opsSightName := args[0]
-		opsSightNamespace, crdNamespace, _, err := getInstanceInfo(util.OpsSightCRDName, "", namespace, opsSightName)
-		if err != nil {
-			return err
-		}
-		opsSight, err := updateOpsSightSpecWithFlags(cmd, opsSightName, opsSightNamespace)
+		opssightName := args[0]
+
+		// Get the flags to set Helm values
+		helmValuesMap, err := createOpsSightCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
 		if err != nil {
 			return err
 		}
 
-		log.Infof("creating OpsSight '%s' in namespace '%s'...", opsSightName, opsSightNamespace)
-
-		// Deploy the OpsSight instance
-		_, err = util.CreateOpsSight(opsSightClient, crdNamespace, opsSight)
-		if err != nil {
-			return fmt.Errorf("error creating the OpsSight '%s' in namespace '%s' due to %+v", opsSightName, opsSightNamespace, err)
+		// Update the Helm Chart Location
+		// TODO: allow user to specify --version and --chart-location
+		chartLocationFlag := cmd.Flag("app-resources-path")
+		if chartLocationFlag.Changed {
+			opssightChartRepository = chartLocationFlag.Value.String()
+		} else {
+			versionFlag := cmd.Flag("version")
+			if versionFlag.Changed {
+				opssightChartRepository = fmt.Sprintf("%s/charts/opssight-%s.tgz", baseChartRepository, versionFlag.Value.String())
+			}
 		}
-		log.Infof("successfully submitted OpsSight '%s' into namespace '%s'", opsSightName, opsSightNamespace)
+
+		// Check Dry Run before deploying any resources
+		err = util.CreateWithHelm3(opssightName, namespace, opssightChartRepository, helmValuesMap, kubeConfigPath, true)
+		if err != nil {
+			return fmt.Errorf("failed to create OpsSight resources: %+v", err)
+		}
+
+		// TODO Create any initial opssight resources ...
+
+		// Deploy OpsSight Resources
+		err = util.CreateWithHelm3(opssightName, namespace, opssightChartRepository, helmValuesMap, kubeConfigPath, false)
+		if err != nil {
+			return fmt.Errorf("failed to create OpsSight resources: %+v", err)
+		}
+
+		log.Infof("OpsSight has been successfully Created!")
 		return nil
 	},
 }
 
 // createOpsSightNativeCmd prints the Kubernetes resources for creating an OpsSight instance
 var createOpsSightNativeCmd = &cobra.Command{
-	Use:           "native NAME",
-	Example:       "synopsysctl create opssight native <name>\nsynopsysctl create opssight native <name> -n <namespace>\nsynopsysctl create opssight native <name> -o yaml",
+	Use:           "native NAME -n NAMESPACE",
+	Example:       "synopsysctl create opssight native <name> -n <namespace>",
 	Short:         "Print the Kubernetes resources for creating an OpsSight instance",
 	SilenceUsage:  true,
 	SilenceErrors: true,
@@ -497,20 +474,38 @@ var createOpsSightNativeCmd = &cobra.Command{
 		}
 		return nil
 	},
-	PreRunE: createOpsSightPreRun,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		opsSightName := args[0]
-		opsSightNamespace, _, _, err := getInstanceInfo(util.OpsSightCRDName, "", namespace, opsSightName)
-		if err != nil {
-			return err
-		}
-		opsSight, err := updateOpsSightSpecWithFlags(cmd, opsSightName, opsSightNamespace)
+		opssightName := args[0]
+
+		// Get the flags to set Helm values
+		helmValuesMap, err := createOpsSightCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
 		if err != nil {
 			return err
 		}
 
-		log.Debugf("generating Kubernetes resources for OpsSight '%s' in namespace '%s'...", opsSightName, opsSightNamespace)
-		return PrintResource(*opsSight, nativeFormat, true)
+		// Update the Helm Chart Location
+		chartLocationFlag := cmd.Flag("app-resources-path")
+		if chartLocationFlag.Changed {
+			opssightChartRepository = chartLocationFlag.Value.String()
+		} else {
+			versionFlag := cmd.Flag("version")
+			if versionFlag.Changed {
+				opssightChartRepository = fmt.Sprintf("%s/charts/opssight-%s.tgz", baseChartRepository, versionFlag.Value.String())
+			}
+		}
+
+		// // TODO Print any initial resources...
+		// for _, obj := range gcpServiceAccountSecrets {
+		// 	PrintComponent(obj, "YAML") // helm only supports yaml
+		// }
+
+		// Print OpsSight Resources
+		err = util.TemplateWithHelm3(opssightName, namespace, opssightChartRepository, helmValuesMap)
+		if err != nil {
+			return fmt.Errorf("failed to generate OpsSight resources: %+v", err)
+		}
+
+		return nil
 	},
 }
 
@@ -854,8 +849,8 @@ var createBDBANativeCmd = &cobra.Command{
 func init() {
 	// initialize global resource ctl structs for commands to use
 	createBlackDuckCobraHelper = *blackduck.NewHelmValuesFromCobraFlags()
-	createAlertCobraHelper = *alert.NewHelmValuesFromCobraFlags()
-	createOpsSightCobraHelper = opssight.NewCRSpecBuilderFromCobraFlags()
+	createAlertCobraHelper = *alertctl.NewHelmValuesFromCobraFlags()
+	createOpsSightCobraHelper = *opssight.NewHelmValuesFromCobraFlags()
 	createPolarisCobraHelper = *polaris.NewHelmValuesFromCobraFlags()
 	createPolarisReportingCobraHelper = *polarisreporting.NewHelmValuesFromCobraFlags()
 	createBDBACobraHelper = *bdba.NewHelmValuesFromCobraFlags()
@@ -887,11 +882,13 @@ func init() {
 	// Add OpsSight Command
 	createOpsSightCmd.PersistentFlags().StringVar(&baseOpsSightSpec, "template", baseOpsSightSpec, "Base resource configuration to modify with flags [empty|upstream|default|disabledBlackDuck]")
 	createOpsSightCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
-	createOpsSightCobraHelper.AddCRSpecFlagsToCommand(createOpsSightCmd, true)
+	cobra.MarkFlagRequired(createOpsSightCmd.PersistentFlags(), "namespace")
+	addChartLocationPathFlag(createOpsSightCmd)
+	createOpsSightCobraHelper.AddCobraFlagsToCommand(createOpsSightCmd, true)
 	createCmd.AddCommand(createOpsSightCmd)
 
-	createOpsSightCobraHelper.AddCRSpecFlagsToCommand(createOpsSightNativeCmd, true)
-	addNativeFormatFlag(createOpsSightNativeCmd)
+	createOpsSightCobraHelper.AddCobraFlagsToCommand(createOpsSightNativeCmd, true)
+	addChartLocationPathFlag(createOpsSightNativeCmd)
 	createOpsSightCmd.AddCommand(createOpsSightNativeCmd)
 
 	// Add Polaris commands

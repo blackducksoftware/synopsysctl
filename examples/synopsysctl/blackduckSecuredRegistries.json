@@ -1,0 +1,14 @@
+[
+    {
+        "url": "urla",
+        "user": "usera",
+        "password": "passworda",
+        "token": "tokenb"
+    },
+    {
+        "url": "urlb",
+        "user": "userb",
+        "password": "passwordb",
+        "token": "tokenb"
+    }
+]

@@ -27,10 +27,10 @@ import (
 	"testing"
 
 	"github.com/blackducksoftware/horizon/pkg/components"
-	"github.com/blackducksoftware/synopsys-operator/pkg/api"
-	opssightapi "github.com/blackducksoftware/synopsys-operator/pkg/api/opssight/v1"
-	"github.com/blackducksoftware/synopsys-operator/pkg/protoform"
-	"github.com/blackducksoftware/synopsys-operator/pkg/util"
+	"github.com/blackducksoftware/synopsysctl/pkg/api"
+	opssightapi "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/protoform"
+	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	"github.com/google/go-cmp/cmp"
 )
 

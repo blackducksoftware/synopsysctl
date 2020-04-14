@@ -23,7 +23,7 @@ package crdupdater
 import (
 	"testing"
 	// "github.com/blackducksoftware/horizon/pkg/components"
-	// "github.com/blackducksoftware/synopsys-operator/pkg/protoform"
+	// "github.com/blackducksoftware/synopsysctl/pkg/protoform"
 )
 
 // TestUpdater will test the updater

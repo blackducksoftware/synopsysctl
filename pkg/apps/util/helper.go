@@ -25,8 +25,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blackducksoftware/synopsys-operator/pkg/api"
-	"github.com/blackducksoftware/synopsys-operator/pkg/util"
+	"github.com/blackducksoftware/synopsysctl/pkg/api"
+	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 )
 

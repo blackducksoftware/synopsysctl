@@ -23,7 +23,7 @@ package soperator
 
 import (
 	"github.com/blackducksoftware/horizon/pkg/components"
-	"github.com/blackducksoftware/synopsys-operator/pkg/api"
+	"github.com/blackducksoftware/synopsysctl/pkg/api"
 	"github.com/juju/errors"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"

@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	blackduckv1 "github.com/blackducksoftware/synopsys-operator/pkg/api/blackduck/v1"
+	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

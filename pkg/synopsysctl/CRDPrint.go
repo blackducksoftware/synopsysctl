@@ -31,12 +31,12 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/blackducksoftware/horizon/pkg/components"
-	"github.com/blackducksoftware/synopsys-operator/pkg/api"
-	opssightapi "github.com/blackducksoftware/synopsys-operator/pkg/api/opssight/v1"
-	"github.com/blackducksoftware/synopsys-operator/pkg/apps"
-	"github.com/blackducksoftware/synopsys-operator/pkg/opssight"
-	"github.com/blackducksoftware/synopsys-operator/pkg/protoform"
-	"github.com/blackducksoftware/synopsys-operator/pkg/soperator"
+	"github.com/blackducksoftware/synopsysctl/pkg/api"
+	opssightapi "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/apps"
+	"github.com/blackducksoftware/synopsysctl/pkg/opssight"
+	"github.com/blackducksoftware/synopsysctl/pkg/protoform"
+	"github.com/blackducksoftware/synopsysctl/pkg/soperator"
 )
 
 // PrintFormat represents the format to print the struct

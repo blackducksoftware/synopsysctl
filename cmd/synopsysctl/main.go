@@ -22,7 +22,7 @@ under the License.
 package main
 
 import (
-	"github.com/blackducksoftware/synopsys-operator/pkg/synopsysctl"
+	"github.com/blackducksoftware/synopsysctl/pkg/synopsysctl"
 	log "github.com/sirupsen/logrus"
 )
 

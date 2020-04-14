@@ -19,7 +19,7 @@ limitations under the License.
 package versioned
 
 import (
-	synopsysv1 "github.com/blackducksoftware/synopsys-operator/pkg/blackduck/client/clientset/versioned/typed/blackduck/v1"
+	synopsysv1 "github.com/blackducksoftware/synopsysctl/pkg/blackduck/client/clientset/versioned/typed/blackduck/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

@@ -25,9 +25,9 @@ import (
 	"fmt"
 	"strings"
 
-	samplev1 "github.com/blackducksoftware/synopsys-operator/pkg/api/sample/v1"
-	"github.com/blackducksoftware/synopsys-operator/pkg/protoform"
-	sampleclientset "github.com/blackducksoftware/synopsys-operator/pkg/sample/client/clientset/versioned"
+	samplev1 "github.com/blackducksoftware/synopsysctl/pkg/api/sample/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/protoform"
+	sampleclientset "github.com/blackducksoftware/synopsysctl/pkg/sample/client/clientset/versioned"
 	"github.com/imdario/mergo"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"

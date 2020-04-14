@@ -25,8 +25,8 @@ import (
 	"fmt"
 
 	horizonapi "github.com/blackducksoftware/horizon/pkg/api"
-	"github.com/blackducksoftware/synopsys-operator/pkg/api"
-	"github.com/blackducksoftware/synopsys-operator/pkg/util"
+	"github.com/blackducksoftware/synopsysctl/pkg/api"
+	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )

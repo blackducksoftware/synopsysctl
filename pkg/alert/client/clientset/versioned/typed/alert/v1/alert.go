@@ -21,8 +21,8 @@ package v1
 import (
 	"time"
 
-	scheme "github.com/blackducksoftware/synopsys-operator/pkg/alert/client/clientset/versioned/scheme"
-	v1 "github.com/blackducksoftware/synopsys-operator/pkg/api/alert/v1"
+	scheme "github.com/blackducksoftware/synopsysctl/pkg/alert/client/clientset/versioned/scheme"
+	v1 "github.com/blackducksoftware/synopsysctl/pkg/api/alert/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

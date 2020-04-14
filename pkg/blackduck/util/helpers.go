@@ -26,9 +26,9 @@ import (
 	"strings"
 	"time"
 
-	blackduckv1 "github.com/blackducksoftware/synopsys-operator/pkg/api/blackduck/v1"
-	blackduckclient "github.com/blackducksoftware/synopsys-operator/pkg/blackduck/client/clientset/versioned"
-	"github.com/blackducksoftware/synopsys-operator/pkg/util"
+	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
+	blackduckclient "github.com/blackducksoftware/synopsysctl/pkg/blackduck/client/clientset/versioned"
+	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

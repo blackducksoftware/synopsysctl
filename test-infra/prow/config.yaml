@@ -31,11 +31,11 @@ tide:
   pr_status_base_url: http://35.186.244.90/pr
 
   merge_method:
-    blackducksoftware/synopsys-operator: squash
+    blackducksoftware/synopsysctl: squash
 
   queries:
     - repos:
-        - blackducksoftware/synopsys-operator
+        - blackducksoftware/synopsysctl
       labels:
         - lgtm
         - approved
@@ -51,7 +51,7 @@ branch-protection:
   orgs:
     blackducksoftware:
       repos:
-        synopsys-operator:
+        synopsysctl:
           required_status_checks:
             contexts:
               - continuous-integration/travis-ci/pr
@@ -60,7 +60,7 @@ branch-protection:
 #
 # TODO: Migrate travis job to prow job
 # presubmits:
-#   blackducksoftware/synopsys-operator:
+#   blackducksoftware/synopsysctl:
 #     - name: gofmt
 #       decorate: true
 #       always_run: true

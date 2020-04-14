@@ -21,10 +21,10 @@ package v1
 import (
 	time "time"
 
-	blackduckv1 "github.com/blackducksoftware/synopsys-operator/pkg/api/blackduck/v1"
-	versioned "github.com/blackducksoftware/synopsys-operator/pkg/blackduck/client/clientset/versioned"
-	internalinterfaces "github.com/blackducksoftware/synopsys-operator/pkg/blackduck/client/informers/externalversions/internalinterfaces"
-	v1 "github.com/blackducksoftware/synopsys-operator/pkg/blackduck/client/listers/blackduck/v1"
+	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
+	versioned "github.com/blackducksoftware/synopsysctl/pkg/blackduck/client/clientset/versioned"
+	internalinterfaces "github.com/blackducksoftware/synopsysctl/pkg/blackduck/client/informers/externalversions/internalinterfaces"
+	v1 "github.com/blackducksoftware/synopsysctl/pkg/blackduck/client/listers/blackduck/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"

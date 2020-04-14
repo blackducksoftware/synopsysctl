@@ -25,9 +25,9 @@ import (
 	"fmt"
 	"strings"
 
-	v1 "github.com/blackducksoftware/synopsys-operator/pkg/api/blackduck/v1"
-	"github.com/blackducksoftware/synopsys-operator/pkg/blackduck"
-	"github.com/blackducksoftware/synopsys-operator/pkg/util"
+	v1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/blackduck"
+	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	"github.com/imdario/mergo"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"

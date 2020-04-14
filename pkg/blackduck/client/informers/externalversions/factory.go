@@ -23,9 +23,9 @@ import (
 	sync "sync"
 	time "time"
 
-	versioned "github.com/blackducksoftware/synopsys-operator/pkg/blackduck/client/clientset/versioned"
-	blackduck "github.com/blackducksoftware/synopsys-operator/pkg/blackduck/client/informers/externalversions/blackduck"
-	internalinterfaces "github.com/blackducksoftware/synopsys-operator/pkg/blackduck/client/informers/externalversions/internalinterfaces"
+	versioned "github.com/blackducksoftware/synopsysctl/pkg/blackduck/client/clientset/versioned"
+	blackduck "github.com/blackducksoftware/synopsysctl/pkg/blackduck/client/informers/externalversions/blackduck"
+	internalinterfaces "github.com/blackducksoftware/synopsysctl/pkg/blackduck/client/informers/externalversions/internalinterfaces"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

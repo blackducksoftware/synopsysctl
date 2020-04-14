@@ -30,7 +30,7 @@ and satisfy a set of label requirements.
 
 # Useful commands:
 ```
-bazel run //prow/cmd/checkconfig -- --plugin-config=/Users/bhutwala/gocode/src/github.com/blackducksoftware/synopsys-operator/test-infra/prow/plugins.yaml --config-path=/Users/bhutwala/gocode/src/github.com/blackducksoftware/synopsys-operator/test-infra/prow/config.yaml
+bazel run //prow/cmd/checkconfig -- --plugin-config=/Users/bhutwala/gocode/src/github.com/blackducksoftware/synopsysctl/test-infra/prow/plugins.yaml --config-path=/Users/bhutwala/gocode/src/github.com/blackducksoftware/synopsysctl/test-infra/prow/config.yaml
 ```
 
 

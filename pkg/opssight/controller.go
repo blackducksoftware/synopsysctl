@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"time"
 
-	opssightclientset "github.com/blackducksoftware/synopsys-operator/pkg/opssight/client/clientset/versioned"
+	opssightclientset "github.com/blackducksoftware/synopsysctl/pkg/opssight/client/clientset/versioned"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"

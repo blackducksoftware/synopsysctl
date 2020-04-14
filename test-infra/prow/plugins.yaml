@@ -1,11 +1,11 @@
 approve:
   - repos:
-      - blackducksoftware/synopsys-operator
+      - blackducksoftware/synopsysctl
     require_self_approval: false
     lgtm_acts_as_approve: true
 
 plugins:
-  blackducksoftware/synopsys-operator:
+  blackducksoftware/synopsysctl:
     - approve
     - assign
     - blunderbuss
@@ -29,7 +29,7 @@ plugins:
     - yuks
 
 external_plugins:
-  blackducksoftware/synopsys-operator:
+  blackducksoftware/synopsysctl:
     - name: needs-rebase
       events:
         - pull_request

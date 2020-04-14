@@ -21,10 +21,10 @@ package opssight
 import (
 	"testing"
 
-	"github.com/blackducksoftware/synopsys-operator/pkg/api"
-	blackduckapi "github.com/blackducksoftware/synopsys-operator/pkg/api/blackduck/v1"
-	opssightapi "github.com/blackducksoftware/synopsys-operator/pkg/api/opssight/v1"
-	"github.com/blackducksoftware/synopsys-operator/pkg/util"
+	"github.com/blackducksoftware/synopsysctl/pkg/api"
+	blackduckapi "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
+	opssightapi "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"

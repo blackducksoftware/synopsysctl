@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"strings"
 
-	v1 "github.com/blackducksoftware/synopsys-operator/pkg/api/blackduck/v1"
+	v1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
 	"github.com/sirupsen/logrus"
 	"k8s.io/api/admission/v1beta1"
 	v1beta12 "k8s.io/api/authentication/v1beta1"

@@ -27,8 +27,8 @@ import (
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	alertctl "github.com/blackducksoftware/synopsys-operator/pkg/alert"
-	"github.com/blackducksoftware/synopsys-operator/pkg/util"
+	alertctl "github.com/blackducksoftware/synopsysctl/pkg/alert"
+	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

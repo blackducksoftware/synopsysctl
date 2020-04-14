@@ -19,8 +19,8 @@ limitations under the License.
 package synopsys
 
 import (
-	v1 "github.com/blackducksoftware/synopsys-operator/pkg/blackduck/client/informers/externalversions/blackduck/v1"
-	internalinterfaces "github.com/blackducksoftware/synopsys-operator/pkg/blackduck/client/informers/externalversions/internalinterfaces"
+	v1 "github.com/blackducksoftware/synopsysctl/pkg/blackduck/client/informers/externalversions/blackduck/v1"
+	internalinterfaces "github.com/blackducksoftware/synopsysctl/pkg/blackduck/client/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to each of this group's versions.

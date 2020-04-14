@@ -2,13 +2,14 @@ package webhook
 
 import (
 	"encoding/json"
-	blackduckclientset "github.com/blackducksoftware/synopsys-operator/pkg/blackduck/client/clientset/versioned"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"net/http"
 	"time"
+
+	blackduckclientset "github.com/blackducksoftware/synopsysctl/pkg/blackduck/client/clientset/versioned"
+	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	"k8s.io/api/admission/v1beta1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"

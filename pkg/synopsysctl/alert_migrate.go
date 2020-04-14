@@ -25,9 +25,9 @@ import (
 	"fmt"
 	"strings"
 
-	alertctl "github.com/blackducksoftware/synopsys-operator/pkg/alert"
-	v1 "github.com/blackducksoftware/synopsys-operator/pkg/api/alert/v1"
-	"github.com/blackducksoftware/synopsys-operator/pkg/util"
+	alertctl "github.com/blackducksoftware/synopsysctl/pkg/alert"
+	v1 "github.com/blackducksoftware/synopsysctl/pkg/api/alert/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

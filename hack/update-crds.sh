@@ -27,7 +27,7 @@ pushd $GOPATH/src/k8s.io/code-generator
   j=0
   for i in "${crds[@]}" ; do
     set +x
-    ./generate-groups.sh "deepcopy,client,informer,lister" "github.com/blackducksoftware/synopsys-operator/pkg/${i}/client" "github.com/blackducksoftware/synopsys-operator/pkg/api" ${i}:${crdVersions[j]}
+    ./generate-groups.sh "deepcopy,client,informer,lister" "github.com/blackducksoftware/synopsysctl/pkg/${i}/client" "github.com/blackducksoftware/synopsysctl/pkg/api" ${i}:${crdVersions[j]}
     let "j++"
   done
 popd

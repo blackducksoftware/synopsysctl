@@ -21,10 +21,10 @@ package v1
 import (
 	time "time"
 
-	opssightv1 "github.com/blackducksoftware/synopsys-operator/pkg/api/opssight/v1"
-	versioned "github.com/blackducksoftware/synopsys-operator/pkg/opssight/client/clientset/versioned"
-	internalinterfaces "github.com/blackducksoftware/synopsys-operator/pkg/opssight/client/informers/externalversions/internalinterfaces"
-	v1 "github.com/blackducksoftware/synopsys-operator/pkg/opssight/client/listers/opssight/v1"
+	opssightv1 "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
+	versioned "github.com/blackducksoftware/synopsysctl/pkg/opssight/client/clientset/versioned"
+	internalinterfaces "github.com/blackducksoftware/synopsysctl/pkg/opssight/client/informers/externalversions/internalinterfaces"
+	v1 "github.com/blackducksoftware/synopsysctl/pkg/opssight/client/listers/opssight/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"

@@ -28,8 +28,8 @@ import (
 
 	horizonapi "github.com/blackducksoftware/horizon/pkg/api"
 	horizon "github.com/blackducksoftware/horizon/pkg/deployer"
-	"github.com/blackducksoftware/synopsys-operator/pkg/soperator"
-	"github.com/blackducksoftware/synopsys-operator/pkg/util"
+	"github.com/blackducksoftware/synopsysctl/pkg/soperator"
+	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	"github.com/juju/errors"
 	log "github.com/sirupsen/logrus" //_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
@@ -63,7 +63,7 @@ func NewController(configPath string, version string) (*Deployer, error) {
 	}
 
 	// check for the existence of operator configmap, if not create it
-	_, err = util.GetConfigMap(kubeClientSet, config.Namespace, "synopsys-operator")
+	_, err = util.GetConfigMap(kubeClientSet, config.Namespace, "synopsysctl")
 	if err != nil {
 		deployer, err := horizon.NewDeployer(kubeConfig)
 		if err != nil {
@@ -78,7 +78,7 @@ func NewController(configPath string, version string) (*Deployer, error) {
 
 		// generate self signed nginx certs
 		cert, key, err := util.GeneratePemSelfSignedCertificateAndKey(pkix.Name{
-			CommonName: fmt.Sprintf("synopsys-operator.%s.svc", config.Namespace),
+			CommonName: fmt.Sprintf("synopsysctl.%s.svc", config.Namespace),
 		})
 		if err != nil {
 			return nil, errors.Annotate(err, "couldn't generate certificate and key")

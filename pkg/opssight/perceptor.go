@@ -28,9 +28,9 @@ import (
 
 	horizonapi "github.com/blackducksoftware/horizon/pkg/api"
 	"github.com/blackducksoftware/horizon/pkg/components"
-	"github.com/blackducksoftware/synopsys-operator/pkg/api"
-	opssightapi "github.com/blackducksoftware/synopsys-operator/pkg/api/opssight/v1"
-	"github.com/blackducksoftware/synopsys-operator/pkg/util"
+	"github.com/blackducksoftware/synopsysctl/pkg/api"
+	opssightapi "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	"github.com/juju/errors"
 	routev1 "github.com/openshift/api/route/v1"
 )

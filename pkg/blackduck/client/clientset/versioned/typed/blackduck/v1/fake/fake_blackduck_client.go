@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v1 "github.com/blackducksoftware/synopsys-operator/pkg/blackduck/client/clientset/versioned/typed/blackduck/v1"
+	v1 "github.com/blackducksoftware/synopsysctl/pkg/blackduck/client/clientset/versioned/typed/blackduck/v1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )

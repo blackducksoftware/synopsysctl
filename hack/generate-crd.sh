@@ -59,7 +59,7 @@ pushd $GOPATH/src/k8s.io > /dev/null 2>&1
 popd > /dev/null 2>&1
 
 pushd $GOPATH/src/k8s.io/code-generator > /dev/null 2>&1
-  ./generate-groups.sh "deepcopy,client,informer,lister" "github.com/blackducksoftware/synopsys-operator/pkg/${crd_name}/client" "github.com/blackducksoftware/synopsys-operator/pkg/api" ${crd_name}:${crd_version}
+  ./generate-groups.sh "deepcopy,client,informer,lister" "github.com/blackducksoftware/synopsysctl/pkg/${crd_name}/client" "github.com/blackducksoftware/synopsysctl/pkg/api" ${crd_name}:${crd_version}
 popd > /dev/null 2>&1
 ########################################################################
 

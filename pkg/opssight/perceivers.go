@@ -27,8 +27,8 @@ import (
 
 	horizonapi "github.com/blackducksoftware/horizon/pkg/api"
 	"github.com/blackducksoftware/horizon/pkg/components"
-	"github.com/blackducksoftware/synopsys-operator/pkg/api"
-	"github.com/blackducksoftware/synopsys-operator/pkg/util"
+	"github.com/blackducksoftware/synopsysctl/pkg/api"
+	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	"github.com/juju/errors"
 	routev1 "github.com/openshift/api/route/v1"
 )

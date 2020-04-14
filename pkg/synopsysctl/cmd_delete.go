@@ -25,8 +25,8 @@ import (
 	"fmt"
 	"strings"
 
-	polarisreporting "github.com/blackducksoftware/synopsys-operator/pkg/polaris-reporting"
-	"github.com/blackducksoftware/synopsys-operator/pkg/util"
+	polarisreporting "github.com/blackducksoftware/synopsysctl/pkg/polaris-reporting"
+	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"

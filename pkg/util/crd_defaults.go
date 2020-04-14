@@ -22,10 +22,10 @@ under the License.
 package util
 
 import (
-	alertv1 "github.com/blackducksoftware/synopsys-operator/pkg/api/alert/v1"
-	blackduckv1 "github.com/blackducksoftware/synopsys-operator/pkg/api/blackduck/v1"
-	opssightv1 "github.com/blackducksoftware/synopsys-operator/pkg/api/opssight/v1"
-	//samplev1 "github.com/blackducksoftware/synopsys-operator/pkg/api/sample/v1"
+	alertv1 "github.com/blackducksoftware/synopsysctl/pkg/api/alert/v1"
+	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
+	opssightv1 "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
+	//samplev1 "github.com/blackducksoftware/synopsysctl/pkg/api/sample/v1"
 )
 
 const (

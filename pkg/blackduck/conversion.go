@@ -25,9 +25,9 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/blackducksoftware/synopsys-operator/pkg/api"
-	v1 "github.com/blackducksoftware/synopsys-operator/pkg/api/blackduck/v1"
-	"github.com/blackducksoftware/synopsys-operator/pkg/util"
+	"github.com/blackducksoftware/synopsysctl/pkg/api"
+	v1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 )

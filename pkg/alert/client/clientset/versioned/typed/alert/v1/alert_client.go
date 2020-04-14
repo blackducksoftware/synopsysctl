@@ -19,8 +19,8 @@ limitations under the License.
 package v1
 
 import (
-	"github.com/blackducksoftware/synopsys-operator/pkg/alert/client/clientset/versioned/scheme"
-	v1 "github.com/blackducksoftware/synopsys-operator/pkg/api/alert/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/alert/client/clientset/versioned/scheme"
+	v1 "github.com/blackducksoftware/synopsysctl/pkg/api/alert/v1"
 	rest "k8s.io/client-go/rest"
 )
 

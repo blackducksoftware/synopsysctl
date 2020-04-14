@@ -27,9 +27,9 @@ import (
 
 	horizonapi "github.com/blackducksoftware/horizon/pkg/api"
 	"github.com/blackducksoftware/horizon/pkg/components"
-	"github.com/blackducksoftware/synopsys-operator/pkg/api"
-	apputil "github.com/blackducksoftware/synopsys-operator/pkg/apps/util"
-	"github.com/blackducksoftware/synopsys-operator/pkg/util"
+	"github.com/blackducksoftware/synopsysctl/pkg/api"
+	apputil "github.com/blackducksoftware/synopsysctl/pkg/apps/util"
+	"github.com/blackducksoftware/synopsysctl/pkg/util"
 )
 
 const (

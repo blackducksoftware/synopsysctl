@@ -21,8 +21,8 @@ package v1
 import (
 	"time"
 
-	v1 "github.com/blackducksoftware/synopsys-operator/pkg/api/opssight/v1"
-	scheme "github.com/blackducksoftware/synopsys-operator/pkg/opssight/client/clientset/versioned/scheme"
+	v1 "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
+	scheme "github.com/blackducksoftware/synopsysctl/pkg/opssight/client/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

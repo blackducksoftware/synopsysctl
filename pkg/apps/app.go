@@ -22,7 +22,7 @@ under the License.
 package apps
 
 import (
-	"github.com/blackducksoftware/synopsys-operator/pkg/protoform"
+	"github.com/blackducksoftware/synopsysctl/pkg/protoform"
 	"k8s.io/client-go/rest"
 )
 

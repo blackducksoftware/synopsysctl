@@ -40,8 +40,7 @@ const defaultBusyBoxImage string = "docker.io/busybox:1.28"
 // flag for all namespaces
 const allNamespacesFlag string = "--all-namespaces"
 
-// Flags for using mock mode - doesn't deploy
-var mockFormat string
+// Flags for using native mode - doesn't deploy
 var nativeFormat = "json"
 
 const (

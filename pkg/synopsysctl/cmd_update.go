@@ -64,8 +64,6 @@ var updatePolarisCobraHelper polaris.HelmValuesFromCobraFlags
 var updatePolarisReportingCobraHelper polarisreporting.HelmValuesFromCobraFlags
 var updateBDBACobraHelper bdba.HelmValuesFromCobraFlags
 
-var updateMockFormat = "json"
-
 // updateCmd provides functionality to update/upgrade features of
 // Synopsys resources
 var updateCmd = &cobra.Command{
@@ -143,8 +141,6 @@ var updateAlertCmd = &cobra.Command{
 }
 
 func updateAlertHelmBased(cmd *cobra.Command, alertName string, customerReleaseName string) error {
-	mockMode := cmd.Flags().Lookup("mock").Changed
-
 	// Set flags from the current release in the updateAlertCobraHelper
 	helmRelease, err := util.GetWithHelm3(alertName, namespace, kubeConfigPath)
 	if err != nil {
@@ -223,12 +219,6 @@ func updateAlertHelmBased(cmd *cobra.Command, alertName string, customerReleaseN
 		javaKeystoreSecretName := "alert-java-keystore"
 		javaKeystoreSecret, err = alertctl.GetAlertJavaKeystoreSecret(namespace, javaKeystoreSecretName, javaKeystoreData)
 		util.SetHelmValueInMap(helmValuesMap, []string{"javaKeystoreSecretName"}, javaKeystoreSecretName)
-	}
-
-	// If mock mode, return and don't create resources
-	if mockMode {
-		_, err = PrintComponent(helmValuesMap, "YAML")
-		return err
 	}
 
 	// Update the Secrets
@@ -660,7 +650,7 @@ func updateOpsSight(ops *opssightapi.OpsSight, flagset *pflag.FlagSet) (*opssigh
 // updateOpsSightCmd updates an OpsSight instance
 var updateOpsSightCmd = &cobra.Command{
 	Use:           "opssight NAME",
-	Example:       "synopsyctl update opssight <name> --blackduck-max-count 2\nsynopsyctl update opssight <name> --blackduck-max-count 2 -n <namespace>\nsynopsyctl update opssight <name> --blackduck-max-count 2 --mock json",
+	Example:       "synopsyctl update opssight <name> --blackduck-max-count 2\nsynopsyctl update opssight <name> --blackduck-max-count 2 -n <namespace>",
 	Short:         "Update an OpsSight instance",
 	SilenceUsage:  true,
 	SilenceErrors: true,
@@ -672,9 +662,8 @@ var updateOpsSightCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		mockMode := cmd.Flags().Lookup("mock").Changed
 		opsSightName := args[0]
-		opsSightNamespace, crdnamespace, _, err := getInstanceInfo(false, util.OpsSightCRDName, util.OpsSightName, namespace, opsSightName)
+		opsSightNamespace, crdnamespace, _, err := getInstanceInfo(util.OpsSightCRDName, util.OpsSightName, namespace, opsSightName)
 		if err != nil {
 			return err
 		}
@@ -692,12 +681,6 @@ var updateOpsSightCmd = &cobra.Command{
 		_, err = util.CheckAndUpdateNamespace(kubeClient, util.OpsSightName, opsSightNamespace, opsSightName, "2.2.5", false)
 		if err != nil {
 			return err
-		}
-
-		// If mock mode, return and don't create resources
-		if mockMode {
-			log.Debugf("generating updates to the CRD for OpsSight '%s' in namespace '%s'...", opsSightName, opsSightNamespace)
-			return PrintResource(*newOpsSight, mockFormat, false)
 		}
 
 		log.Infof("updating OpsSight '%s' in namespace '%s'...", opsSightName, opsSightNamespace)
@@ -756,9 +739,8 @@ var updateOpsSightExternalHostCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		mockMode := cmd.Flags().Lookup("mock").Changed
 		opsSightName := args[0]
-		opsSightNamespace, crdnamespace, _, err := getInstanceInfo(false, util.OpsSightCRDName, util.OpsSightName, namespace, opsSightName)
+		opsSightNamespace, crdnamespace, _, err := getInstanceInfo(util.OpsSightCRDName, util.OpsSightName, namespace, opsSightName)
 		if err != nil {
 			return err
 		}
@@ -769,12 +751,6 @@ var updateOpsSightExternalHostCmd = &cobra.Command{
 		newOpsSight, err := updateOpsSightExternalHost(currOpsSight, args[1], args[2], args[3], args[4], args[5], args[6])
 		if err != nil {
 			return err
-		}
-
-		// If mock mode, return and don't create resources
-		if mockMode {
-			log.Debugf("generating updates to the CRD for OpsSight '%s' in namespace '%s'...", opsSightName, opsSightNamespace)
-			return PrintResource(*newOpsSight, mockFormat, false)
 		}
 
 		log.Infof("updating OpsSight '%s' with an external host in namespace '%s'...", opsSightName, opsSightNamespace)
@@ -813,7 +789,7 @@ var updateOpsSightExternalHostNativeCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		opsSightName := args[0]
-		opsSightNamespace, crdnamespace, _, err := getInstanceInfo(false, util.OpsSightCRDName, util.OpsSightName, namespace, opsSightName)
+		opsSightNamespace, crdnamespace, _, err := getInstanceInfo(util.OpsSightCRDName, util.OpsSightName, namespace, opsSightName)
 		if err != nil {
 			return err
 		}
@@ -856,9 +832,8 @@ var updateOpsSightAddRegistryCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		mockMode := cmd.Flags().Lookup("mock").Changed
 		opsSightName := args[0]
-		opsSightNamespace, crdnamespace, _, err := getInstanceInfo(false, util.OpsSightCRDName, util.OpsSightName, namespace, opsSightName)
+		opsSightNamespace, crdnamespace, _, err := getInstanceInfo(util.OpsSightCRDName, util.OpsSightName, namespace, opsSightName)
 		if err != nil {
 			return err
 		}
@@ -869,12 +844,6 @@ var updateOpsSightAddRegistryCmd = &cobra.Command{
 		newOpsSight, err := updateOpsSightAddRegistry(currOpsSight, args[1], args[2], args[3])
 		if err != nil {
 			return err
-		}
-
-		// If mock mode, return and don't create resources
-		if mockMode {
-			log.Debugf("generating updates to the CRD for OpsSight '%s' in namespace '%s'...", opsSightName, opsSightNamespace)
-			return PrintResource(*newOpsSight, mockFormat, false)
 		}
 
 		log.Infof("updating OpsSight '%s' with internal registry in namespace '%s'...", opsSightName, opsSightNamespace)
@@ -903,7 +872,7 @@ var updateOpsSightAddRegistryNativeCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		opsSightName := args[0]
-		opsSightNamespace, crdnamespace, _, err := getInstanceInfo(false, util.OpsSightCRDName, util.OpsSightName, namespace, opsSightName)
+		opsSightNamespace, crdnamespace, _, err := getInstanceInfo(util.OpsSightCRDName, util.OpsSightName, namespace, opsSightName)
 		if err != nil {
 			return err
 		}
@@ -1085,7 +1054,6 @@ func init() {
 	updateAlertCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
 	cobra.MarkFlagRequired(updateAlertCmd.PersistentFlags(), "namespace")
 	updateAlertCobraHelper.AddCobraFlagsToCommand(updateAlertCmd, false)
-	addMockFlag(updateAlertCmd)
 	addChartLocationPathFlag(updateAlertCmd)
 	updateCmd.AddCommand(updateAlertCmd)
 
@@ -1112,18 +1080,15 @@ func init() {
 	// updateOpsSightCmd
 	updateOpsSightCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
 	updateOpsSightCobraHelper.AddCRSpecFlagsToCommand(updateOpsSightCmd, false)
-	addMockFlag(updateOpsSightCmd)
 	updateCmd.AddCommand(updateOpsSightCmd)
 
 	// updateOpsSightExternalHostCmd
-	addMockFlag(updateOpsSightExternalHostCmd)
 	updateOpsSightCmd.AddCommand(updateOpsSightExternalHostCmd)
 
 	addNativeFormatFlag(updateOpsSightExternalHostNativeCmd)
 	updateOpsSightExternalHostCmd.AddCommand(updateOpsSightExternalHostNativeCmd)
 
 	// updateOpsSightAddRegistryCmd
-	addMockFlag(updateOpsSightAddRegistryCmd)
 	updateOpsSightCmd.AddCommand(updateOpsSightAddRegistryCmd)
 
 	addNativeFormatFlag(updateOpsSightAddRegistryNativeCmd)

@@ -21,9 +21,9 @@ binary: clean ${OUTDIR}
 	$(foreach p,${PLATFORM}, \
 		echo "creating synopsysctl binary for $(p) platform" && \
 		if [[ $(p) = ${WINDOWS} ]]; then \
-			docker run --rm -e CGO_ENABLED=0 -e GOOS=$(p) -e GOARCH=amd64 -v "${CURRENT_DIR}":/go/src/github.com/blackducksoftware/synopsys-operator -w /go/src/github.com/blackducksoftware/synopsys-operator/cmd/synopsysctl golang:1.13 go build -ldflags "-X main.version=${TAG}" -o /go/src/github.com/blackducksoftware/synopsys-operator/${OUTDIR}/$(p)/synopsysctl.exe; \
+			docker run --rm -e CGO_ENABLED=0 -e GOOS=$(p) -e GOARCH=amd64 -v "${CURRENT_DIR}":/go/src/github.com/blackducksoftware/synopsysctl -w /go/src/github.com/blackducksoftware/synopsysctl/cmd/synopsysctl golang:1.13 go build -ldflags "-X main.version=${TAG}" -o /go/src/github.com/blackducksoftware/synopsysctl/${OUTDIR}/$(p)/synopsysctl.exe; \
 		else \
-			docker run --rm -e CGO_ENABLED=0 -e GOOS=$(p) -e GOARCH=amd64 -v "${CURRENT_DIR}":/go/src/github.com/blackducksoftware/synopsys-operator -w /go/src/github.com/blackducksoftware/synopsys-operator/cmd/synopsysctl golang:1.13 go build -ldflags "-X main.version=${TAG}" -o /go/src/github.com/blackducksoftware/synopsys-operator/${OUTDIR}/$(p)/synopsysctl; \
+			docker run --rm -e CGO_ENABLED=0 -e GOOS=$(p) -e GOARCH=amd64 -v "${CURRENT_DIR}":/go/src/github.com/blackducksoftware/synopsysctl -w /go/src/github.com/blackducksoftware/synopsysctl/cmd/synopsysctl golang:1.13 go build -ldflags "-X main.version=${TAG}" -o /go/src/github.com/blackducksoftware/synopsysctl/${OUTDIR}/$(p)/synopsysctl; \
 		fi && \
 		echo "completed synopsysctl binary for $(p) platform"; \
 	)
@@ -40,18 +40,18 @@ local-binary: clean ${OUTDIR}
 	) 
 
 coverity: clean ${OUTDIR}
-	mkdir -p /go/src/github.com/blackducksoftware && ln -s `pwd` /go/src/github.com/blackducksoftware/synopsys-operator
+	mkdir -p /go/src/github.com/blackducksoftware && ln -s `pwd` /go/src/github.com/blackducksoftware/synopsysctl
 	$(foreach p,${PLATFORM}, \
 		echo "creating synopsysctl binary for $(p) platform at `date`" && \
-		cd /go/src/github.com/blackducksoftware/synopsys-operator/cmd/synopsysctl && \
+		cd /go/src/github.com/blackducksoftware/synopsysctl/cmd/synopsysctl && \
 		if [ $(p) = ${WINDOWS} ]; then \
-			go build -ldflags "-X main.version=${TAG}" -o /go/src/github.com/blackducksoftware/synopsys-operator/${OUTDIR}/$(p)/synopsysctl.exe; \
+			go build -ldflags "-X main.version=${TAG}" -o /go/src/github.com/blackducksoftware/synopsysctl/${OUTDIR}/$(p)/synopsysctl.exe; \
 		else \
-			go build -ldflags "-X main.version=${TAG}" -o /go/src/github.com/blackducksoftware/synopsys-operator/${OUTDIR}/$(p)/synopsysctl; \
+			go build -ldflags "-X main.version=${TAG}" -o /go/src/github.com/blackducksoftware/synopsysctl/${OUTDIR}/$(p)/synopsysctl; \
 		fi && \
 		echo "completed synopsysctl binary for $(p) platform at `date`" \
 	)
-	rm /go/src/github.com/blackducksoftware/synopsys-operator
+	rm /go/src/github.com/blackducksoftware/synopsysctl
 
 package:
 	$(foreach p,${PLATFORM}, \

@@ -1,0 +1,8 @@
+cmd/synopsysctl/synopsysctl
+pkg/.DS_Store
+pkg/api/.DS_Store
+.DS_Store
+.idea/
+.vscode/*
+cmd/synopsysctl/*.key
+_output/*

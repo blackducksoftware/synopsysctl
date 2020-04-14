@@ -1,0 +1,36 @@
+approve:
+  - repos:
+      - blackducksoftware/synopsys-operator
+    require_self_approval: false
+    lgtm_acts_as_approve: true
+
+plugins:
+  blackducksoftware/synopsys-operator:
+    - approve
+    - assign
+    - blunderbuss
+    - cat
+    - dog
+    - golint
+    - heart
+    - help
+    - hold
+    - label
+    - lgtm
+    - lifecycle
+    - milestone
+    - owners-label
+    - pony
+    - shrug
+    - size
+    - trigger
+    - verify-owners
+    - wip
+    - yuks
+
+external_plugins:
+  blackducksoftware/synopsys-operator:
+    - name: needs-rebase
+      events:
+        - pull_request
+    - name: cherrypick

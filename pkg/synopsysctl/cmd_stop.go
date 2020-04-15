@@ -46,7 +46,7 @@ var stopCmd = &cobra.Command{
 
 // stopAlertCmd stops an Alert instance
 var stopAlertCmd = &cobra.Command{
-	Use:           "alert NAME",
+	Use:           "alert NAME -n NAMESPACE",
 	Example:       "synopsysctl stop alert <name> -n <namespace>",
 	Short:         "Stop an Alert instance",
 	SilenceUsage:  true,
@@ -54,7 +54,7 @@ var stopAlertCmd = &cobra.Command{
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			cmd.Help()
-			return fmt.Errorf("this command takes one argument but got %+v", len(args))
+			return fmt.Errorf("this command takes 1 argument, but got %+v", args)
 		}
 		return nil
 	},

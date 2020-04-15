@@ -75,8 +75,8 @@ Create Alert Commands
 
 // createCmd creates an Alert instance
 var createAlertCmd = &cobra.Command{
-	Use:           "alert NAME",
-	Example:       "synopsysctl create alert <name>\nsynopsysctl create alert <name> -n <namespace>\nsynopsysctl create alert <name> --mock json",
+	Use:           "alert NAME -n NAMESPACE",
+	Example:       "synopsysctl create alert <name> -n <namespace>",
 	Short:         "Create an Alert instance",
 	SilenceUsage:  true,
 	SilenceErrors: true,
@@ -84,7 +84,7 @@ var createAlertCmd = &cobra.Command{
 		// Check the Number of Arguments
 		if len(args) != 1 {
 			cmd.Help()
-			return fmt.Errorf("this command takes 1 argument")
+			return fmt.Errorf("this command takes 1 argument, but got %+v", args)
 		}
 		return nil
 	},
@@ -179,8 +179,8 @@ var createAlertCmd = &cobra.Command{
 
 // createAlertNativeCmd prints the Kubernetes resources for creating an Alert instance
 var createAlertNativeCmd = &cobra.Command{
-	Use:           "native NAME",
-	Example:       "synopsysctl create alert native <name>\nsynopsysctl create alert native <name> -n <namespace>\nsynopsysctl create alert native <name> -o yaml",
+	Use:           "native NAME -n NAMESPACE",
+	Example:       "synopsysctl create alert native <name> -n <namespace>",
 	Short:         "Print the Kubernetes resources for creating an Alert instance",
 	SilenceUsage:  true,
 	SilenceErrors: true,
@@ -188,7 +188,7 @@ var createAlertNativeCmd = &cobra.Command{
 		// Check the Number of Arguments
 		if len(args) != 1 {
 			cmd.Help()
-			return fmt.Errorf("this command takes 1 argument")
+			return fmt.Errorf("this command takes 1 argument, but got %+v", args)
 		}
 		return nil
 	},
@@ -464,7 +464,7 @@ var createOpsSightCmd = &cobra.Command{
 		// Check the Number of Arguments
 		if len(args) != 1 {
 			cmd.Help()
-			return fmt.Errorf("this command takes 1 arguments")
+			return fmt.Errorf("this command takes 1 argument, but got %+v", args)
 		}
 		return nil
 	},
@@ -510,7 +510,7 @@ var createOpsSightNativeCmd = &cobra.Command{
 		// Check the Number of Arguments
 		if len(args) != 1 {
 			cmd.Help()
-			return fmt.Errorf("this command takes 1 argument")
+			return fmt.Errorf("this command takes 1 argument, but got %+v", args)
 		}
 		return nil
 	},
@@ -836,7 +836,7 @@ var createBDBANativeCmd = &cobra.Command{
 		// Check the Number of Arguments
 		if len(args) != 0 {
 			cmd.Help()
-			return fmt.Errorf("this command takes 0 argument, but got %+v", args)
+			return fmt.Errorf("this command takes 0 arguments, but got %+v", args)
 		}
 		return nil
 	},

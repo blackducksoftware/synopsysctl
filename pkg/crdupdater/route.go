@@ -82,7 +82,7 @@ func (c *Route) buildNewAndOldObject() error {
 
 	// build new route
 	for i, newRoute := range c.routes {
-		newRouteKube := util.GetRouteComponent(c.routeClient, newRoute, c.routes[i].Labels)
+		newRouteKube := util.GetRouteComponent(newRoute, c.routes[i].Labels)
 		c.newRoutes[newRoute.Name] = newRouteKube
 	}
 	return nil

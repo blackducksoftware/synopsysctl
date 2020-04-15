@@ -26,18 +26,18 @@ import (
 	"strings"
 
 	alertctl "github.com/blackducksoftware/synopsysctl/pkg/alert"
+	opssightv1 "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
 	"github.com/blackducksoftware/synopsysctl/pkg/bdba"
+	"github.com/blackducksoftware/synopsysctl/pkg/blackduck"
+	"github.com/blackducksoftware/synopsysctl/pkg/opssight"
 	"github.com/blackducksoftware/synopsysctl/pkg/polaris"
 	polarisreporting "github.com/blackducksoftware/synopsysctl/pkg/polaris-reporting"
 	polarisreportingctl "github.com/blackducksoftware/synopsysctl/pkg/polaris-reporting"
-
-	opssightv1 "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
-	"github.com/blackducksoftware/synopsysctl/pkg/blackduck"
-	"github.com/blackducksoftware/synopsysctl/pkg/opssight"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -351,6 +351,13 @@ var createBlackDuckCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to create Blackduck resources: %+v", err)
 		}
+
+		err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, namespace, args[0], helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"])
+		if err != nil {
+			return err
+		}
+
+		log.Infof("Black Duck has been successfully Created!")
 		return nil
 	},
 }
@@ -398,6 +405,20 @@ var createBlackDuckNativeCmd = &cobra.Command{
 		}
 		for _, v := range secrets {
 			PrintComponent(v, "YAML") // helm only supports yaml
+		}
+
+		if helmValuesMap["exposeui"] != nil && helmValuesMap["exposeui"].(bool) {
+			switch helmValuesMap["exposedServiceType"].(string) {
+			case "NodePort":
+				service := blackduck.GetWebServerExposedService(namespace, util.GetResourceName(args[0], util.BlackDuckName, "webserver-exposed"), args[0], corev1.ServiceTypeNodePort)
+				PrintComponent(service, "YAML") // helm only supports yaml
+			case "LoadBalancer":
+				service := blackduck.GetWebServerExposedService(namespace, util.GetResourceName(args[0], util.BlackDuckName, "webserver-exposed"), args[0], corev1.ServiceTypeLoadBalancer)
+				PrintComponent(service, "YAML") // helm only supports yaml
+			case "OpenShift":
+				route := blackduck.GetWebServerRoute(namespace, util.GetResourceName(args[0], util.BlackDuckName, ""), args[0])
+				PrintComponent(route, "YAML") // helm only supports yaml
+			}
 		}
 
 		// Check Dry Run before deploying any resources

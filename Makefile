@@ -57,9 +57,9 @@ package:
 	$(foreach p,${PLATFORM}, \
 		echo "creating synopsysctl package for $(p) platform" && \
 		cd ${OUTDIR}/$(p) && \
-		if [[ $(p) = ${LINUX} ]]; then \
+		if [[ "$(p)" = "${LINUX}" ]]; then \
 			tar -zcvf synopsysctl-$(p)-amd64.tar.gz synopsysctl && mv synopsysctl-$(p)-amd64.tar.gz .. && cd .. && $(SHA_SUM_CMD) synopsysctl-$(p)-amd64.tar.gz >> CHECKSUM && rm -rf $(p); \
-		elif [[ $(p) = ${WINDOWS} ]]; then \
+		elif [[ "$(p)" = "${WINDOWS}" ]]; then \
 			zip synopsysctl-$(p)-amd64.zip synopsysctl.exe && mv synopsysctl-$(p)-amd64.zip .. && cd .. && $(SHA_SUM_CMD) synopsysctl-$(p)-amd64.zip >> CHECKSUM && rm -rf $(p); \
 		else \
 			zip synopsysctl-$(p)-amd64.zip synopsysctl && mv synopsysctl-$(p)-amd64.zip .. && cd .. && $(SHA_SUM_CMD) synopsysctl-$(p)-amd64.zip >> CHECKSUM && rm -rf $(p); \

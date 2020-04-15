@@ -415,7 +415,7 @@ var createBlackDuckNativeCmd = &cobra.Command{
 			case "LoadBalancer":
 				service := blackduck.GetWebServerExposedService(namespace, util.GetResourceName(args[0], util.BlackDuckName, "webserver-exposed"), args[0], corev1.ServiceTypeLoadBalancer)
 				PrintComponent(service, "YAML") // helm only supports yaml
-			case "OpenShift":
+			case util.OPENSHIFT:
 				route := blackduck.GetWebServerRoute(namespace, util.GetResourceName(args[0], util.BlackDuckName, ""), args[0])
 				PrintComponent(route, "YAML") // helm only supports yaml
 			}

@@ -52,7 +52,7 @@ func CRUDServiceOrRoute(restConfig *rest.Config, kubeClient *kubernetes.Clientse
 			if err != nil {
 				return err
 			}
-		case "OpenShift":
+		case util.OPENSHIFT:
 			if _, err = util.GetService(kubeClient, namespace, serviceName); err == nil {
 				err = util.DeleteService(kubeClient, namespace, serviceName)
 				if err != nil {

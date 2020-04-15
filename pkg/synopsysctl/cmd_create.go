@@ -40,7 +40,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // Create Command CRSpecBuilderFromCobraFlagsInterface
@@ -115,8 +114,6 @@ var createAlertCmd = &cobra.Command{
 		}
 
 		// Create secrets for Alert
-		customCertificateSecret := map[string]runtime.Object{}
-		javaKeystoreSecret := map[string]runtime.Object{}
 		certificateFlag := cmd.Flag("certificate-file-path")
 		certificateKeyFlag := cmd.Flag("certificate-key-file-path")
 		if certificateFlag.Changed && certificateKeyFlag.Changed {
@@ -130,8 +127,11 @@ var createAlertCmd = &cobra.Command{
 				log.Fatalf("failed to read certificate file: %+v", err)
 			}
 			customCertificateSecretName := "alert-custom-certificate"
-			customCertificateSecret, err = alertctl.GetAlertCustomCertificateSecret(namespace, customCertificateSecretName, certificateData, certificateKeyData)
+			customCertificateSecret := alertctl.GetAlertCustomCertificateSecret(namespace, customCertificateSecretName, certificateData, certificateKeyData)
 			util.SetHelmValueInMap(helmValuesMap, []string{"webserverCustomCertificatesSecretName"}, customCertificateSecretName)
+			if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&customCertificateSecret); err != nil && !k8serrors.IsAlreadyExists(err) {
+				return fmt.Errorf("failed to create certifacte secret: %+v", err)
+			}
 		}
 
 		javaKeystoreFlag := cmd.Flag("java-keystore-file-path")
@@ -141,21 +141,10 @@ var createAlertCmd = &cobra.Command{
 				log.Fatalf("failed to read Java Keystore file: %+v", err)
 			}
 			javaKeystoreSecretName := "alert-java-keystore"
-			javaKeystoreSecret, err = alertctl.GetAlertJavaKeystoreSecret(namespace, javaKeystoreSecretName, javaKeystoreData)
+			javaKeystoreSecret := alertctl.GetAlertJavaKeystoreSecret(namespace, javaKeystoreSecretName, javaKeystoreData)
 			util.SetHelmValueInMap(helmValuesMap, []string{"javaKeystoreSecretName"}, javaKeystoreSecretName)
-		}
-
-		// Deploy the Secrets
-		if len(customCertificateSecret) > 0 {
-			err = KubectlApplyRuntimeObjects(customCertificateSecret)
-			if err != nil {
-				return fmt.Errorf("failed to deploy the customCertificateSecret Secrets: %s", err)
-			}
-		}
-		if len(javaKeystoreSecret) > 0 {
-			err = KubectlApplyRuntimeObjects(javaKeystoreSecret)
-			if err != nil {
-				return fmt.Errorf("failed to deploy the javaKeystoreSecret Secrets: %s", err)
+			if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&javaKeystoreSecret); err != nil && !k8serrors.IsAlreadyExists(err) {
+				return fmt.Errorf("failed to create javakeystore secret: %+v", err)
 			}
 		}
 
@@ -206,8 +195,6 @@ var createAlertNativeCmd = &cobra.Command{
 		}
 
 		// Get secrets for Alert
-		customCertificateSecret := map[string]runtime.Object{}
-		javaKeystoreSecret := map[string]runtime.Object{}
 		certificateFlag := cmd.Flag("certificate-file-path")
 		certificateKeyFlag := cmd.Flag("certificate-key-file-path")
 		if certificateFlag.Changed && certificateKeyFlag.Changed {
@@ -221,8 +208,11 @@ var createAlertNativeCmd = &cobra.Command{
 				log.Fatalf("failed to read certificate file: %+v", err)
 			}
 			customCertificateSecretName := "alert-custom-certificate"
-			customCertificateSecret, err = alertctl.GetAlertCustomCertificateSecret(namespace, customCertificateSecretName, certificateData, certificateKeyData)
+			customCertificateSecret := alertctl.GetAlertCustomCertificateSecret(namespace, customCertificateSecretName, certificateData, certificateKeyData)
 			util.SetHelmValueInMap(helmValuesMap, []string{"webserverCustomCertificatesSecretName"}, customCertificateSecretName)
+			if _, err = PrintComponent(customCertificateSecret, "YAML"); err != nil {
+				return err
+			}
 		}
 
 		javaKeystoreFlag := cmd.Flag("java-keystore-file-path")
@@ -232,17 +222,11 @@ var createAlertNativeCmd = &cobra.Command{
 				log.Fatalf("failed to read Java Keystore file: %+v", err)
 			}
 			javaKeystoreSecretName := "alert-java-keystore"
-			javaKeystoreSecret, err = alertctl.GetAlertJavaKeystoreSecret(namespace, javaKeystoreSecretName, javaKeystoreData)
+			javaKeystoreSecret := alertctl.GetAlertJavaKeystoreSecret(namespace, javaKeystoreSecretName, javaKeystoreData)
 			util.SetHelmValueInMap(helmValuesMap, []string{"javaKeystoreSecretName"}, javaKeystoreSecretName)
-		}
-		// Print the Secrets
-		if len(customCertificateSecret) > 0 {
-			_, err = PrintComponent(customCertificateSecret, "YAML")
-			return err
-		}
-		if len(javaKeystoreSecret) > 0 {
-			_, err = PrintComponent(customCertificateSecret, "YAML")
-			return err
+			if _, err = PrintComponent(javaKeystoreSecret, "YAML"); err != nil {
+				return err
+			}
 		}
 
 		// Deploy Alert Resources

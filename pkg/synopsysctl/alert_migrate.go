@@ -30,6 +30,7 @@ import (
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -147,18 +148,28 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 	// Update the Secrets
 	if len(alert.Spec.Certificate) > 0 && len(alert.Spec.CertificateKey) > 0 {
 		customCertificateSecretName := util.GetHelmValueFromMap(helmValuesMap, []string{"webserverCustomCertificatesSecretName"}).(string)
-		customCertificateSecret, err := alertctl.GetAlertCustomCertificateSecret(namespace, customCertificateSecretName, alert.Spec.Certificate, alert.Spec.CertificateKey)
-		err = KubectlApplyRuntimeObjects(customCertificateSecret)
-		if err != nil {
-			return fmt.Errorf("failed to deploy the customCertificateSecret Secrets: %s", err)
+		customCertificateSecret := alertctl.GetAlertCustomCertificateSecret(namespace, customCertificateSecretName, alert.Spec.Certificate, alert.Spec.CertificateKey)
+		if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&customCertificateSecret); err != nil {
+			if k8serrors.IsAlreadyExists(err) {
+				if _, err := kubeClient.CoreV1().Secrets(namespace).Update(&customCertificateSecret); err != nil {
+					return fmt.Errorf("failed to update certificate secret: %+v", err)
+				}
+			} else {
+				return fmt.Errorf("failed to create certificate secret: %+v", err)
+			}
 		}
 	}
 	if len(alert.Spec.JavaKeyStore) > 0 {
 		javaKeystoreSecretName := util.GetHelmValueFromMap(helmValuesMap, []string{"javaKeystoreSecretName"}).(string)
-		javaKeystoreSecret, err := alertctl.GetAlertJavaKeystoreSecret(namespace, javaKeystoreSecretName, alert.Spec.JavaKeyStore)
-		err = KubectlApplyRuntimeObjects(javaKeystoreSecret)
-		if err != nil {
-			return fmt.Errorf("failed to deploy the javaKeystoreSecret Secrets: %s", err)
+		javaKeystoreSecret := alertctl.GetAlertJavaKeystoreSecret(namespace, javaKeystoreSecretName, alert.Spec.JavaKeyStore)
+		if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&javaKeystoreSecret); err != nil {
+			if k8serrors.IsAlreadyExists(err) {
+				if _, err := kubeClient.CoreV1().Secrets(namespace).Update(&javaKeystoreSecret); err != nil {
+					return fmt.Errorf("failed to update javakeystore secret: %+v", err)
+				}
+			} else {
+				return fmt.Errorf("failed to create javakeystore secret: %+v", err)
+			}
 		}
 	}
 

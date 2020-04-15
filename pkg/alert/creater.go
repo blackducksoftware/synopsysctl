@@ -24,14 +24,11 @@ package alert
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // GetAlertCustomCertificateSecret ...
-func GetAlertCustomCertificateSecret(namespace, secretName, customCertificate, customCertificateKey string) (map[string]runtime.Object, error) {
-	mapOfUniqueIDToBaseRuntimeObject := make(map[string]runtime.Object, 0)
-
-	mapOfUniqueIDToBaseRuntimeObject["Secret.customCertificate"] = &corev1.Secret{
+func GetAlertCustomCertificateSecret(namespace, secretName, customCertificate, customCertificateKey string) corev1.Secret {
+	return corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
 			APIVersion: "v1",
@@ -46,15 +43,11 @@ func GetAlertCustomCertificateSecret(namespace, secretName, customCertificate, c
 		},
 		Type: corev1.SecretTypeOpaque,
 	}
-
-	return mapOfUniqueIDToBaseRuntimeObject, nil
 }
 
 // GetAlertJavaKeystoreSecret ...
-func GetAlertJavaKeystoreSecret(namespace, secretName, javaKeystore string) (map[string]runtime.Object, error) {
-	mapOfUniqueIDToBaseRuntimeObject := make(map[string]runtime.Object, 0)
-
-	mapOfUniqueIDToBaseRuntimeObject["Secret.customCertificate"] = &corev1.Secret{
+func GetAlertJavaKeystoreSecret(namespace, secretName, javaKeystore string) corev1.Secret {
+	return corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
 			APIVersion: "v1",
@@ -68,6 +61,4 @@ func GetAlertJavaKeystoreSecret(namespace, secretName, javaKeystore string) (map
 		},
 		Type: corev1.SecretTypeOpaque,
 	}
-
-	return mapOfUniqueIDToBaseRuntimeObject, nil
 }

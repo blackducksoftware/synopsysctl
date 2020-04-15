@@ -28,12 +28,11 @@ import (
 
 	"github.com/blackducksoftware/synopsysctl/pkg/api"
 	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // HelmValuesFromCobraFlags is a type for converting synopsysctl flags
@@ -99,6 +98,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 	return ctl.args, nil
 }
 
+// SetArgs set the map to values
 func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 	for key, value := range args {
 		ctl.args[key] = value
@@ -233,8 +233,18 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 		switch f.Name {
 		case "size":
 			util.SetHelmValueInMap(ctl.args, []string{"size"}, ctl.flagTree.Size)
-		//case "expose-ui":
-		//	ctl.blackDuckSpec.ExposeService = ctl.ExposeService
+		case "expose-ui":
+			util.SetHelmValueInMap(ctl.args, []string{"exposeui"}, true)
+			switch ctl.flagTree.ExposeService {
+			case util.NODEPORT:
+				util.SetHelmValueInMap(ctl.args, []string{"exposedServiceType"}, "NodePort")
+			case util.LOADBALANCER:
+				util.SetHelmValueInMap(ctl.args, []string{"exposedServiceType"}, "LoadBalancer")
+			case util.OPENSHIFT:
+				util.SetHelmValueInMap(ctl.args, []string{"exposedServiceType"}, util.OPENSHIFT)
+			default:
+				util.SetHelmValueInMap(ctl.args, []string{"exposeui"}, false)
+			}
 		case "environs":
 			for _, value := range ctl.flagTree.Environs {
 				values := strings.SplitN(value, ":", 2)
@@ -267,29 +277,36 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 			util.SetHelmValueInMap(ctl.args, []string{"enableLivenessProbe"}, strings.ToUpper(ctl.flagTree.LivenessProbes) == "TRUE")
 		case "persistent-storage":
 			util.SetHelmValueInMap(ctl.args, []string{"enablePersistentStorage"}, strings.ToUpper(ctl.flagTree.PersistentStorage) == "TRUE")
-		//case "pvc-file-path":
-		//	data, err := util.ReadFileData(ctl.PVCFilePath)
-		//	if err != nil {
-		//		log.Fatalf("failed to read pvc file: %+v", err)
-		//	}
-		//	pvcs := []blackduckv1.PVC{}
-		//	err = json.Unmarshal([]byte(data), &pvcs)
-		//	if err != nil {
-		//		log.Fatalf("failed to unmarshal pvc structs: %+v", err)
-		//	}
-		//	for _, newPVC := range pvcs {
-		//		found := false
-		//		for i, currPVC := range ctl.blackDuckSpec.PVC {
-		//			if newPVC.Name == currPVC.Name {
-		//				ctl.blackDuckSpec.PVC[i] = newPVC
-		//				found = true
-		//				break
-		//			}
-		//		}
-		//		if !found {
-		//			ctl.blackDuckSpec.PVC = append(ctl.blackDuckSpec.PVC, newPVC)
-		//		}
-		//	}
+		case "pvc-file-path":
+			data, err := util.ReadFileData(ctl.flagTree.PVCFilePath)
+			if err != nil {
+				log.Fatalf("failed to read pvc file: %+v", err)
+			}
+			pvcs := []blackduckv1.PVC{}
+			err = json.Unmarshal([]byte(data), &pvcs)
+			if err != nil {
+				log.Fatalf("failed to unmarshal pvc structs: %+v", err)
+			}
+			pvcMappingOperatorToHelm := map[string]string{
+				"blackduck-postgres":         "postgres",
+				"blackduck-authentication":   "authentication",
+				"blackduck-cfssl":            "cfssl",
+				"blackduck-registration":     "registration",
+				"blackduck-webapp":           "webapp",
+				"blackduck-logstash":         "logstash",
+				"blackduck-uploadcache-data": "uploadcache",
+			}
+			for _, pvc := range pvcs {
+				if val, ok := pvcMappingOperatorToHelm[pvc.Name]; ok {
+					util.SetHelmValueInMap(ctl.args, []string{val, "claimSize"}, pvc.Size)
+					util.SetHelmValueInMap(ctl.args, []string{val, "storageClass"}, pvc.StorageClass)
+					util.SetHelmValueInMap(ctl.args, []string{val, "volumeName"}, pvc.VolumeName)
+				} else {
+					util.SetHelmValueInMap(ctl.args, []string{pvc.Name, "claimSize"}, pvc.Size)
+					util.SetHelmValueInMap(ctl.args, []string{pvc.Name, "storageClass"}, pvc.StorageClass)
+					util.SetHelmValueInMap(ctl.args, []string{pvc.Name, "volumeName"}, pvc.VolumeName)
+				}
+			}
 		case "node-affinity-file-path":
 			data, err := util.ReadFileData(ctl.flagTree.NodeAffinityFilePath)
 			if err != nil {
@@ -304,7 +321,6 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 			for k, v := range nodeAffinities {
 				util.SetHelmValueInMap(ctl.args, []string{k, "affinity"}, OperatorAffinityTok8sAffinity(v))
 			}
-
 		case "security-context-file-path":
 			data, err := util.ReadFileData(ctl.flagTree.SecurityContextFilePath)
 			if err != nil {

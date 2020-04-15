@@ -3,14 +3,12 @@
 filters:
   ".*":
     reviewers:
-      - rrati
       - msenmurugan
       - jdartigalongue
       - mphammer
       - yashbhutwala
       - VSharapov
     approvers:
-      - rrati
       - msenmurugan
       - jdartigalongue
       - mphammer

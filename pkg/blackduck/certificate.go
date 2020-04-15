@@ -121,6 +121,7 @@ func CreateSelfSignedCert() (string, string) {
 	return certificate.String(), key.String()
 }
 
+// GetCertificateSecretFromFile generates secret from file
 func GetCertificateSecretFromFile(secretName, namespace, certPath, keyPath string) (*corev1.Secret, error) {
 	cert, err := ioutil.ReadFile(certPath)
 	if err != nil {
@@ -135,6 +136,7 @@ func GetCertificateSecretFromFile(secretName, namespace, certPath, keyPath strin
 	return GetCertificateSecret(secretName, namespace, cert, key)
 }
 
+// GetCertificateSecret get the webserver or nginx certificate secret from file bytes
 func GetCertificateSecret(secretName string, namespace string, cert []byte, key []byte) (*corev1.Secret, error) {
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -158,6 +160,7 @@ func GetCertificateSecret(secretName string, namespace string, cert []byte, key 
 	}, nil
 }
 
+// GetProxyCertificateSecret get the proxy certificate secret from file bytes
 func GetProxyCertificateSecret(secretName string, namespace string, cert []byte) (*corev1.Secret, error) {
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -180,6 +183,7 @@ func GetProxyCertificateSecret(secretName string, namespace string, cert []byte)
 	}, nil
 }
 
+// GetAuthCertificateSecret get the authentication CA certificate secret from file bytes
 func GetAuthCertificateSecret(secretName string, namespace string, cert []byte) (*corev1.Secret, error) {
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{

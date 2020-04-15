@@ -132,36 +132,54 @@ var deleteBlackDuckCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to delete Blackduck resources: %+v", err)
 		}
-		secrets := []string{"-webserver-certificate", "-proxy-certificate", "-auth-custom-ca"}
+
+		// delete secret
+		secrets := []string{"webserver-certificate", "proxy-certificate", "auth-custom-ca"}
 		for _, v := range secrets {
-			if err := util.DeleteSecret(kubeClient, namespace, fmt.Sprintf("%s%s", args[0], v)); !k8serrors.IsNotFound(err) {
-				log.Warnf("couldn't delete secret %s", v)
+			if err := util.DeleteSecret(kubeClient, namespace, fmt.Sprintf("%s-%s-%s", args[0], util.BlackDuckName, v)); err != nil && !k8serrors.IsNotFound(err) {
+				return fmt.Errorf("couldn't delete secret '%s' in namespace '%s' due to %+v", v, namespace, err)
 			}
 		}
 
 		labelSelector := fmt.Sprintf("app=%s, name=%s", util.BlackDuckName, args[0])
+		// delete exposed service
 		svcs, err := util.ListServices(kubeClient, namespace, labelSelector)
 		if err != nil {
-			return err
+			return fmt.Errorf("couldn't list services in namespace '%s' due to %+v", namespace, err)
 		}
 		for _, svc := range svcs.Items {
 			if strings.HasSuffix(svc.Name, "-exposed") {
-				if err := util.DeleteService(kubeClient, namespace, svc.Name); !k8serrors.IsNotFound(err) {
-					return err
+				if err := util.DeleteService(kubeClient, namespace, svc.Name); err != nil && !k8serrors.IsNotFound(err) {
+					return fmt.Errorf("couldn't delete service '%s' in namespace '%s' due to %+v", svc.Name, namespace, err)
 				}
 			}
 		}
 
+		// delete PVC
 		pvcs, err := util.ListPVCs(kubeClient, namespace, labelSelector)
 		if err != nil {
-			return err
+			return fmt.Errorf("couldn't list pvc in namespace '%s' due to %+v", namespace, err)
 		}
 		for _, pvc := range pvcs.Items {
-			if err := util.DeletePVC(kubeClient, namespace, pvc.Name); !k8serrors.IsNotFound(err) {
-				return err
+			if err := util.DeletePVC(kubeClient, namespace, pvc.Name); err != nil && !k8serrors.IsNotFound(err) {
+				return fmt.Errorf("couldn't delete pvc '%s' in namespace '%s' due to %+v", pvc.Name, namespace, err)
 			}
 		}
 
+		// delete route
+		isOpenShift := util.IsOpenshift(kubeClient)
+		if isOpenShift {
+			routeName := util.GetResourceName(args[0], util.BlackDuckName, "")
+			routeClient := util.GetRouteClient(restconfig, kubeClient, namespace)
+			if _, err = util.GetRoute(routeClient, namespace, routeName); err == nil {
+				err = util.DeleteRoute(routeClient, namespace, routeName)
+				if err != nil {
+					return fmt.Errorf("unable to delete Black Duck webserver route due to %+v", err)
+				}
+			}
+		}
+
+		log.Infof("Black Duck has been successfully Deleted!")
 		return nil
 	},
 }

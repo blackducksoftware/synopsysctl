@@ -308,7 +308,7 @@ var updateBlackDuckCmd = &cobra.Command{
 				blackduckChartRepository = fmt.Sprintf("https://artifactory.internal.synopsys.com/artifactory/bds-hub-helm-snapshot-local/blackduck/blackduck-%s.tgz", versionFlag.Value.String())
 			}
 		}
-		// TODO verity we can download the chart
+
 		isOperatorBased := false
 		instance, err := util.GetWithHelm3(args[0], namespace, kubeConfigPath)
 		if err != nil {
@@ -316,6 +316,7 @@ var updateBlackDuckCmd = &cobra.Command{
 		}
 
 		if !isOperatorBased && instance != nil {
+			updateBlackDuckCobraHelper.SetArgs(instance.Config)
 			helmValuesMap, err := updateBlackDuckCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
 			if err != nil {
 				return err
@@ -329,10 +330,10 @@ var updateBlackDuckCmd = &cobra.Command{
 				if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&v); err != nil {
 					if k8serrors.IsAlreadyExists(err) {
 						if _, err := kubeClient.CoreV1().Secrets(namespace).Update(&v); err != nil {
-							return fmt.Errorf("failed to update certificate secret: %+v", err)
+							return fmt.Errorf("failed to update certificate secret due to %+v", err)
 						}
 					} else {
-						return fmt.Errorf("failed to create certificate secret: %+v", err)
+						return fmt.Errorf("failed to create certificate secret due to %+v", err)
 					}
 				}
 			}
@@ -343,21 +344,26 @@ var updateBlackDuckCmd = &cobra.Command{
 				extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", size.(string)))
 			}
 
-			updateBlackDuckCobraHelper.SetArgs(instance.Config)
 			if err := util.UpdateWithHelm3(args[0], namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath, extraFiles...); err != nil {
 				return err
 			}
-		} else if isOperatorBased {
-			if !cmd.Flag("version").Changed { // TODO fill in the blackduck version
-				return fmt.Errorf("you must upgrade this Blackduck version with --version to use this synopsysctl binary - modifying Alert versions before XXXXX are not supported with this binary")
+
+			err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, namespace, args[0], helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"])
+			if err != nil {
+				return err
 			}
-			ok, err := util.IsVersionGreaterThanOrEqualTo(cmd.Flag("version").Value.String(), 2019, time.April, 0)
+
+		} else if isOperatorBased {
+			if !cmd.Flag("version").Changed {
+				return fmt.Errorf("you must upgrade this Blackduck version with --version 2020.4.0 and above to use this synopsysctl binary")
+			}
+			ok, err := util.IsVersionGreaterThanOrEqualTo(cmd.Flag("version").Value.String(), 2020, time.April, 0)
 			if err != nil {
 				return err
 			}
 
 			if !ok {
-				return fmt.Errorf("migration is only suported for version 2019.4.0 and above")
+				return fmt.Errorf("migration is only suported for version 2020.4.0 and above")
 			}
 
 			operatorNamespace := namespace
@@ -384,11 +390,11 @@ var updateBlackDuckCmd = &cobra.Command{
 				return fmt.Errorf("error getting Black Duck '%s' in namespace '%s' due to %+v", blackDuckName, crdNamespace, err)
 			}
 			if err := migrate(currBlackDuck, operatorNamespace, crdNamespace, cmd.Flags()); err != nil {
-				// TODO restart operator if migration failed?
 				return err
 			}
 		}
 
+		log.Infof("Black Duck has been successfully Updated in namespace '%s'!", namespace)
 		return nil
 	},
 }

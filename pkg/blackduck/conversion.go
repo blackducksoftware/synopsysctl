@@ -32,6 +32,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// OperatorAffinityTok8sAffinity converts synopsysctl affinity format to kube affinity format
 func OperatorAffinityTok8sAffinity(opAffinity []v1.NodeAffinity) corev1.Affinity {
 	var hardTerms, softTerms []corev1.NodeSelectorTerm
 	for _, aValue := range opAffinity {
@@ -77,6 +78,7 @@ func OperatorAffinityTok8sAffinity(opAffinity []v1.NodeAffinity) corev1.Affinity
 	return af
 }
 
+// OperatorSecurityContextTok8sAffinity converts synopsysctl security context format to kube affinity format
 func OperatorSecurityContextTok8sAffinity(opSecurityContext api.SecurityContext) corev1.PodSecurityContext {
 	return corev1.PodSecurityContext{
 		FSGroup:    opSecurityContext.FsGroup,
@@ -85,6 +87,7 @@ func OperatorSecurityContextTok8sAffinity(opSecurityContext api.SecurityContext)
 	}
 }
 
+// GetCertsFromFlagsAndSetHelmValue converts synopsysctl certificate files to kube secrets
 func GetCertsFromFlagsAndSetHelmValue(name string, namespace string, flagset *pflag.FlagSet, helmVal map[string]interface{}) ([]corev1.Secret, error) {
 	var objects []corev1.Secret
 	if flagset.Lookup("certificate-file-path").Changed && flagset.Lookup("certificate-key-file-path").Changed {

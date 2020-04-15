@@ -663,6 +663,38 @@ func ListServices(clientset *kubernetes.Clientset, namespace string, labelSelect
 	return clientset.CoreV1().Services(namespace).List(metav1.ListOptions{LabelSelector: labelSelector})
 }
 
+// GetKubeService will get the kubernetes service
+func GetKubeService(namespace string, name string, labels map[string]string, selector map[string]string, port int32, target string, serviceType corev1.ServiceType) *corev1.Service {
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:       fmt.Sprintf("port-%d", port),
+					Port:       port,
+					TargetPort: intstr.Parse(target),
+					Protocol:   corev1.ProtocolTCP,
+				},
+			},
+			Type:     serviceType,
+			Selector: selector,
+		},
+	}
+}
+
+// CreateKubeService will create the kubernetes service
+func CreateKubeService(clientset *kubernetes.Clientset, namespace string, service *corev1.Service) (*corev1.Service, error) {
+	return clientset.CoreV1().Services(namespace).Create(service)
+}
+
 // UpdateService will update the service information for the input service name inside the input namespace
 func UpdateService(clientset *kubernetes.Clientset, namespace string, service *corev1.Service) (*corev1.Service, error) {
 	return clientset.CoreV1().Services(namespace).Update(service)
@@ -1166,7 +1198,7 @@ func UpdateRoute(routeClient *routeclient.RouteV1Client, namespace string, route
 }
 
 // GetRouteComponent returns the route component
-func GetRouteComponent(routeClient *routeclient.RouteV1Client, route *api.Route, labels map[string]string) *routev1.Route {
+func GetRouteComponent(route *api.Route, labels map[string]string) *routev1.Route {
 	componentRoute := &routev1.Route{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      route.Name,

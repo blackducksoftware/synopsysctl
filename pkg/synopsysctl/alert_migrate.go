@@ -32,7 +32,6 @@ import (
 	"github.com/spf13/pflag"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string, flags *pflag.FlagSet) error {
@@ -173,6 +172,8 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 		}
 	}
 
+	// Rename the old exposed service/route to use the new Alert's release name
+	isOpenShift := util.IsOpenshift(kubeClient)
 	svc, err := util.GetService(kubeClient, namespace, fmt.Sprintf("%s-exposed", newReleaseName))
 	if err != nil {
 		svc.Kind = "Service"
@@ -181,10 +182,28 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 		svc.Labels["name"] = newReleaseName
 		svc.Spec.Selector = util.InitLabels(svc.Spec.Selector)
 		svc.Spec.Selector["name"] = newReleaseName
-		err = KubectlApplyRuntimeObjects(map[string]runtime.Object{fmt.Sprintf("%s-exposed", newReleaseName): svc})
-		if err != nil {
-			return fmt.Errorf("failed to deploy the alert exposed service: %s", err)
+		if _, err = kubeClient.CoreV1().Services(namespace).Update(svc); err != nil {
+			return fmt.Errorf("failed to update Alert's exposed service due to %s", err)
 		}
+	} else if isOpenShift {
+		routeClient := util.GetRouteClient(restconfig, kubeClient, namespace)
+		route, err := util.GetRoute(routeClient, namespace, fmt.Sprintf("%s-exposed", newReleaseName))
+		if err != nil {
+			route.Kind = "Route"
+			route.APIVersion = "v1"
+			route.Labels = util.InitLabels(route.Labels)
+			route.Labels["name"] = newReleaseName
+			if _, err = routeClient.Routes(namespace).Update(route); err != nil {
+				return fmt.Errorf("failed to update Alert's route due to %s", err)
+			}
+		}
+	}
+
+	// Update exposed Services for Alert
+	exposeUI := flags.Lookup("expose-ui").Changed && flags.Lookup("expose-ui").Value.String() != util.NONE
+	err = alertctl.CRUDServiceOrRoute(restconfig, kubeClient, namespace, newReleaseName, exposeUI, helmValuesMap["exposedServiceType"])
+	if err != nil {
+		return fmt.Errorf("failed to update Alert's exposed service %+v", err)
 	}
 
 	// Deploy new Resources

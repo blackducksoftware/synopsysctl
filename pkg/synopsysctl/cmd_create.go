@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/blackducksoftware/synopsysctl/pkg/alert"
 	alertctl "github.com/blackducksoftware/synopsysctl/pkg/alert"
 	opssightv1 "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
 	"github.com/blackducksoftware/synopsysctl/pkg/bdba"
@@ -148,6 +149,13 @@ var createAlertCmd = &cobra.Command{
 			}
 		}
 
+		// Expose Services for Alert
+		exposeUI := cmd.Flags().Lookup("expose-ui").Changed && cmd.Flags().Lookup("expose-ui").Value.String() != util.NONE
+		err = alert.CRUDServiceOrRoute(restconfig, kubeClient, namespace, alertName, exposeUI, helmValuesMap["exposedServiceType"])
+		if err != nil {
+			return err
+		}
+
 		// Deploy Alert Resources
 		err = util.CreateWithHelm3(alertName, namespace, alertChartRepository, helmValuesMap, kubeConfigPath, false)
 		if err != nil {
@@ -226,6 +234,22 @@ var createAlertNativeCmd = &cobra.Command{
 			util.SetHelmValueInMap(helmValuesMap, []string{"javaKeystoreSecretName"}, javaKeystoreSecretName)
 			if _, err = PrintComponent(javaKeystoreSecret, "YAML"); err != nil {
 				return err
+			}
+		}
+
+		// Print exposed Services for Alert
+		exposeUI := cmd.Flags().Lookup("expose-ui").Changed && cmd.Flags().Lookup("expose-ui").Value.String() != util.NONE
+		if exposeUI {
+			switch helmValuesMap["exposedServiceType"].(string) {
+			case "NodePort":
+				service := alert.GetExposedService(namespace, util.GetResourceName(alertName, util.AlertName, "exposed"), alertName, corev1.ServiceTypeNodePort)
+				PrintComponent(service, "YAML") // helm only supports yaml
+			case "LoadBalancer":
+				service := alert.GetExposedService(namespace, util.GetResourceName(alertName, util.AlertName, "exposed"), alertName, corev1.ServiceTypeLoadBalancer)
+				PrintComponent(service, "YAML") // helm only supports yaml
+			case util.OPENSHIFT:
+				route := alert.GetRoute(namespace, util.GetResourceName(alertName, util.BlackDuckName, ""), alertName)
+				PrintComponent(route, "YAML") // helm only supports yaml
 			}
 		}
 

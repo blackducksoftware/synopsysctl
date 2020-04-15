@@ -33,7 +33,7 @@ import (
 
 	horizonapi "github.com/blackducksoftware/horizon/pkg/api"
 	"github.com/blackducksoftware/horizon/pkg/components"
-	alertctl "github.com/blackducksoftware/synopsysctl/pkg/alert"
+	"github.com/blackducksoftware/synopsysctl/pkg/alert"
 	blackduckapi "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
 	opssightapi "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
 	"github.com/blackducksoftware/synopsysctl/pkg/bdba"
@@ -56,7 +56,7 @@ import (
 )
 
 // Update Command ResourceCtlSpecBuilders
-var updateAlertCobraHelper alertctl.HelmValuesFromCobraFlags
+var updateAlertCobraHelper alert.HelmValuesFromCobraFlags
 var updateBlackDuckCobraHelper blackduck.HelmValuesFromCobraFlags
 var updateOpsSightCobraHelper CRSpecBuilderFromCobraFlagsInterface
 var updatePolarisCobraHelper polaris.HelmValuesFromCobraFlags
@@ -203,7 +203,7 @@ func updateAlertHelmBased(cmd *cobra.Command, alertName string, customerReleaseN
 			log.Fatalf("failed to read certificate file: %+v", err)
 		}
 		customCertificateSecretName := "alert-custom-certificate"
-		customCertificateSecret := alertctl.GetAlertCustomCertificateSecret(namespace, customCertificateSecretName, certificateData, certificateKeyData)
+		customCertificateSecret := alert.GetAlertCustomCertificateSecret(namespace, customCertificateSecretName, certificateData, certificateKeyData)
 		util.SetHelmValueInMap(helmValuesMap, []string{"webserverCustomCertificatesSecretName"}, customCertificateSecretName)
 		if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&customCertificateSecret); err != nil {
 			if k8serrors.IsAlreadyExists(err) {
@@ -222,7 +222,7 @@ func updateAlertHelmBased(cmd *cobra.Command, alertName string, customerReleaseN
 			log.Fatalf("failed to read Java Keystore file: %+v", err)
 		}
 		javaKeystoreSecretName := "alert-java-keystore"
-		javaKeystoreSecret := alertctl.GetAlertJavaKeystoreSecret(namespace, javaKeystoreSecretName, javaKeystoreData)
+		javaKeystoreSecret := alert.GetAlertJavaKeystoreSecret(namespace, javaKeystoreSecretName, javaKeystoreData)
 		util.SetHelmValueInMap(helmValuesMap, []string{"javaKeystoreSecretName"}, javaKeystoreSecretName)
 		if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&javaKeystoreSecret); err != nil {
 			if k8serrors.IsAlreadyExists(err) {
@@ -233,6 +233,13 @@ func updateAlertHelmBased(cmd *cobra.Command, alertName string, customerReleaseN
 				return fmt.Errorf("failed to create javakeystore secret: %+v", err)
 			}
 		}
+	}
+
+	// Expose Services for Alert
+	exposeUI := cmd.Flags().Lookup("expose-ui").Changed && cmd.Flags().Lookup("expose-ui").Value.String() != util.NONE
+	err = alert.CRUDServiceOrRoute(restconfig, kubeClient, namespace, alertName, exposeUI, helmValuesMap["exposedServiceType"])
+	if err != nil {
+		return err
 	}
 
 	// Update Alert Resources
@@ -1043,7 +1050,7 @@ func init() {
 	// initialize global resource ctl structs for commands to use
 	updateBlackDuckCobraHelper = *blackduck.NewHelmValuesFromCobraFlags()
 	updateOpsSightCobraHelper = opssight.NewCRSpecBuilderFromCobraFlags()
-	updateAlertCobraHelper = *alertctl.NewHelmValuesFromCobraFlags()
+	updateAlertCobraHelper = *alert.NewHelmValuesFromCobraFlags()
 	updatePolarisCobraHelper = *polaris.NewHelmValuesFromCobraFlags()
 	updatePolarisReportingCobraHelper = *polarisreporting.NewHelmValuesFromCobraFlags()
 	updateBDBACobraHelper = *bdba.NewHelmValuesFromCobraFlags()

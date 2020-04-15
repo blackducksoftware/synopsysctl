@@ -54,23 +54,12 @@ var rootCmd = &cobra.Command{
 			return err
 		}
 
-		// Determine if synopsysctl is running in mock mode
-		mockMode := false
-		mockModeFlagExists := cmd.Flags().Lookup("mock")
-		if mockModeFlagExists != nil && mockModeFlagExists.Changed {
-			mockMode = true
-		}
-
 		// Determine if synopsysctl is running in native command
 		nativeMode := strings.Contains(cmd.CommandPath(), "native")
 
-		// Determine if synopsysctl is 'updating' a resource
-		updatingResource := strings.Contains(cmd.CommandPath(), "update")
-
-		// Don't set cluster resources if we are in mock mode or native mode (aka the command doesn't need access the cluster)
-		// This allows users to use native/mock when not connected to a cluster
-		// Note: If you are updating a resource you can run mock mode and still need access to the cluster
-		if updatingResource || (!mockMode && !nativeMode) {
+		// Don't set cluster resources if we are in native mode (aka the command doesn't need access the cluster)
+		// This allows users to use native when not connected to a cluster
+		if !nativeMode {
 			if err := setGlobalKubeConfigPath(cmd); err != nil {
 				log.Error(err)
 				os.Exit(1)

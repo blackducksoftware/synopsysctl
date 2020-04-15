@@ -49,7 +49,3 @@ func addChartLocationPathFlag(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&baseURL, "chart-location-path", "", baseURL, "Absolute path to the Helm Chart Tarball")
 	cmd.Flags().MarkHidden("chart-location-path")
 }
-
-func addMockFlag(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&mockFormat, "mock", mockFormat, "Print the resource spec in the specified format instead of creating it [json|yaml]")
-}

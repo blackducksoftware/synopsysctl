@@ -308,15 +308,13 @@ func KubectlDeleteRuntimeObjects(objects map[string]runtime.Object) error {
 }
 
 // getInstanceInfo provides the app and crd namespaces as well as the crd scope of the request custom resource instance
-func getInstanceInfo(mock bool, crdName string, appName string, namespace string, name string) (string, string, apiextensions.ResourceScope, error) {
+func getInstanceInfo(crdName string, appName string, namespace string, name string) (string, string, apiextensions.ResourceScope, error) {
 	crdScope := apiextensions.ClusterScoped
-	if !mock {
-		crd, err := util.GetCustomResourceDefinition(apiExtensionClient, crdName)
-		if err != nil {
-			return "", "", "", fmt.Errorf("unable to get Custom Resource Definition '%s' in your cluster due to %+v", crdName, err)
-		}
-		crdScope = crd.Spec.Scope
+	crd, err := util.GetCustomResourceDefinition(apiExtensionClient, crdName)
+	if err != nil {
+		return "", "", "", fmt.Errorf("unable to get Custom Resource Definition '%s' in your cluster due to %+v", crdName, err)
 	}
+	crdScope = crd.Spec.Scope
 
 	// if the CRD scope is namespaced scope, then the user need to provide the namespace
 	if crdScope != apiextensions.ClusterScoped && len(namespace) == 0 {

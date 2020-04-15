@@ -145,7 +145,7 @@ var stopOpsSightCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		errors := []error{}
 		for _, opsSightName := range args {
-			opsSightNamespace, crdNamespace, scope, err := getInstanceInfo(false, util.OpsSightCRDName, util.OpsSightName, namespace, opsSightName)
+			opsSightNamespace, crdNamespace, scope, err := getInstanceInfo(util.OpsSightCRDName, util.OpsSightName, namespace, opsSightName)
 			if err != nil {
 				if len(opsSightNamespace) == 0 && scope == apiextensions.ClusterScoped {
 					err = fmt.Errorf("%s %s doesn't appear to be running: %v", util.OpsSightName, opsSightName, err)

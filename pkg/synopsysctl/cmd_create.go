@@ -89,7 +89,6 @@ var createAlertCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		mockMode := cmd.Flags().Lookup("mock").Changed
 		alertName := fmt.Sprintf("%s%s", args[0], AlertPostSuffix)
 
 		// Get the flags to set Helm values
@@ -144,12 +143,6 @@ var createAlertCmd = &cobra.Command{
 			javaKeystoreSecretName := "alert-java-keystore"
 			javaKeystoreSecret, err = alertctl.GetAlertJavaKeystoreSecret(namespace, javaKeystoreSecretName, javaKeystoreData)
 			util.SetHelmValueInMap(helmValuesMap, []string{"javaKeystoreSecretName"}, javaKeystoreSecretName)
-		}
-
-		// If mock mode, return and don't create resources
-		if mockMode {
-			_, err = PrintComponent(helmValuesMap, "YAML")
-			return err
 		}
 
 		// Deploy the Secrets
@@ -477,7 +470,7 @@ func updateOpsSightSpecWithFlags(cmd *cobra.Command, opsSightName string, opsSig
 // createOpsSightCmd creates an OpsSight instance
 var createOpsSightCmd = &cobra.Command{
 	Use:           "opssight NAME",
-	Example:       "synopsysctl create opssight <name>\nsynopsysctl create opssight <name> -n <namespace>\nsynopsysctl create opssight <name> --mock json",
+	Example:       "synopsysctl create opssight <name>\nsynopsysctl create opssight <name> -n <namespace>",
 	Short:         "Create an OpsSight instance",
 	SilenceUsage:  true,
 	SilenceErrors: true,
@@ -491,21 +484,14 @@ var createOpsSightCmd = &cobra.Command{
 	},
 	PreRunE: createOpsSightPreRun,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		mockMode := cmd.Flags().Lookup("mock").Changed
 		opsSightName := args[0]
-		opsSightNamespace, crdNamespace, _, err := getInstanceInfo(mockMode, util.OpsSightCRDName, "", namespace, opsSightName)
+		opsSightNamespace, crdNamespace, _, err := getInstanceInfo(util.OpsSightCRDName, "", namespace, opsSightName)
 		if err != nil {
 			return err
 		}
 		opsSight, err := updateOpsSightSpecWithFlags(cmd, opsSightName, opsSightNamespace)
 		if err != nil {
 			return err
-		}
-
-		// If mock mode, return and don't create resources
-		if mockMode {
-			log.Debugf("generating CRD for OpsSight '%s' in namespace '%s'...", opsSightName, opsSightNamespace)
-			return PrintResource(*opsSight, mockFormat, false)
 		}
 
 		log.Infof("creating OpsSight '%s' in namespace '%s'...", opsSightName, opsSightNamespace)
@@ -538,7 +524,7 @@ var createOpsSightNativeCmd = &cobra.Command{
 	PreRunE: createOpsSightPreRun,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		opsSightName := args[0]
-		opsSightNamespace, _, _, err := getInstanceInfo(true, util.OpsSightCRDName, "", namespace, opsSightName)
+		opsSightNamespace, _, _, err := getInstanceInfo(util.OpsSightCRDName, "", namespace, opsSightName)
 		if err != nil {
 			return err
 		}
@@ -905,7 +891,6 @@ func init() {
 	cobra.MarkFlagRequired(createAlertCmd.PersistentFlags(), "namespace")
 	createAlertCobraHelper.AddCobraFlagsToCommand(createAlertCmd, true)
 	addChartLocationPathFlag(createAlertCmd)
-	addMockFlag(createAlertCmd)
 	createCmd.AddCommand(createAlertCmd)
 
 	createAlertCobraHelper.AddCobraFlagsToCommand(createAlertNativeCmd, true)
@@ -927,7 +912,6 @@ func init() {
 	createOpsSightCmd.PersistentFlags().StringVar(&baseOpsSightSpec, "template", baseOpsSightSpec, "Base resource configuration to modify with flags [empty|upstream|default|disabledBlackDuck]")
 	createOpsSightCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
 	createOpsSightCobraHelper.AddCRSpecFlagsToCommand(createOpsSightCmd, true)
-	addMockFlag(createOpsSightCmd)
 	createCmd.AddCommand(createOpsSightCmd)
 
 	createOpsSightCobraHelper.AddCRSpecFlagsToCommand(createOpsSightNativeCmd, true)

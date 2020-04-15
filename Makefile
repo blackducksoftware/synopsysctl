@@ -20,7 +20,7 @@ UI_BRANCH := master
 binary: clean ${OUTDIR} 
 	$(foreach p,${PLATFORM}, \
 		echo "creating synopsysctl binary for $(p) platform" && \
-		if [[ "$(p)" = "${WINDOWS}" ]]; then \
+		if [ "$(p)" = "${WINDOWS}" ]; then \
 			docker run --rm -e CGO_ENABLED=0 -e GOOS=$(p) -e GOARCH=amd64 -v "${CURRENT_DIR}":/go/src/github.com/blackducksoftware/synopsysctl -w /go/src/github.com/blackducksoftware/synopsysctl/cmd/synopsysctl golang:1.13 go build -ldflags "-X main.version=${TAG}" -o /go/src/github.com/blackducksoftware/synopsysctl/${OUTDIR}/$(p)/synopsysctl.exe; \
 		else \
 			docker run --rm -e CGO_ENABLED=0 -e GOOS=$(p) -e GOARCH=amd64 -v "${CURRENT_DIR}":/go/src/github.com/blackducksoftware/synopsysctl -w /go/src/github.com/blackducksoftware/synopsysctl/cmd/synopsysctl golang:1.13 go build -ldflags "-X main.version=${TAG}" -o /go/src/github.com/blackducksoftware/synopsysctl/${OUTDIR}/$(p)/synopsysctl; \
@@ -31,7 +31,7 @@ binary: clean ${OUTDIR}
 local-binary: clean ${OUTDIR} 
 	$(foreach p,${PLATFORM}, \
 		echo "creating synopsysctl binary for $(p) platform" && \
-		if [[ "$(p)" = "${WINDOWS}" ]]; then \
+		if [ "$(p)" = "${WINDOWS}" ]; then \
 			CGO_ENABLED=0 GOOS=$(p) GOARCH=amd64 go build -ldflags "-X main.version=${TAG}" -o ./${OUTDIR}/$(p)/synopsysctl.exe ./cmd/synopsysctl; \
 		else \
 			CGO_ENABLED=0 GOOS=$(p) GOARCH=amd64 go build -ldflags "-X main.version=${TAG}" -o ./${OUTDIR}/$(p)/synopsysctl ./cmd/synopsysctl; \
@@ -57,9 +57,9 @@ package:
 	$(foreach p,${PLATFORM}, \
 		echo "creating synopsysctl package for $(p) platform" && \
 		cd ${OUTDIR}/$(p) && \
-		if [[ "$(p)" = "${LINUX}" ]]; then \
+		if [ "$(p)" = "${LINUX}" ]; then \
 			tar -zcvf synopsysctl-$(p)-amd64.tar.gz synopsysctl && mv synopsysctl-$(p)-amd64.tar.gz .. && cd .. && $(SHA_SUM_CMD) synopsysctl-$(p)-amd64.tar.gz >> CHECKSUM && rm -rf $(p); \
-		elif [[ "$(p)" = "${WINDOWS}" ]]; then \
+		elif [ "$(p)" = "${WINDOWS}" ]; then \
 			zip synopsysctl-$(p)-amd64.zip synopsysctl.exe && mv synopsysctl-$(p)-amd64.zip .. && cd .. && $(SHA_SUM_CMD) synopsysctl-$(p)-amd64.zip >> CHECKSUM && rm -rf $(p); \
 		else \
 			zip synopsysctl-$(p)-amd64.zip synopsysctl && mv synopsysctl-$(p)-amd64.zip .. && cd .. && $(SHA_SUM_CMD) synopsysctl-$(p)-amd64.zip >> CHECKSUM && rm -rf $(p); \

@@ -76,7 +76,7 @@ var getCmd = &cobra.Command{
 
 // getAlertCmd display one or many Alert instances
 var getAlertCmd = &cobra.Command{
-	Use:           "alert NAME",
+	Use:           "alert NAME -n NAMESPACE",
 	Example:       "synopsysctl get alert <name> -n <namespace>",
 	Aliases:       []string{"alerts"},
 	Short:         "Display an Alert instance",
@@ -84,7 +84,7 @@ var getAlertCmd = &cobra.Command{
 	SilenceErrors: true,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
-			return fmt.Errorf("this command takes 1 argument but got %+v", len(args))
+			return fmt.Errorf("this command takes 1 argument, but got %+v", args)
 		}
 		return nil
 	},
@@ -210,7 +210,7 @@ var getPolarisCmd = &cobra.Command{
 	SilenceErrors: true,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
-			return fmt.Errorf("this command takes 0 arguments but got %+v", len(args))
+			return fmt.Errorf("this command takes 0 arguments, but got %+v", args)
 		}
 		return nil
 	},
@@ -234,7 +234,7 @@ var getPolarisReportingCmd = &cobra.Command{
 	SilenceErrors: true,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
-			return fmt.Errorf("this command takes 0 arguments but got %+v", len(args))
+			return fmt.Errorf("this command takes 0 arguments, but got %+v", args)
 		}
 		return nil
 	},
@@ -258,7 +258,7 @@ var getBDBACmd = &cobra.Command{
 	SilenceErrors: true,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
-			return fmt.Errorf("this command takes 0 arguments but got %+v", len(args))
+			return fmt.Errorf("this command takes 0 arguments, but got %+v", args)
 		}
 		return nil
 	},

@@ -46,15 +46,15 @@ var deleteCmd = &cobra.Command{
 
 // deleteAlertCmd deletes Alert instances from the cluster
 var deleteAlertCmd = &cobra.Command{
-	Use:           "alert NAME",
-	Example:       "synopsysctl delete alert <name>\nsynopsysctl delete alert <name> -n <namespace>",
+	Use:           "alert NAME -n NAMESPACE",
+	Example:       "synopsysctl delete alert <name> -n <namespace>",
 	Short:         "Delete an Alert instances",
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			cmd.Help()
-			return fmt.Errorf("this command takes 1 argument but got %+v", len(args))
+			return fmt.Errorf("this command takes 1 argument, but got %+v", len(args))
 		}
 		return nil
 	},

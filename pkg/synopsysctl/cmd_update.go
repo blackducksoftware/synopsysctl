@@ -90,7 +90,7 @@ var updateAlertCmd = &cobra.Command{
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			cmd.Help()
-			return fmt.Errorf("this command takes 1 argument but got %+v", len(args))
+			return fmt.Errorf("this command takes 1 argument but got %+v", args)
 		}
 		return nil
 	},

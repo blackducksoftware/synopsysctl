@@ -124,7 +124,7 @@ func crudExposedService(restConfig *rest.Config, kubeClient *kubernetes.Clientse
 func GetWebServerExposedService(namespace string, serviceName string, name string, serviceType corev1.ServiceType) *corev1.Service {
 	return util.GetKubeService(
 		namespace,
-		name,
+		serviceName,
 		map[string]string{
 			"app":       util.BlackDuckName,
 			"component": "webserver-exposed",

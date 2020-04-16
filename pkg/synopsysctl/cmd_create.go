@@ -386,10 +386,10 @@ var createBlackDuckNativeCmd = &cobra.Command{
 
 		if helmValuesMap["exposeui"] != nil && helmValuesMap["exposeui"].(bool) {
 			switch helmValuesMap["exposedServiceType"].(string) {
-			case "NodePort":
+			case util.NODEPORT:
 				service := blackduck.GetWebServerExposedService(namespace, util.GetResourceName(args[0], util.BlackDuckName, "webserver-exposed"), args[0], corev1.ServiceTypeNodePort)
 				PrintComponent(service, "YAML") // helm only supports yaml
-			case "LoadBalancer":
+			case util.LOADBALANCER:
 				service := blackduck.GetWebServerExposedService(namespace, util.GetResourceName(args[0], util.BlackDuckName, "webserver-exposed"), args[0], corev1.ServiceTypeLoadBalancer)
 				PrintComponent(service, "YAML") // helm only supports yaml
 			case util.OPENSHIFT:

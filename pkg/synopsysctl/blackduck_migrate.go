@@ -294,6 +294,14 @@ func BlackduckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 	}
 
 	util.SetHelmValueInMap(helmConfig, []string{"size"}, bd.Spec.Size)
+
+	// expose service
+	if strings.EqualFold(bd.Spec.ExposeService, util.NONE) {
+		util.SetHelmValueInMap(helmConfig, []string{"exposeui"}, false)
+	} else {
+		util.SetHelmValueInMap(helmConfig, []string{"exposeui"}, true)
+	}
+	util.SetHelmValueInMap(helmConfig, []string{"exposedServiceType"}, bd.Spec.ExposeService)
 	return helmConfig, nil
 }
 

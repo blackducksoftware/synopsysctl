@@ -42,12 +42,12 @@ func CRUDServiceOrRoute(restConfig *rest.Config, kubeClient *kubernetes.Clientse
 	var err error
 	if isExposedUI != nil && isExposedUI.(bool) {
 		switch exposedServiceType.(string) {
-		case "NodePort":
+		case util.NODEPORT:
 			err = crudExposedService(restConfig, kubeClient, namespace, name, corev1.ServiceTypeNodePort)
 			if err != nil {
 				return err
 			}
-		case "LoadBalancer":
+		case util.LOADBALANCER:
 			err = crudExposedService(restConfig, kubeClient, namespace, name, corev1.ServiceTypeLoadBalancer)
 			if err != nil {
 				return err

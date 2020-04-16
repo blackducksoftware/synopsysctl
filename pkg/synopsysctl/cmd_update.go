@@ -317,13 +317,15 @@ var updateBlackDuckCmd = &cobra.Command{
 				return err
 			}
 			for _, v := range secrets {
-				if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&v); err != nil {
-					if k8serrors.IsAlreadyExists(err) {
-						if _, err := kubeClient.CoreV1().Secrets(namespace).Update(&v); err != nil {
-							return fmt.Errorf("failed to update certificate secret due to %+v", err)
-						}
-					} else {
-						return fmt.Errorf("failed to create certificate secret due to %+v", err)
+				if secret, err := util.GetSecret(kubeClient, namespace, v.Name); err == nil {
+					secret.Data = v.Data
+					secret.StringData = v.StringData
+					if _, err := util.UpdateSecret(kubeClient, namespace, secret); err != nil {
+						return fmt.Errorf("failed to update certificate secret: %+v", err)
+					}
+				} else {
+					if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&v); err != nil {
+						return fmt.Errorf("failed to create certificate secret: %+v", err)
 					}
 				}
 			}

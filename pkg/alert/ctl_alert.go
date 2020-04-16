@@ -183,11 +183,11 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 			util.SetHelmValueInMap(ctl.args, []string{"exposeui"}, false)
 			switch ctl.flagTree.ExposeService {
 			case util.NODEPORT:
+				util.SetHelmValueInMap(ctl.args, []string{"exposeui"}, true)
 				util.SetHelmValueInMap(ctl.args, []string{"exposedServiceType"}, "NodePort")
 			case util.LOADBALANCER:
+				util.SetHelmValueInMap(ctl.args, []string{"exposeui"}, true)
 				util.SetHelmValueInMap(ctl.args, []string{"exposedServiceType"}, "LoadBalancer")
-			case util.NONE:
-				util.SetHelmValueInMap(ctl.args, []string{"exposedServiceType"}, "ClusterIP")
 			}
 		case "port":
 			util.SetHelmValueInMap(ctl.args, []string{"alert", "port"}, ctl.flagTree.Port)

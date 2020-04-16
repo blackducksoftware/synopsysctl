@@ -91,6 +91,25 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 		extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", size.(string)))
 	}
 
+	secrets, err := blackduck.GetCertsFromFlagsAndSetHelmValue(bd.Name, namespace, flags, helmValuesMap)
+	if err != nil {
+		return err
+	}
+
+	for _, v := range secrets {
+		if secret, err := util.GetSecret(kubeClient, namespace, v.Name); err == nil {
+			secret.Data = v.Data
+			secret.StringData = v.StringData
+			if _, err := util.UpdateSecret(kubeClient, namespace, secret); err != nil {
+				return fmt.Errorf("failed to update certificate secret: %+v", err)
+			}
+		} else {
+			if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&v); err != nil {
+				return fmt.Errorf("failed to create certificate secret: %+v", err)
+			}
+		}
+	}
+
 	err = util.CreateWithHelm3(bd.Name, bd.Spec.Namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath, true, extraFiles...)
 	if err != nil {
 		return fmt.Errorf("failed to create Blackduck resources: %+v", err)

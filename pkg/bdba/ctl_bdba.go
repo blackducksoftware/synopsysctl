@@ -121,11 +121,11 @@ type FlagTree struct {
 	IngressTLSSecretName string `json:"ingressTLSSecretName"`
 
 	// External PostgreSQL
-	ExternalPG             bool   `json:ExternalPg`
+	ExternalPG             bool   `json:"ExternalPg"`
 	ExternalPGHost         string `json:"ExternalPgHost"`
 	ExternalPGPort         int    `json:"ExternalPgPort"`
 	ExternalPGUser         string `json:"ExternalPgUser"`
-	ExternalPGPassword     string `json:"ExternalPgUser"`
+	ExternalPGPassword     string `json:"ExternalPgPassword"`
 	ExternalPGDataBase     string `json:"ExternalPgDataBase"`
 	ExternalPGSSLMode      string `json:"ExternalPgSSLMode"`
 	ExternalPGRootCASecret string `json:"ExternalPgRootCASecret"`

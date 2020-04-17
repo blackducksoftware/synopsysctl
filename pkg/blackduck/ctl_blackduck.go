@@ -287,25 +287,30 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 			if err != nil {
 				log.Fatalf("failed to unmarshal pvc structs: %+v", err)
 			}
-			pvcMappingOperatorToHelm := map[string]string{
-				"blackduck-postgres":         "postgres",
-				"blackduck-authentication":   "authentication",
-				"blackduck-cfssl":            "cfssl",
-				"blackduck-registration":     "registration",
-				"blackduck-webapp":           "webapp",
-				"blackduck-logstash":         "logstash",
-				"blackduck-uploadcache-data": "uploadcache",
+			// Add values here if the path in Values.yaml is different than just the pvcIDName
+			// ex: the pvcIDName as "postgres" but the path is postgres.something.claimSize
+			// ex: the pvcIDName is "blackduck-postgres" but the path is postgres.claimSize
+			pvcIDNameToHelmPath := map[string][]string{
+				"blackduck-postgres":         {"postgres"},
+				"blackduck-authentication":   {"authentication"},
+				"blackduck-cfssl":            {"cfssl"},
+				"blackduck-registration":     {"registration"},
+				"blackduck-webapp":           {"webapp"},
+				"blackduck-logstash":         {"logstash"},
+				"blackduck-uploadcache-data": {"uploadcache"},
 			}
 			for _, pvc := range pvcs {
-				if val, ok := pvcMappingOperatorToHelm[pvc.Name]; ok {
-					util.SetHelmValueInMap(ctl.args, []string{val, "claimSize"}, pvc.Size)
-					util.SetHelmValueInMap(ctl.args, []string{val, "storageClass"}, pvc.StorageClass)
-					util.SetHelmValueInMap(ctl.args, []string{val, "volumeName"}, pvc.VolumeName)
-				} else {
-					util.SetHelmValueInMap(ctl.args, []string{pvc.Name, "claimSize"}, pvc.Size)
-					util.SetHelmValueInMap(ctl.args, []string{pvc.Name, "storageClass"}, pvc.StorageClass)
-					util.SetHelmValueInMap(ctl.args, []string{pvc.Name, "volumeName"}, pvc.VolumeName)
+				pvcIDName := pvc.Name
+				pathToHelmValue := []string{pvcIDName}                            // default path is the pvcIDName
+				if newPathToHelmValue, ok := pvcIDNameToHelmPath[pvcIDName]; ok { // Override the path if it isn't the pvcIDName
+					pathToHelmValue = newPathToHelmValue
 				}
+				// Support custom PVC (different than the PVC provided in the Helm Chart)
+				util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "persistentVolumeClaimName"), pvc.PVCName)
+				// Set values for PVC provided in the Helm Chart
+				util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "claimSize"), pvc.Size)
+				util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "storageClass"), pvc.StorageClass)
+				util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "volumeName"), pvc.VolumeName)
 			}
 		case "node-affinity-file-path":
 			data, err := util.ReadFileData(ctl.flagTree.NodeAffinityFilePath)

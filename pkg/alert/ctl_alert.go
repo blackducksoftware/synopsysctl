@@ -24,9 +24,11 @@ package alert
 import (
 	// "encoding/json"
 
+	"encoding/json"
 	"fmt"
 	"strings"
 
+	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -44,25 +46,23 @@ type HelmValuesFromCobraFlags struct {
 // FlagTree is a set of fields needed to configure the Polaris Reporting Helm Chart
 type FlagTree struct {
 	Version                string
+	Registry               string
+	PullSecrets            []string
 	StandAlone             string
 	ExposeService          string
-	Port                   int32
 	EncryptionPassword     string
 	EncryptionGlobalSalt   string
-	Environs               []string
-	PersistentStorage      string
-	PVCName                string
-	PVCStorageClass        string
-	PVCSize                string
-	AlertMemory            string
-	CfsslMemory            string
-	Registry               string
-	RegistryNamespace      string
-	PullSecrets            []string
 	CertificateFilePath    string
 	CertificateKeyFilePath string
 	JavaKeyStoreFilePath   string
+	Environs               []string
+	PersistentStorage      string
+	PVCStorageClass        string
+	PVCFilePath            string
+	AlertMemory            string
+	CfsslMemory            string
 	// SecurityContextFilePath string
+	Port int32
 }
 
 // NewHelmValuesFromCobraFlags returns an initialized HelmValuesFromCobraFlags
@@ -89,31 +89,48 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 // master=true is used to add all flags for creating an instance
 // master=false is used to add a subset of flags for updating an instance
 func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, master bool) {
+	// Application Version and Image Tag
 	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "5.3.0", "Version of Alert")
 	if master {
 		cobra.MarkFlagRequired(cmd.Flags(), "version")
 	}
 
+	// Pulling images values
+	cmd.Flags().StringVar(&ctl.flagTree.Registry, "registry", "docker.io/blackducksoftware", "Name of the registry to use for images")
+	cmd.Flags().StringSliceVar(&ctl.flagTree.PullSecrets, "pull-secret-name", ctl.flagTree.PullSecrets, "Only if the registry requires authentication")
+
+	// Standalone (uses it's own cfssl)
 	cmd.Flags().StringVar(&ctl.flagTree.StandAlone, "standalone", "true", "If true, Alert runs in standalone mode [true|false]")
+
+	// Exposing the UI
 	if master {
 		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", util.NONE, "Service type to expose Alert's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]")
 	} else {
 		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", ctl.flagTree.ExposeService, "Service type to expose Alert's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]")
 	}
+
+	// Secrets Values
 	cmd.Flags().StringVar(&ctl.flagTree.EncryptionPassword, "encryption-password", ctl.flagTree.EncryptionPassword, "Encryption Password for Alert")
 	cmd.Flags().StringVar(&ctl.flagTree.EncryptionGlobalSalt, "encryption-global-salt", ctl.flagTree.EncryptionGlobalSalt, "Encryption Global Salt for Alert")
-	cmd.Flags().StringVar(&ctl.flagTree.PersistentStorage, "persistent-storage", "true", "If true, Alert has persistent storage [true|false]")
-	cmd.Flags().StringSliceVar(&ctl.flagTree.Environs, "environs", ctl.flagTree.Environs, "Environment variables of Alert")
-	cmd.Flags().StringVar(&ctl.flagTree.PVCName, "pvc-name", ctl.flagTree.PVCName, "Name of the persistent volume claim")
-	cmd.Flags().StringVar(&ctl.flagTree.PVCStorageClass, "pvc-storage-class", ctl.flagTree.PVCStorageClass, "Storage class for the persistent volume claim")
-	cmd.Flags().StringVar(&ctl.flagTree.PVCSize, "pvc-size", "5G", "Memory allocation of the persistent volume claim")
-	cmd.Flags().StringVar(&ctl.flagTree.AlertMemory, "alert-memory", "2560Mi", "Memory allocation of Alert")
-	cmd.Flags().StringVar(&ctl.flagTree.CfsslMemory, "cfssl-memory", "640Mi", "Memory allocation of CFSSL")
-	cmd.Flags().StringVar(&ctl.flagTree.Registry, "registry", "docker.io/blackducksoftware", "Name of the registry to use for images")
-	cmd.Flags().StringSliceVar(&ctl.flagTree.PullSecrets, "pull-secret-name", ctl.flagTree.PullSecrets, "Only if the registry requires authentication")
 	cmd.Flags().StringVar(&ctl.flagTree.CertificateFilePath, "certificate-file-path", ctl.flagTree.CertificateFilePath, "Absolute path to the PEM certificate to use for Alert")
 	cmd.Flags().StringVar(&ctl.flagTree.CertificateKeyFilePath, "certificate-key-file-path", ctl.flagTree.CertificateKeyFilePath, "Absolute path to the PEM certificate key for Alert")
 	cmd.Flags().StringVar(&ctl.flagTree.JavaKeyStoreFilePath, "java-keystore-file-path", ctl.flagTree.JavaKeyStoreFilePath, "Absolute path to the Java Keystore to use for Alert")
+
+	// Environs
+	cmd.Flags().StringSliceVar(&ctl.flagTree.Environs, "environs", ctl.flagTree.Environs, "Environment variables of Alert")
+
+	// Persistent Storage
+	if master {
+		cmd.Flags().StringVar(&ctl.flagTree.PVCStorageClass, "pvc-storage-class", ctl.flagTree.PVCStorageClass, "Storage class for the persistent volume claim")
+		cmd.Flags().StringVar(&ctl.flagTree.PersistentStorage, "persistent-storage", "true", "If true, Alert has persistent storage [true|false]")
+	}
+	cmd.Flags().StringVar(&ctl.flagTree.PVCFilePath, "pvc-file-path", ctl.flagTree.PVCFilePath, "Absolute path to a file containing a list of PVC json structs")
+
+	// Resources, Size, and Memory
+	cmd.Flags().StringVar(&ctl.flagTree.AlertMemory, "alert-memory", "2560Mi", "Memory allocation of Alert")
+	cmd.Flags().StringVar(&ctl.flagTree.CfsslMemory, "cfssl-memory", "640Mi", "Memory allocation of CFSSL")
+
+	// // Security Contexts
 	// cmd.Flags().StringVar(&ctl.flagTree.SecurityContextFilePath, "security-context-file-path", ctl.flagTree.SecurityContextFilePath, "Absolute path to a file containing a map of pod names to security contexts runAsUser, fsGroup, and runAsGroup")
 
 	cmd.Flags().Int32Var(&ctl.flagTree.Port, "port", ctl.flagTree.Port, "Port of Alert") // only for devs
@@ -199,15 +216,41 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 		case "encryption-global-salt":
 			util.SetHelmValueInMap(ctl.args, []string{"setEncryptionSecretData"}, true)
 			util.SetHelmValueInMap(ctl.args, []string{"alertEncryptionGlobalSalt"}, ctl.flagTree.EncryptionGlobalSalt)
+		case "pvc-file-path":
+			data, err := util.ReadFileData(ctl.flagTree.PVCFilePath)
+			if err != nil {
+				log.Fatalf("failed to read pvc file: %+v", err)
+			}
+			pvcs := []blackduckv1.PVC{}
+			err = json.Unmarshal([]byte(data), &pvcs)
+			if err != nil {
+				log.Fatalf("failed to unmarshal pvc structs: %+v", err)
+			}
+			// Add values here if the path in Values.yaml is different than just the pvcIDName
+			// ex: the pvcIDName as "alert" but the path is alert.something.claimSize
+			// ex: the pvcIDName is "alert-container" but the path is alert.claimSize
+			pvcIDNameToHelmPath := map[string][]string{
+				// "alert": {"alert"},
+				// "postgres": []string{"postgres"},
+			}
+			for _, pvc := range pvcs {
+				pvcIDName := pvc.Name
+				pathToHelmValue := []string{pvcIDName}                            // default path is the pvcIDName
+				if newPathToHelmValue, ok := pvcIDNameToHelmPath[pvcIDName]; ok { // Override the path if it isn't the pvcIDName
+					pathToHelmValue = newPathToHelmValue
+				}
+				// Support custom PVC (different than the PVC provided in the Helm Chart)
+				util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "persistentVolumeClaimName"), pvc.PVCName)
+				// Set values for PVC provided in the Helm Chart
+				util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "claimSize"), pvc.Size)
+				util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "storageClass"), pvc.StorageClass)
+				util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "volumeName"), pvc.VolumeName)
+			}
 		case "persistent-storage":
 			persistentStorageVal := strings.ToUpper(ctl.flagTree.PersistentStorage) == "TRUE"
 			util.SetHelmValueInMap(ctl.args, []string{"enablePersistentStorage"}, persistentStorageVal)
-		case "pvc-name":
-			util.SetHelmValueInMap(ctl.args, []string{"alert", "persistentVolumeClaimName"}, ctl.flagTree.PVCName)
 		case "pvc-storage-class":
 			util.SetHelmValueInMap(ctl.args, []string{"storageClass"}, ctl.flagTree.PVCStorageClass)
-		case "pvc-size":
-			util.SetHelmValueInMap(ctl.args, []string{"alert", "claimSize"}, ctl.flagTree.PVCSize)
 		case "alert-memory":
 			util.SetHelmValueInMap(ctl.args, []string{"alert", "resources", "limits", "memory"}, ctl.flagTree.AlertMemory)
 			util.SetHelmValueInMap(ctl.args, []string{"alert", "resources", "requests", "memory"}, ctl.flagTree.AlertMemory)

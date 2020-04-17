@@ -99,20 +99,6 @@ func TestSetCRSpecFieldByFlag(t *testing.T) {
 		},
 		// case
 		{
-			flagName: "port",
-			changedCtl: &HelmValuesFromCobraFlags{
-				flagTree: FlagTree{
-					Port: int32(1234),
-				},
-			},
-			changedArgs: map[string]interface{}{
-				"alert": map[string]interface{}{
-					"port": int32(1234),
-				},
-			},
-		},
-		// case
-		{
 			flagName: "expose-ui",
 			changedCtl: &HelmValuesFromCobraFlags{
 				flagTree: FlagTree{
@@ -162,16 +148,21 @@ func TestSetCRSpecFieldByFlag(t *testing.T) {
 				"enablePersistentStorage": true,
 			},
 		},
-		// case
+		// TODO case
 		{
-			flagName: "pvc-name",
+			flagName: "pvc-file-path",
 			changedCtl: &HelmValuesFromCobraFlags{
 				flagTree: FlagTree{
-					PVCName: "pvcName",
+					PVCFilePath: "../../examples/synopsysctl/pvc-alert.json",
 				},
 			},
 			changedArgs: map[string]interface{}{
-				"persistentVolumeClaimName": "pvcName",
+				"alert": map[string]interface{}{
+					"persistentVolumeClaimName": "",
+					"claimSize":                 "custom",
+					"storageClass":              "custom",
+					"volumeName":                "custom",
+				},
 			},
 		},
 		// case
@@ -183,19 +174,7 @@ func TestSetCRSpecFieldByFlag(t *testing.T) {
 				},
 			},
 			changedArgs: map[string]interface{}{
-				"storageClassName": "storageclass",
-			},
-		},
-		// case
-		{
-			flagName: "pvc-size",
-			changedCtl: &HelmValuesFromCobraFlags{
-				flagTree: FlagTree{
-					PVCSize: "size",
-				},
-			},
-			changedArgs: map[string]interface{}{
-				"pvcSize": "size",
+				"storageClass": "storageclass",
 			},
 		},
 		// case
@@ -315,6 +294,20 @@ func TestSetCRSpecFieldByFlag(t *testing.T) {
 		// 	changedCtl:  &HelmValuesFromCobraFlags{},
 		// 	changedArgs: map[string]interface{}{},
 		// },
+		// case
+		{
+			flagName: "port",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					Port: int32(1234),
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"alert": map[string]interface{}{
+					"port": int32(1234),
+				},
+			},
+		},
 	}
 
 	// get the flagset

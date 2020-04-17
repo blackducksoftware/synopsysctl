@@ -90,8 +90,10 @@ type Environs struct {
 
 // PVC will contain the specifications of the different PVC.
 // This will overwrite the default claim configuration
+// Name is the name of the container
 type PVC struct {
 	Name         string `json:"name"`
+	PVCName      string `json:"pvcName,omitempty"`
 	Size         string `json:"size,omitempty"`
 	StorageClass string `json:"storageClass,omitempty"`
 	VolumeName   string `json:"volumeName,omitempty"`

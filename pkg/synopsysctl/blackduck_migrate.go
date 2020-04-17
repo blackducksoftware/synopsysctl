@@ -57,6 +57,10 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 		return err
 	}
 
+	if util.IsOpenshift(kubeClient) {
+		util.SetHelmValueInMap(helmValuesMap, []string{"isKubernetes"}, false)
+	}
+
 	helmValuesMapFromFlag, err := updateBlackDuckCobraHelper.GenerateHelmFlagsFromCobraFlags(flags)
 	if err != nil {
 		return err
@@ -121,7 +125,7 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 		return fmt.Errorf("failed to create Blackduck resources: %+v", err)
 	}
 
-	err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, bd.Spec.Namespace, bd.Name, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"])
+	err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, bd.Spec.Namespace, bd.Name, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], true)
 	if err != nil {
 		return err
 	}
@@ -189,6 +193,15 @@ func BlackduckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 		if err != nil {
 			return nil, err
 		}
+	} else if strings.EqualFold(bd.Spec.CertificateName, "default") {
+		currentSecret, err := kubeClient.CoreV1().Secrets(operatorNamespace).Get("blackduck-certificate", metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+		webserverSecret, err = blackduck.GetCertificateSecret(webserverSecretName, bd.Spec.Namespace, currentSecret.Data["WEBSERVER_CUSTOM_CERT_FILE"], currentSecret.Data["WEBSERVER_CUSTOM_KEY_FILE"])
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		currentSecret, err := kubeClient.CoreV1().Secrets(bd.Spec.Namespace).Get(util.GetResourceName(bd.Name, util.BlackDuckName, "webserver-certificate"), metav1.GetOptions{})
 		if err != nil {
@@ -234,13 +247,21 @@ func BlackduckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 
 	// Postgres
 	if bd.Spec.ExternalPostgres != nil {
+		adminPassword, err := util.Base64Decode(bd.Spec.ExternalPostgres.PostgresAdminPassword)
+		if err != nil {
+			return nil, err
+		}
+		userPassword, err := util.Base64Decode(bd.Spec.ExternalPostgres.PostgresUserPassword)
+		if err != nil {
+			return nil, err
+		}
 		util.SetHelmValueInMap(helmConfig, []string{"postgres", "host"}, bd.Spec.ExternalPostgres.PostgresHost)
 		util.SetHelmValueInMap(helmConfig, []string{"postgres", "port"}, bd.Spec.ExternalPostgres.PostgresPort)
 		util.SetHelmValueInMap(helmConfig, []string{"postgres", "adminUserName"}, bd.Spec.ExternalPostgres.PostgresAdmin)
 		util.SetHelmValueInMap(helmConfig, []string{"postgres", "userUserName"}, bd.Spec.ExternalPostgres.PostgresUser)
 		util.SetHelmValueInMap(helmConfig, []string{"postgres", "ssl"}, bd.Spec.ExternalPostgres.PostgresUser)
-		util.SetHelmValueInMap(helmConfig, []string{"postgres", "adminPassword"}, bd.Spec.ExternalPostgres.PostgresAdminPassword)
-		util.SetHelmValueInMap(helmConfig, []string{"postgres", "userPassword"}, bd.Spec.ExternalPostgres.PostgresUserPassword)
+		util.SetHelmValueInMap(helmConfig, []string{"postgres", "adminPassword"}, adminPassword)
+		util.SetHelmValueInMap(helmConfig, []string{"postgres", "userPassword"}, userPassword)
 	} else {
 		adminPassword, err := util.Base64Decode(bd.Spec.AdminPassword)
 		if err != nil {
@@ -250,11 +271,15 @@ func BlackduckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 		if err != nil {
 			return nil, err
 		}
-		util.SetHelmValueInMap(helmConfig, []string{"postgres", "adminUserName"}, "blackduck")
+
+		if bd.Spec.PersistentStorage {
+			util.SetHelmValueInMap(helmConfig, []string{"postgres", "adminUserName"}, "blackduck")
+		} else {
+			util.SetHelmValueInMap(helmConfig, []string{"postgres", "adminUserName"}, "postgres")
+		}
 		util.SetHelmValueInMap(helmConfig, []string{"postgres", "userUserName"}, "blackduck_user")
 		util.SetHelmValueInMap(helmConfig, []string{"postgres", "adminPassword"}, adminPassword)
 		util.SetHelmValueInMap(helmConfig, []string{"postgres", "userPassword"}, userPassword)
-
 		util.SetHelmValueInMap(helmConfig, []string{"postgres", "isExternal"}, false)
 	}
 
@@ -315,12 +340,16 @@ func BlackduckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 	util.SetHelmValueInMap(helmConfig, []string{"size"}, bd.Spec.Size)
 
 	// expose service
-	if strings.EqualFold(bd.Spec.ExposeService, util.NONE) {
-		util.SetHelmValueInMap(helmConfig, []string{"exposeui"}, false)
-	} else {
-		util.SetHelmValueInMap(helmConfig, []string{"exposeui"}, true)
+	util.SetHelmValueInMap(helmConfig, []string{"exposeui"}, false)
+	switch bd.Spec.ExposeService {
+	case util.NODEPORT:
+		util.SetHelmValueInMap(helmConfig, []string{"exposedServiceType"}, "NodePort")
+	case util.LOADBALANCER:
+		util.SetHelmValueInMap(helmConfig, []string{"exposedServiceType"}, "LoadBalancer")
+	case util.OPENSHIFT:
+		util.SetHelmValueInMap(helmConfig, []string{"exposedServiceType"}, "OpenShift")
 	}
-	util.SetHelmValueInMap(helmConfig, []string{"exposedServiceType"}, bd.Spec.ExposeService)
+
 	return helmConfig, nil
 }
 

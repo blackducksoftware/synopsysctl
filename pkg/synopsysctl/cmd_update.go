@@ -340,7 +340,7 @@ var updateBlackDuckCmd = &cobra.Command{
 				return err
 			}
 
-			err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, namespace, args[0], helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"])
+			err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, namespace, args[0], helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], false)
 			if err != nil {
 				return err
 			}

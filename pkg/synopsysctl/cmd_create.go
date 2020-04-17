@@ -37,7 +37,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -329,7 +328,7 @@ var createBlackDuckCmd = &cobra.Command{
 			return fmt.Errorf("failed to create Blackduck resources: %+v", err)
 		}
 
-		err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, namespace, args[0], helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"])
+		err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, namespace, args[0], helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], false)
 		if err != nil {
 			return err
 		}
@@ -382,20 +381,6 @@ var createBlackDuckNativeCmd = &cobra.Command{
 		}
 		for _, v := range secrets {
 			PrintComponent(v, "YAML") // helm only supports yaml
-		}
-
-		if helmValuesMap["exposeui"] != nil && helmValuesMap["exposeui"].(bool) {
-			switch helmValuesMap["exposedServiceType"].(string) {
-			case util.NODEPORT:
-				service := blackduck.GetWebServerExposedService(namespace, util.GetResourceName(args[0], util.BlackDuckName, "webserver-exposed"), args[0], corev1.ServiceTypeNodePort)
-				PrintComponent(service, "YAML") // helm only supports yaml
-			case util.LOADBALANCER:
-				service := blackduck.GetWebServerExposedService(namespace, util.GetResourceName(args[0], util.BlackDuckName, "webserver-exposed"), args[0], corev1.ServiceTypeLoadBalancer)
-				PrintComponent(service, "YAML") // helm only supports yaml
-			case util.OPENSHIFT:
-				route := blackduck.GetWebServerRoute(namespace, util.GetResourceName(args[0], util.BlackDuckName, ""), args[0])
-				PrintComponent(route, "YAML") // helm only supports yaml
-			}
 		}
 
 		// Check Dry Run before deploying any resources

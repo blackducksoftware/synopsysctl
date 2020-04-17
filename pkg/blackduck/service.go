@@ -25,63 +25,57 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blackducksoftware/synopsysctl/pkg/api"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
-	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
 // CRUDServiceOrRoute will create or update Black Duck exposed service or route in case of OpenShift
-func CRUDServiceOrRoute(restConfig *rest.Config, kubeClient *kubernetes.Clientset, namespace string, name string, isExposedUI interface{}, exposedServiceType interface{}) error {
+func CRUDServiceOrRoute(restConfig *rest.Config, kubeClient *kubernetes.Clientset, namespace string, name string, isExposedUI interface{}, exposedServiceType interface{}, isMigrate bool) error {
 	serviceName := util.GetResourceName(name, util.BlackDuckName, "webserver-exposed")
 	routeName := util.GetResourceName(name, util.BlackDuckName, "")
 	isOpenShift := util.IsOpenshift(kubeClient)
 	var err error
 	if isExposedUI != nil && isExposedUI.(bool) {
 		switch exposedServiceType.(string) {
-		case util.NODEPORT:
+		case "NodePort":
 			err = crudExposedService(restConfig, kubeClient, namespace, name, corev1.ServiceTypeNodePort)
 			if err != nil {
 				return err
 			}
-		case util.LOADBALANCER:
+		case "LoadBalancer":
 			err = crudExposedService(restConfig, kubeClient, namespace, name, corev1.ServiceTypeLoadBalancer)
 			if err != nil {
 				return err
 			}
-		case util.OPENSHIFT:
-			if _, err = util.GetService(kubeClient, namespace, serviceName); err == nil {
-				err = util.DeleteService(kubeClient, namespace, serviceName)
-				if err != nil {
-					return fmt.Errorf("unable to delete the Black Duck webserver expose service due to %+v", err)
-				}
-			}
-			routeClient := util.GetRouteClient(restConfig, kubeClient, namespace)
-			if _, err = util.GetRoute(routeClient, namespace, routeName); err != nil && !k8serrors.IsAlreadyExists(err) {
-				openShiftRoute := GetWebServerRoute(namespace, routeName, name)
-				_, err := util.CreateRoute(routeClient, namespace, openShiftRoute)
-				if err != nil {
-					return fmt.Errorf("failed to create Black Duck webserver route due to %+v", err)
+		case "OpenShift":
+			if svc, err := util.GetService(kubeClient, namespace, serviceName); err == nil {
+				svc.Labels = util.InitLabels(svc.Labels)
+				if _, ok := svc.Labels["helm.sh/chart"]; !ok {
+					err = util.DeleteService(kubeClient, namespace, serviceName)
+					if err != nil {
+						return fmt.Errorf("unable to delete the Black Duck webserver expose service due to %+v", err)
+					}
 				}
 			}
 		}
 	} else {
-		if isOpenShift {
-			routeClient := util.GetRouteClient(restConfig, kubeClient, namespace)
-			if _, err = util.GetRoute(routeClient, namespace, routeName); err == nil {
-				err = util.DeleteRoute(routeClient, namespace, routeName)
-				if err != nil {
-					return fmt.Errorf("unable to delete Black Duck webserver route due to %+v", err)
+		if isMigrate {
+			if isOpenShift {
+				routeClient := util.GetRouteClient(restConfig, kubeClient, namespace)
+				if _, err = util.GetRoute(routeClient, namespace, routeName); err == nil {
+					err = util.DeleteRoute(routeClient, namespace, routeName)
+					if err != nil {
+						return fmt.Errorf("unable to delete Black Duck webserver route due to %+v", err)
+					}
 				}
-			}
-		} else {
-			if _, err = util.GetService(kubeClient, namespace, serviceName); err == nil {
-				err = util.DeleteService(kubeClient, namespace, serviceName)
-				if err != nil {
-					return fmt.Errorf("unable to delete the Black Duck webserver expose service due to %+v", err)
+			} else {
+				if _, err = util.GetService(kubeClient, namespace, serviceName); err == nil {
+					err = util.DeleteService(kubeClient, namespace, serviceName)
+					if err != nil {
+						return fmt.Errorf("unable to delete the Black Duck webserver expose service due to %+v", err)
+					}
 				}
 			}
 		}
@@ -93,66 +87,25 @@ func CRUDServiceOrRoute(restConfig *rest.Config, kubeClient *kubernetes.Clientse
 func crudExposedService(restConfig *rest.Config, kubeClient *kubernetes.Clientset, namespace string, name string, serviceType corev1.ServiceType) error {
 	serviceName := util.GetResourceName(name, util.BlackDuckName, "webserver-exposed")
 	routeName := util.GetResourceName(name, util.BlackDuckName, "")
-	isOpenShift := util.IsOpenshift(kubeClient)
-	if isOpenShift {
+	if util.IsOpenshift(kubeClient) {
 		routeClient := util.GetRouteClient(restConfig, kubeClient, namespace)
-		if _, err := util.GetRoute(routeClient, namespace, routeName); err == nil {
-			err = util.DeleteRoute(routeClient, namespace, routeName)
-			if err != nil {
-				return fmt.Errorf("unable to delete Black Duck webserver route due to %+v", err)
+		if route, err := util.GetRoute(routeClient, namespace, routeName); err == nil {
+			route.Labels = util.InitLabels(route.Labels)
+			if _, ok := route.Labels["helm.sh/chart"]; !ok {
+				err = util.DeleteRoute(routeClient, namespace, routeName)
+				if err != nil {
+					return fmt.Errorf("unable to delete Black Duck webserver route due to %+v", err)
+				}
 			}
 		}
 	}
 	if svc, err := util.GetService(kubeClient, namespace, serviceName); err == nil {
-		if !strings.EqualFold(string(svc.Spec.Type), string(serviceType)) {
-			svc.Spec.Type = serviceType
-			if _, err = util.UpdateService(kubeClient, namespace, svc); err != nil {
-				return fmt.Errorf("failed to update Black Duck webserver exposed service due to %+v", err)
+		svc.Labels = util.InitLabels(svc.Labels)
+		if _, ok := svc.Labels["helm.sh/chart"]; !ok && !strings.EqualFold(string(svc.Spec.Type), string(serviceType)) {
+			if err = util.DeleteService(kubeClient, namespace, svc.Name); err != nil {
+				return fmt.Errorf("failed to delete Black Duck webserver exposed service due to %+v", err)
 			}
-		}
-	} else {
-		service := GetWebServerExposedService(namespace, serviceName, name, serviceType)
-		_, err = util.CreateKubeService(kubeClient, namespace, service)
-		if err != nil {
-			return fmt.Errorf("failed to create Black Duck webserver exposed service due to %+v", err)
 		}
 	}
 	return nil
-}
-
-// GetWebServerExposedService return the Kubernetes service
-func GetWebServerExposedService(namespace string, serviceName string, name string, serviceType corev1.ServiceType) *corev1.Service {
-	return util.GetKubeService(
-		namespace,
-		serviceName,
-		map[string]string{
-			"app":       util.BlackDuckName,
-			"component": "webserver-exposed",
-			"name":      name,
-		},
-		map[string]string{
-			"app":       util.BlackDuckName,
-			"component": "webserver",
-			"name":      name,
-		},
-		int32(443),
-		"8443",
-		serviceType,
-	)
-}
-
-// GetWebServerRoute return the OpenShift route
-func GetWebServerRoute(namespace string, routeName string, name string) *routev1.Route {
-	return util.GetRouteComponent(
-		&api.Route{
-			Name:               routeName,
-			Namespace:          namespace,
-			Kind:               "Service",
-			ServiceName:        util.GetResourceName(name, util.BlackDuckName, "webserver"),
-			PortName:           fmt.Sprintf("port-%d", 443),
-			Labels:             map[string]string{"app": util.BlackDuckName, "name": name, "component": "route"},
-			TLSTerminationType: routev1.TLSTerminationPassthrough,
-		},
-		map[string]string{"app": util.BlackDuckName, "name": name, "component": "route"},
-	)
 }

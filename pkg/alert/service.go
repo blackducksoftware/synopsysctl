@@ -1,6 +1,5 @@
 /*
 Copyright (C) 2020 Synopsys, Inc.
-
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements. See the NOTICE file
 distributed with this work for additional information
@@ -8,9 +7,7 @@ regarding copyright ownership. The ASF licenses this file
 to you under the Apache License, Version 2.0 (the
 "License"); you may not use this file except in compliance
 with the License. You may obtain a copy of the License at
-
 http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
 "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -19,7 +16,7 @@ specific language governing permissions and limitations
 under the License.
 */
 
-package blackduck
+package alert
 
 import (
 	"fmt"
@@ -31,10 +28,10 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-// CRUDServiceOrRoute will create or update Black Duck exposed service or route in case of OpenShift
+// CRUDServiceOrRoute will create or update Alert exposed service, or route in case of OpenShift
 func CRUDServiceOrRoute(restConfig *rest.Config, kubeClient *kubernetes.Clientset, namespace string, name string, isExposedUI interface{}, exposedServiceType interface{}, isMigrate bool) error {
-	serviceName := util.GetResourceName(name, util.BlackDuckName, "webserver-exposed")
-	routeName := util.GetResourceName(name, util.BlackDuckName, "")
+	serviceName := util.GetResourceName(name, util.AlertName, "exposed")
+	routeName := util.GetResourceName(name, util.AlertName, "")
 	isOpenShift := util.IsOpenshift(kubeClient)
 	var err error
 	if isExposedUI != nil && isExposedUI.(bool) {
@@ -55,7 +52,7 @@ func CRUDServiceOrRoute(restConfig *rest.Config, kubeClient *kubernetes.Clientse
 				if _, ok := svc.Labels["helm.sh/chart"]; !ok {
 					err = util.DeleteService(kubeClient, namespace, serviceName)
 					if err != nil {
-						return fmt.Errorf("unable to delete the Black Duck webserver expose service due to %+v", err)
+						return fmt.Errorf("unable to delete the Alert's expose service due to %+v", err)
 					}
 				}
 			}
@@ -67,14 +64,14 @@ func CRUDServiceOrRoute(restConfig *rest.Config, kubeClient *kubernetes.Clientse
 				if _, err = util.GetRoute(routeClient, namespace, routeName); err == nil {
 					err = util.DeleteRoute(routeClient, namespace, routeName)
 					if err != nil {
-						return fmt.Errorf("unable to delete Black Duck webserver route due to %+v", err)
+						return fmt.Errorf("unable to delete Alert's route due to %+v", err)
 					}
 				}
 			} else {
 				if _, err = util.GetService(kubeClient, namespace, serviceName); err == nil {
 					err = util.DeleteService(kubeClient, namespace, serviceName)
 					if err != nil {
-						return fmt.Errorf("unable to delete the Black Duck webserver expose service due to %+v", err)
+						return fmt.Errorf("unable to delete the Alert's expose service due to %+v", err)
 					}
 				}
 			}
@@ -85,8 +82,8 @@ func CRUDServiceOrRoute(restConfig *rest.Config, kubeClient *kubernetes.Clientse
 
 // crudExposedService crud for webserver exposed service
 func crudExposedService(restConfig *rest.Config, kubeClient *kubernetes.Clientset, namespace string, name string, serviceType corev1.ServiceType) error {
-	serviceName := util.GetResourceName(name, util.BlackDuckName, "webserver-exposed")
-	routeName := util.GetResourceName(name, util.BlackDuckName, "")
+	serviceName := util.GetResourceName(name, util.AlertName, "exposed")
+	routeName := util.GetResourceName(name, util.AlertName, "")
 	if util.IsOpenshift(kubeClient) {
 		routeClient := util.GetRouteClient(restConfig, kubeClient, namespace)
 		if route, err := util.GetRoute(routeClient, namespace, routeName); err == nil {
@@ -94,7 +91,7 @@ func crudExposedService(restConfig *rest.Config, kubeClient *kubernetes.Clientse
 			if _, ok := route.Labels["helm.sh/chart"]; !ok {
 				err = util.DeleteRoute(routeClient, namespace, routeName)
 				if err != nil {
-					return fmt.Errorf("unable to delete Black Duck webserver route due to %+v", err)
+					return fmt.Errorf("unable to delete Alert's route due to %+v", err)
 				}
 			}
 		}
@@ -103,7 +100,7 @@ func crudExposedService(restConfig *rest.Config, kubeClient *kubernetes.Clientse
 		svc.Labels = util.InitLabels(svc.Labels)
 		if _, ok := svc.Labels["helm.sh/chart"]; !ok && !strings.EqualFold(string(svc.Spec.Type), string(serviceType)) {
 			if err = util.DeleteService(kubeClient, namespace, svc.Name); err != nil {
-				return fmt.Errorf("failed to delete Black Duck webserver exposed service due to %+v", err)
+				return fmt.Errorf("failed to delete Alert's service due to %+v", err)
 			}
 		}
 	}

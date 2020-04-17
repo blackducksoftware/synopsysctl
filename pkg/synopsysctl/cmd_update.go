@@ -33,30 +33,27 @@ import (
 
 	horizonapi "github.com/blackducksoftware/horizon/pkg/api"
 	"github.com/blackducksoftware/horizon/pkg/components"
+	"github.com/blackducksoftware/synopsysctl/pkg/alert"
 	alertctl "github.com/blackducksoftware/synopsysctl/pkg/alert"
 	blackduckapi "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
 	opssightapi "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
 	"github.com/blackducksoftware/synopsysctl/pkg/bdba"
-	polarisreporting "github.com/blackducksoftware/synopsysctl/pkg/polaris-reporting"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-
-	// bdappsutil "github.com/blackducksoftware/synopsysctl/pkg/apps/util"
-
 	blackduck "github.com/blackducksoftware/synopsysctl/pkg/blackduck"
 	opssight "github.com/blackducksoftware/synopsysctl/pkg/opssight"
 	"github.com/blackducksoftware/synopsysctl/pkg/polaris"
+	polarisreporting "github.com/blackducksoftware/synopsysctl/pkg/polaris-reporting"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// "k8s.io/apimachinery/pkg/runtime"
 )
 
 // Update Command ResourceCtlSpecBuilders
-var updateAlertCobraHelper alertctl.HelmValuesFromCobraFlags
+var updateAlertCobraHelper alert.HelmValuesFromCobraFlags
 var updateBlackDuckCobraHelper blackduck.HelmValuesFromCobraFlags
 var updateOpsSightCobraHelper CRSpecBuilderFromCobraFlagsInterface
 var updatePolarisCobraHelper polaris.HelmValuesFromCobraFlags
@@ -203,7 +200,7 @@ func updateAlertHelmBased(cmd *cobra.Command, alertName string, customerReleaseN
 			log.Fatalf("failed to read certificate file: %+v", err)
 		}
 		customCertificateSecretName := "alert-custom-certificate"
-		customCertificateSecret := alertctl.GetAlertCustomCertificateSecret(namespace, customCertificateSecretName, certificateData, certificateKeyData)
+		customCertificateSecret := alert.GetAlertCustomCertificateSecret(namespace, customCertificateSecretName, certificateData, certificateKeyData)
 		util.SetHelmValueInMap(helmValuesMap, []string{"webserverCustomCertificatesSecretName"}, customCertificateSecretName)
 		if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&customCertificateSecret); err != nil {
 			if k8serrors.IsAlreadyExists(err) {
@@ -222,7 +219,7 @@ func updateAlertHelmBased(cmd *cobra.Command, alertName string, customerReleaseN
 			log.Fatalf("failed to read Java Keystore file: %+v", err)
 		}
 		javaKeystoreSecretName := "alert-java-keystore"
-		javaKeystoreSecret := alertctl.GetAlertJavaKeystoreSecret(namespace, javaKeystoreSecretName, javaKeystoreData)
+		javaKeystoreSecret := alert.GetAlertJavaKeystoreSecret(namespace, javaKeystoreSecretName, javaKeystoreData)
 		util.SetHelmValueInMap(helmValuesMap, []string{"javaKeystoreSecretName"}, javaKeystoreSecretName)
 		if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&javaKeystoreSecret); err != nil {
 			if k8serrors.IsAlreadyExists(err) {
@@ -233,6 +230,13 @@ func updateAlertHelmBased(cmd *cobra.Command, alertName string, customerReleaseN
 				return fmt.Errorf("failed to create javakeystore secret: %+v", err)
 			}
 		}
+	}
+
+	// Expose Services for Alert
+	exposeUI := cmd.Flags().Lookup("expose-ui").Changed && cmd.Flags().Lookup("expose-ui").Value.String() != util.NONE
+	err = alert.CRUDServiceOrRoute(restconfig, kubeClient, namespace, alertName, exposeUI, helmValuesMap["exposedServiceType"], false)
+	if err != nil {
+		return err
 	}
 
 	// Update Alert Resources
@@ -340,7 +344,7 @@ var updateBlackDuckCmd = &cobra.Command{
 				return err
 			}
 
-			err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, namespace, args[0], helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"])
+			err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, namespace, args[0], helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], false)
 			if err != nil {
 				return err
 			}

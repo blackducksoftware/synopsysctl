@@ -30,6 +30,7 @@ import (
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -72,12 +73,6 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 		}
 		if len(pvcList.Items) != 1 {
 			return fmt.Errorf("there should be only 1 pvc for alert but got %+v", len(pvcList.Items))
-		}
-		pvc := pvcList.Items[0]
-		pvc.Labels = util.InitLabels(pvc.Labels)
-		pvc.Labels["name"] = fmt.Sprintf("%s%s", alert.Name, AlertPostSuffix)
-		if _, err = util.UpdatePVC(kubeClient, alert.Spec.Namespace, &pvc); err != nil {
-			log.Errorf("unable to update an alert persistent volume claim due to %+v", err)
 		}
 		util.SetHelmValueInMap(helmValuesMap, []string{"persistentVolumeClaimName"}, pvcList.Items[0].Name)
 	}
@@ -153,45 +148,62 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 	if len(alert.Spec.Certificate) > 0 && len(alert.Spec.CertificateKey) > 0 {
 		customCertificateSecretName := util.GetHelmValueFromMap(helmValuesMap, []string{"webserverCustomCertificatesSecretName"}).(string)
 		customCertificateSecret := alertctl.GetAlertCustomCertificateSecret(namespace, customCertificateSecretName, alert.Spec.Certificate, alert.Spec.CertificateKey)
-		if secret, err := util.GetSecret(kubeClient, namespace, customCertificateSecretName); err == nil {
-			secret.Data = customCertificateSecret.Data
-			secret.StringData = customCertificateSecret.StringData
-			if _, err := util.UpdateSecret(kubeClient, namespace, secret); err != nil {
-				return fmt.Errorf("failed to update certificate secret: %+v", err)
-			}
-		} else {
-			if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&customCertificateSecret); err != nil {
+		if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&customCertificateSecret); err != nil {
+			if k8serrors.IsAlreadyExists(err) {
+				if _, err := kubeClient.CoreV1().Secrets(namespace).Update(&customCertificateSecret); err != nil {
+					return fmt.Errorf("failed to update certificate secret: %+v", err)
+				}
+			} else {
 				return fmt.Errorf("failed to create certificate secret: %+v", err)
 			}
 		}
 	}
-
 	if len(alert.Spec.JavaKeyStore) > 0 {
 		javaKeystoreSecretName := util.GetHelmValueFromMap(helmValuesMap, []string{"javaKeystoreSecretName"}).(string)
 		javaKeystoreSecret := alertctl.GetAlertJavaKeystoreSecret(namespace, javaKeystoreSecretName, alert.Spec.JavaKeyStore)
-		if secret, err := util.GetSecret(kubeClient, namespace, javaKeystoreSecretName); err == nil {
-			secret.Data = javaKeystoreSecret.Data
-			secret.StringData = javaKeystoreSecret.StringData
-			if _, err := util.UpdateSecret(kubeClient, namespace, secret); err != nil {
-				return fmt.Errorf("failed to update javakeystore secret: %+v", err)
-			}
-		} else {
-			if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&javaKeystoreSecret); err != nil {
+		if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&javaKeystoreSecret); err != nil {
+			if k8serrors.IsAlreadyExists(err) {
+				if _, err := kubeClient.CoreV1().Secrets(namespace).Update(&javaKeystoreSecret); err != nil {
+					return fmt.Errorf("failed to update javakeystore secret: %+v", err)
+				}
+			} else {
 				return fmt.Errorf("failed to create javakeystore secret: %+v", err)
 			}
 		}
 	}
 
-	if svc, err := util.GetService(kubeClient, namespace, fmt.Sprintf("%s-exposed", newReleaseName)); err == nil {
+	// Rename the old exposed service/route to use the new Alert's release name
+	isOpenShift := util.IsOpenshift(kubeClient)
+	svc, err := util.GetService(kubeClient, namespace, fmt.Sprintf("%s-exposed", newReleaseName))
+	if err == nil {
 		svc.Kind = "Service"
 		svc.APIVersion = "v1"
 		svc.Labels = util.InitLabels(svc.Labels)
 		svc.Labels["name"] = newReleaseName
 		svc.Spec.Selector = util.InitLabels(svc.Spec.Selector)
 		svc.Spec.Selector["name"] = newReleaseName
-		if _, err = util.UpdateService(kubeClient, namespace, svc); err != nil {
-			return fmt.Errorf("failed to deploy the alert exposed service: %s", err)
+		if _, err = kubeClient.CoreV1().Services(namespace).Update(svc); err != nil {
+			return fmt.Errorf("failed to update Alert's exposed service due to %s", err)
 		}
+	} else if isOpenShift {
+		routeClient := util.GetRouteClient(restconfig, kubeClient, namespace)
+		route, err := util.GetRoute(routeClient, namespace, fmt.Sprintf("%s-exposed", newReleaseName))
+		if err == nil {
+			route.Kind = "Route"
+			route.APIVersion = "v1"
+			route.Labels = util.InitLabels(route.Labels)
+			route.Labels["name"] = newReleaseName
+			if _, err = routeClient.Routes(namespace).Update(route); err != nil {
+				return fmt.Errorf("failed to update Alert's route due to %s", err)
+			}
+		}
+	}
+
+	// Update exposed Services for Alert
+	exposeUI := flags.Lookup("expose-ui").Changed && flags.Lookup("expose-ui").Value.String() != util.NONE
+	err = alertctl.CRUDServiceOrRoute(restconfig, kubeClient, namespace, newReleaseName, exposeUI, helmValuesMap["exposedServiceType"], true)
+	if err != nil {
+		return fmt.Errorf("failed to update Alert's exposed service %+v", err)
 	}
 
 	// Deploy new Resources
@@ -222,15 +234,16 @@ func AlertV1ToHelmValues(alert *v1.Alert, operatorNamespace string) (map[string]
 	}
 
 	if len(alert.Spec.ExposeService) > 0 {
+		util.SetHelmValueInMap(helmValuesMap, []string{"exposeui"}, false)
 		switch alert.Spec.ExposeService {
 		case util.NODEPORT:
 			util.SetHelmValueInMap(helmValuesMap, []string{"exposedServiceType"}, "NodePort")
-			util.SetHelmValueInMap(helmValuesMap, []string{"exposeui"}, false)
 		case util.LOADBALANCER:
 			util.SetHelmValueInMap(helmValuesMap, []string{"exposedServiceType"}, "LoadBalancer")
-			util.SetHelmValueInMap(helmValuesMap, []string{"exposeui"}, false)
+		case util.OPENSHIFT:
+			util.SetHelmValueInMap(helmValuesMap, []string{"exposedServiceType"}, "OpenShift")
 		case util.NONE:
-			util.SetHelmValueInMap(helmValuesMap, []string{"exposeui"}, false)
+			util.SetHelmValueInMap(helmValuesMap, []string{"exposedServiceType"}, "")
 		}
 	}
 

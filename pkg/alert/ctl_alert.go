@@ -218,7 +218,7 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 			// TODO: Make sure this is converted correclty
 			envMap := map[string]interface{}{}
 			for _, env := range ctl.flagTree.Environs {
-				envSplit := strings.Split(env, ":")
+				envSplit := strings.SplitN(env, ":", 2)
 				envMap[envSplit[0]] = envSplit[1]
 			}
 			util.SetHelmValueInMap(ctl.args, []string{"environs"}, envMap)

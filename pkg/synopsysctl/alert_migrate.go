@@ -175,7 +175,7 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 	// Rename the old exposed service/route to use the new Alert's release name
 	isOpenShift := util.IsOpenshift(kubeClient)
 	svc, err := util.GetService(kubeClient, namespace, fmt.Sprintf("%s-exposed", newReleaseName))
-	if err != nil {
+	if err == nil {
 		svc.Kind = "Service"
 		svc.APIVersion = "v1"
 		svc.Labels = util.InitLabels(svc.Labels)
@@ -188,7 +188,7 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 	} else if isOpenShift {
 		routeClient := util.GetRouteClient(restconfig, kubeClient, namespace)
 		route, err := util.GetRoute(routeClient, namespace, fmt.Sprintf("%s-exposed", newReleaseName))
-		if err != nil {
+		if err == nil {
 			route.Kind = "Route"
 			route.APIVersion = "v1"
 			route.Labels = util.InitLabels(route.Labels)

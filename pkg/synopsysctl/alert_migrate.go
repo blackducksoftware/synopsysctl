@@ -74,7 +74,7 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 		if len(pvcList.Items) != 1 {
 			return fmt.Errorf("there should be only 1 pvc for alert but got %+v", len(pvcList.Items))
 		}
-		util.SetHelmValueInMap(helmValuesMap, []string{"persistentVolumeClaimName"}, pvcList.Items[0].Name)
+		util.SetHelmValueInMap(helmValuesMap, []string{"alert", "persistentVolumeClaimName"}, pvcList.Items[0].Name)
 	}
 
 	log.Info("upgrading Alert instance")
@@ -266,15 +266,15 @@ func AlertV1ToHelmValues(alert *v1.Alert, operatorNamespace string) (map[string]
 	util.SetHelmValueInMap(helmValuesMap, []string{"enablePersistentStorage"}, alert.Spec.PersistentStorage)
 
 	if len(alert.Spec.PVCName) > 0 {
-		util.SetHelmValueInMap(helmValuesMap, []string{"persistentVolumeClaimName"}, alert.Spec.PVCName)
+		util.SetHelmValueInMap(helmValuesMap, []string{"alert", "persistentVolumeClaimName"}, alert.Spec.PVCName)
 	}
 
 	if len(alert.Spec.PVCStorageClass) > 0 {
-		util.SetHelmValueInMap(helmValuesMap, []string{"storageClassName"}, alert.Spec.PVCStorageClass)
+		util.SetHelmValueInMap(helmValuesMap, []string{"storageClass"}, alert.Spec.PVCStorageClass)
 	}
 
 	if len(alert.Spec.PVCSize) > 0 {
-		util.SetHelmValueInMap(helmValuesMap, []string{"pvcSize"}, alert.Spec.PVCSize)
+		util.SetHelmValueInMap(helmValuesMap, []string{"alert", "claimSize"}, alert.Spec.PVCSize)
 	}
 
 	if len(alert.Spec.AlertMemory) > 0 {

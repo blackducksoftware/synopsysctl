@@ -203,11 +203,11 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 			persistentStorageVal := strings.ToUpper(ctl.flagTree.PersistentStorage) == "TRUE"
 			util.SetHelmValueInMap(ctl.args, []string{"enablePersistentStorage"}, persistentStorageVal)
 		case "pvc-name":
-			util.SetHelmValueInMap(ctl.args, []string{"persistentVolumeClaimName"}, ctl.flagTree.PVCName)
+			util.SetHelmValueInMap(ctl.args, []string{"alert", "persistentVolumeClaimName"}, ctl.flagTree.PVCName)
 		case "pvc-storage-class":
-			util.SetHelmValueInMap(ctl.args, []string{"storageClassName"}, ctl.flagTree.PVCStorageClass)
+			util.SetHelmValueInMap(ctl.args, []string{"storageClass"}, ctl.flagTree.PVCStorageClass)
 		case "pvc-size":
-			util.SetHelmValueInMap(ctl.args, []string{"pvcSize"}, ctl.flagTree.PVCSize)
+			util.SetHelmValueInMap(ctl.args, []string{"alert", "claimSize"}, ctl.flagTree.PVCSize)
 		case "alert-memory":
 			util.SetHelmValueInMap(ctl.args, []string{"alert", "resources", "limits", "memory"}, ctl.flagTree.AlertMemory)
 			util.SetHelmValueInMap(ctl.args, []string{"alert", "resources", "requests", "memory"}, ctl.flagTree.AlertMemory)

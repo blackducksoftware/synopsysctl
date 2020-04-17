@@ -50,7 +50,7 @@ const (
 
 var nativeClusterType = clusterTypeKubernetes
 
-var baseURL = "https://raw.githubusercontent.com/blackducksoftware/releases/master"
+var baseURL = ""
 
 var baseChartRepository = "https://chartmuseum.cloudnative.sig-clops.synopsys.com"
 

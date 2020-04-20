@@ -22,8 +22,6 @@ under the License.
 package alert
 
 import (
-	// "encoding/json"
-
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -45,22 +43,21 @@ type HelmValuesFromCobraFlags struct {
 
 // FlagTree is a set of fields needed to configure the Polaris Reporting Helm Chart
 type FlagTree struct {
-	Version                string
-	Registry               string
-	PullSecrets            []string
-	StandAlone             string
-	ExposeService          string
-	EncryptionPassword     string
-	EncryptionGlobalSalt   string
-	CertificateFilePath    string
-	CertificateKeyFilePath string
-	JavaKeyStoreFilePath   string
-	Environs               []string
-	PersistentStorage      string
-	PVCStorageClass        string
-	PVCFilePath            string
-	AlertMemory            string
-	CfsslMemory            string
+	Version                     string
+	DeploymentResourcesFilePath string
+	Registry                    string
+	PullSecrets                 []string
+	StandAlone                  string
+	ExposeService               string
+	EncryptionPassword          string
+	EncryptionGlobalSalt        string
+	CertificateFilePath         string
+	CertificateKeyFilePath      string
+	JavaKeyStoreFilePath        string
+	Environs                    []string
+	PersistentStorage           string
+	PVCStorageClass             string
+	PVCFilePath                 string
 	// SecurityContextFilePath string
 	Port int32
 }
@@ -95,6 +92,8 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 		cobra.MarkFlagRequired(cmd.Flags(), "version")
 	}
 
+	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", ctl.flagTree.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs")
+
 	// Pulling images values
 	cmd.Flags().StringVar(&ctl.flagTree.Registry, "registry", "docker.io/blackducksoftware", "Name of the registry to use for images")
 	cmd.Flags().StringSliceVar(&ctl.flagTree.PullSecrets, "pull-secret-name", ctl.flagTree.PullSecrets, "Only if the registry requires authentication")
@@ -125,10 +124,6 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 		cmd.Flags().StringVar(&ctl.flagTree.PersistentStorage, "persistent-storage", "true", "If true, Alert has persistent storage [true|false]")
 	}
 	cmd.Flags().StringVar(&ctl.flagTree.PVCFilePath, "pvc-file-path", ctl.flagTree.PVCFilePath, "Absolute path to a file containing a list of PVC json structs")
-
-	// Resources, Size, and Memory
-	cmd.Flags().StringVar(&ctl.flagTree.AlertMemory, "alert-memory", "2560Mi", "Memory allocation of Alert")
-	cmd.Flags().StringVar(&ctl.flagTree.CfsslMemory, "cfssl-memory", "640Mi", "Memory allocation of CFSSL")
 
 	// // Security Contexts
 	// cmd.Flags().StringVar(&ctl.flagTree.SecurityContextFilePath, "security-context-file-path", ctl.flagTree.SecurityContextFilePath, "Absolute path to a file containing a map of pod names to security contexts runAsUser, fsGroup, and runAsGroup")
@@ -196,6 +191,8 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 		case "standalone":
 			standAloneVal := strings.ToUpper(ctl.flagTree.StandAlone) == "TRUE"
 			util.SetHelmValueInMap(ctl.args, []string{"enableStandalone"}, standAloneVal)
+		case "deployment-resources-file-path":
+			util.GetDeploymentResources(ctl.flagTree.DeploymentResourcesFilePath, ctl.args, "heapMaxMemory")
 		case "expose-ui":
 			util.SetHelmValueInMap(ctl.args, []string{"exposeui"}, true)
 			switch ctl.flagTree.ExposeService {
@@ -251,12 +248,6 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 			util.SetHelmValueInMap(ctl.args, []string{"enablePersistentStorage"}, persistentStorageVal)
 		case "pvc-storage-class":
 			util.SetHelmValueInMap(ctl.args, []string{"storageClass"}, ctl.flagTree.PVCStorageClass)
-		case "alert-memory":
-			util.SetHelmValueInMap(ctl.args, []string{"alert", "resources", "limits", "memory"}, ctl.flagTree.AlertMemory)
-			util.SetHelmValueInMap(ctl.args, []string{"alert", "resources", "requests", "memory"}, ctl.flagTree.AlertMemory)
-		case "cfssl-memory":
-			util.SetHelmValueInMap(ctl.args, []string{"cfssl", "resources", "limits", "memory"}, ctl.flagTree.CfsslMemory)
-			util.SetHelmValueInMap(ctl.args, []string{"cfssl", "resources", "requests", "memory"}, ctl.flagTree.CfsslMemory)
 		case "environs":
 			// TODO: Make sure this is converted correclty
 			envMap := map[string]interface{}{}

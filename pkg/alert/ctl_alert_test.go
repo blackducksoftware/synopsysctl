@@ -99,6 +99,27 @@ func TestSetCRSpecFieldByFlag(t *testing.T) {
 		},
 		// case
 		{
+			flagName: "deployment-resources-file-path",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					DeploymentResourcesFilePath: "../../examples/synopsysctl/deployment-resources-test.json",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"postgres": map[string]interface{}{
+					"heapMaxMemory": "3096m",
+					"replicas":      int32(1),
+					"resources": map[string]interface{}{
+						"requests": map[string]interface{}{
+							"cpu":    "1000m",
+							"memory": "3072Mi",
+						},
+					},
+				},
+			},
+		},
+		// case
+		{
 			flagName: "expose-ui",
 			changedCtl: &HelmValuesFromCobraFlags{
 				flagTree: FlagTree{
@@ -175,48 +196,6 @@ func TestSetCRSpecFieldByFlag(t *testing.T) {
 			},
 			changedArgs: map[string]interface{}{
 				"storageClass": "storageclass",
-			},
-		},
-		// case
-		{
-			flagName: "alert-memory",
-			changedCtl: &HelmValuesFromCobraFlags{
-				flagTree: FlagTree{
-					AlertMemory: "10Gi",
-				},
-			},
-			changedArgs: map[string]interface{}{
-				"alert": map[string]interface{}{
-					"resources": map[string]interface{}{
-						"limits": map[string]interface{}{
-							"memory": "10Gi",
-						},
-						"requests": map[string]interface{}{
-							"memory": "10Gi",
-						},
-					},
-				},
-			},
-		},
-		// case
-		{
-			flagName: "cfssl-memory",
-			changedCtl: &HelmValuesFromCobraFlags{
-				flagTree: FlagTree{
-					CfsslMemory: "10Gi",
-				},
-			},
-			changedArgs: map[string]interface{}{
-				"cfssl": map[string]interface{}{
-					"resources": map[string]interface{}{
-						"limits": map[string]interface{}{
-							"memory": "10Gi",
-						},
-						"requests": map[string]interface{}{
-							"memory": "10Gi",
-						},
-					},
-				},
 			},
 		},
 		// case

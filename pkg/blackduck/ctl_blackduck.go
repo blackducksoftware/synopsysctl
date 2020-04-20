@@ -46,6 +46,7 @@ type HelmValuesFromCobraFlags struct {
 // FlagTree is a set of fields needed to configure the Blackduck Helm Chart
 type FlagTree struct {
 	Size                          string
+	DeploymentResourcesFilePath   string
 	Version                       string
 	ExposeService                 string
 	ExternalPostgresHost          string
@@ -129,6 +130,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCRSpecFlagsToCommand(cmd *cobra.Command,
 		cmd.Flags().StringVar(&ctl.flagTree.PVCFilePath, "pvc-file-path", ctl.flagTree.PVCFilePath, "Absolute path to a file containing a list of PVC json structs")
 	}
 	cmd.Flags().StringVar(&ctl.flagTree.Size, "size", ctl.flagTree.Size, "Size of Black Duck [small|medium|large|x-large]")
+	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", ctl.flagTree.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs")
 	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "2020.4.0", "Version of Black Duck")
 	if master {
 		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", util.NONE, "Service type of Black Duck webserver's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]")
@@ -312,6 +314,8 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 				util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "storageClass"), pvc.StorageClass)
 				util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "volumeName"), pvc.VolumeName)
 			}
+		case "deployment-resources-file-path":
+			util.GetDeploymentResources(ctl.flagTree.DeploymentResourcesFilePath, ctl.args, "hubMaxMemory")
 		case "node-affinity-file-path":
 			data, err := util.ReadFileData(ctl.flagTree.NodeAffinityFilePath)
 			if err != nil {

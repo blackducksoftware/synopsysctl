@@ -115,3 +115,22 @@ type SecurityContext struct {
 	RunAsUser  *int64 `json:"runAsUser"`
 	RunAsGroup *int64 `json:"runAsGroup"`
 }
+
+// DeploymentResource contains the specification of a pod replica's, container memory and cpu limits and requests and container JVM heap max memory
+type DeploymentResource struct {
+	Replicas      *int32    `json:"replicas,omitempty"`
+	Resources     Resources `json:"resources,omitempty"`
+	HeapMaxMemory *string   `json:"heapMaxMemory,omitempty"`
+}
+
+// Resources contains specification for container requests and limits
+type Resources struct {
+	Requests Resource `json:"requests,omitempty"`
+	Limits   Resource `json:"limits,omitempty"`
+}
+
+// Resource contains specification for container cpu and memory
+type Resource struct {
+	CPU    *string `json:"cpu,omitempty"`
+	Memory *string `json:"memory,omitempty"`
+}

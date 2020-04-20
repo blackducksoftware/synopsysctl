@@ -16,7 +16,7 @@ synopsysctl --verbose-level=debug create polaris native --namespace "$NAMESPACE"
 --smtp-password "password" --smtp-sender-email "noreply@synopsys.com" --insecure-skip-smtp-tls-verify \
 --enable-postgres-container  --postgres-password "postgres" --postgres-size "1Gi" --uploadserver-size "1Gi" \
 --eventstore-size "1Gi" --mongodb-size "1Gi" --downloadserver-size "1Gi" --enable-reporting --reportstorage-size "1Gi" \
---ingress-class "nginx" --chart-location-path "" -o yaml >> $NATIVE_FILENAME
+--ingress-class "nginx" --app-resources-path "" -o yaml >> $NATIVE_FILENAME
 
 # if synopsysctl command fails, can't test anything else, fail immediately
 if [ $? -eq 0 ]; then

@@ -79,7 +79,7 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 	log.Info("upgrading Black Duck using Helm based deployment")
 	// Update the Helm Chart Location
 
-	chartLocationFlag := flags.Lookup("chart-location-path")
+	chartLocationFlag := flags.Lookup("app-resources-path")
 	if chartLocationFlag.Changed {
 		blackduckChartRepository = chartLocationFlag.Value.String()
 	} else {

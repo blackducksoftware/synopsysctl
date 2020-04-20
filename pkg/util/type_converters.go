@@ -28,6 +28,11 @@ import (
 	"strings"
 )
 
+// StringToPtr will convert string to pointer
+func StringToPtr(i string) *string {
+	return &i
+}
+
 // IntToPtr will convert int to pointer
 func IntToPtr(i int) *int {
 	return &i

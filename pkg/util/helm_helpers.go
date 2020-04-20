@@ -23,14 +23,16 @@ package util
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/blackducksoftware/synopsysctl/pkg/api"
 	"github.com/ghodss/yaml"
-
+	"github.com/imdario/mergo"
 	log "github.com/sirupsen/logrus"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -42,8 +44,6 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
-
-	"github.com/imdario/mergo"
 )
 
 var settings = cli.New()
@@ -439,4 +439,34 @@ func GetHelmValueFromMap(valueMapPointer map[string]interface{}, keyList []strin
 		}
 	}
 	return nil
+}
+
+// GetDeploymentResources reads the deployment resource file path and sets the Helm resource maps
+func GetDeploymentResources(deploymentResourceFilePath string, valueMapPointer map[string]interface{}, heapMaxMemoryName string) {
+	data, err := ReadFileData(deploymentResourceFilePath)
+	if err != nil {
+		log.Fatalf("failed to read deployment resources file: %+v", err)
+	}
+	deploymentResources := make(map[string]api.DeploymentResource, 0)
+	err = json.Unmarshal([]byte(data), &deploymentResources)
+	if err != nil {
+		log.Fatalf("failed to unmarshal deployment resources structs: %+v", err)
+	}
+
+	for key, value := range deploymentResources {
+		if value.Replicas != nil {
+			SetHelmValueInMap(valueMapPointer, []string{key, "replicas"}, *value.Replicas)
+		}
+		setStringPtrInHelmValueInMap(valueMapPointer, []string{key, heapMaxMemoryName}, value.HeapMaxMemory)
+		setStringPtrInHelmValueInMap(valueMapPointer, []string{key, "resources", "limits", "cpu"}, value.Resources.Limits.CPU)
+		setStringPtrInHelmValueInMap(valueMapPointer, []string{key, "resources", "limits", "memory"}, value.Resources.Limits.Memory)
+		setStringPtrInHelmValueInMap(valueMapPointer, []string{key, "resources", "requests", "cpu"}, value.Resources.Requests.CPU)
+		setStringPtrInHelmValueInMap(valueMapPointer, []string{key, "resources", "requests", "memory"}, value.Resources.Requests.Memory)
+	}
+}
+
+func setStringPtrInHelmValueInMap(valueMapPointer map[string]interface{}, keyList []string, value *string) {
+	if value != nil {
+		SetHelmValueInMap(valueMapPointer, keyList, *value)
+	}
 }

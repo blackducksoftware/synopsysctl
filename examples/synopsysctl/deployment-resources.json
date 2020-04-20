@@ -1,0 +1,108 @@
+{
+    "postgres": {
+        "resources": {
+            "requests": {
+                "cpu": "1000m",
+                "memory": "3072Mi"
+            }
+        }
+    },
+    "authentication": {
+        "heapMaxMemory": "512m", 
+        "resources": {
+            "limits": {
+                "memory": "1024Mi"
+            }
+        }
+    },
+    "binaryscanner": {
+        "resources": {
+            "limits": {
+                "cpu": "1000m",
+                "memory": "2048Mi"
+            }
+        }
+    },
+    "cfssl": {
+        "resources": {
+            "limits": {
+                "memory": "640Mi"
+            }
+        }
+    },
+    "documentation": {
+        "resources": {
+            "limits": {
+                "memory": "512Mi"
+            }
+        }
+    },
+    "jobrunner": {
+        "replicas": 1,
+        "heapMaxMemory": "4096m",
+        "resources": {
+            "limits": {
+                "cpu": "1000m",
+                "memory": "4608Mi"
+            }
+        }
+    },
+    "rabbitmq": {
+        "resources": {
+            "limits": {
+                "memory": "1024Mi"
+            }
+        }
+    },
+    "registration": {
+        "resources": {
+            "requests": {
+                "cpu": "1000m"
+            },
+            "limits": {
+                "memory": "1024Mi"
+            }
+        }
+    },
+    "scan": {
+        "replicas": 1,
+        "heapMaxMemory": "2048m",
+        "resources": {
+            "limits": {
+                "memory": "2560Mi"
+            }
+        }
+    },
+    "uploadcache": {
+        "resources": {
+            "limits": {
+                "memory": "512Mi"
+            }
+        }
+    },
+    "webapp": {
+        "heapMaxMemory": "2048m",
+        "resources": {
+            "requests": {
+                "cpu": "1000m"
+            },
+            "limits": {
+                "memory": "2560Mi"
+            }
+        }
+    },
+    "logstash": {
+        "resources": {
+            "limits": {
+                "memory": "1024Mi"
+            }
+        }
+    },
+    "webserver": {
+        "resources": {
+            "limits": {
+                "memory": "512Mi"
+            }
+        }
+    }
+}

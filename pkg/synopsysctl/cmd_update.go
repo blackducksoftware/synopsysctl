@@ -92,7 +92,7 @@ var updateAlertCmd = &cobra.Command{
 		alertName := args[0]
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("chart-location-path")
+		chartLocationFlag := cmd.Flag("app-resources-path")
 		if chartLocationFlag.Changed {
 			alertChartRepository = chartLocationFlag.Value.String()
 		} else {
@@ -293,7 +293,7 @@ var updateBlackDuckCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("chart-location-path")
+		chartLocationFlag := cmd.Flag("app-resources-path")
 		if chartLocationFlag.Changed {
 			blackduckChartRepository = chartLocationFlag.Value.String()
 		} else {
@@ -924,7 +924,7 @@ var updatePolarisCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("chart-location-path")
+		chartLocationFlag := cmd.Flag("app-resources-path")
 		if chartLocationFlag.Changed {
 			polarisChartRepository = chartLocationFlag.Value.String()
 		} else {
@@ -974,7 +974,7 @@ var updatePolarisReportingCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("chart-location-path")
+		chartLocationFlag := cmd.Flag("app-resources-path")
 		if chartLocationFlag.Changed {
 			polarisReportingChartRepository = chartLocationFlag.Value.String()
 		} else {
@@ -1024,7 +1024,7 @@ var updateBDBACmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("chart-location-path")
+		chartLocationFlag := cmd.Flag("app-resources-path")
 		if chartLocationFlag.Changed {
 			bdbaChartRepository = chartLocationFlag.Value.String()
 		} else {

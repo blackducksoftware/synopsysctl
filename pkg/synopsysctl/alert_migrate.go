@@ -90,7 +90,7 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 	}
 
 	// Update the Helm Chart Location
-	chartLocationFlag := flags.Lookup("chart-location-path")
+	chartLocationFlag := flags.Lookup("app-resources-path")
 	if chartLocationFlag.Changed {
 		alertChartRepository = chartLocationFlag.Value.String()
 	} else {

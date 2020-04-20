@@ -69,7 +69,7 @@ var stopAlertCmd = &cobra.Command{
 		// Update the Helm Chart Location
 		configAlertData := instance.Config["alert"].(map[string]interface{})
 		configAlertVersion := configAlertData["imageTag"]
-		chartLocationFlag := cmd.Flag("chart-location-path")
+		chartLocationFlag := cmd.Flag("app-resources-path")
 		if chartLocationFlag.Changed {
 			alertChartRepository = chartLocationFlag.Value.String()
 		} else {
@@ -110,7 +110,7 @@ var stopBlackDuckCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("chart-location-path")
+		chartLocationFlag := cmd.Flag("app-resources-path")
 		if chartLocationFlag.Changed {
 			blackduckChartRepository = chartLocationFlag.Value.String()
 		} else {

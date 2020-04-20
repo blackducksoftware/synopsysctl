@@ -46,6 +46,6 @@ func addbaseURLFlag(cmd *cobra.Command) {
 }
 
 func addChartLocationPathFlag(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&baseURL, "chart-location-path", "", baseURL, "Absolute path to an application Tarball for air-gapped customer")
-	// cmd.Flags().MarkHidden("chart-location-path")
+	cmd.Flags().StringVarP(&baseURL, "app-resources-path", "", baseURL, "Absolute path to an application Tarball for air-gapped customer")
+	// cmd.Flags().MarkHidden("app-resources-path")
 }

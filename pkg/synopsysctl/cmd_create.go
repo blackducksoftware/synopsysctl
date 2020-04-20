@@ -96,7 +96,7 @@ var createAlertCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("chart-location-path")
+		chartLocationFlag := cmd.Flag("app-resources-path")
 		if chartLocationFlag.Changed {
 			alertChartRepository = chartLocationFlag.Value.String()
 		} else {
@@ -190,7 +190,7 @@ var createAlertNativeCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("chart-location-path")
+		chartLocationFlag := cmd.Flag("app-resources-path")
 		if chartLocationFlag.Changed {
 			alertChartRepository = chartLocationFlag.Value.String()
 		} else {
@@ -297,7 +297,7 @@ var createBlackDuckCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("chart-location-path")
+		chartLocationFlag := cmd.Flag("app-resources-path")
 		if chartLocationFlag.Changed {
 			blackduckChartRepository = chartLocationFlag.Value.String()
 		} else {
@@ -372,7 +372,7 @@ var createBlackDuckNativeCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("chart-location-path")
+		chartLocationFlag := cmd.Flag("app-resources-path")
 		if chartLocationFlag.Changed {
 			blackduckChartRepository = chartLocationFlag.Value.String()
 		} else {
@@ -538,7 +538,7 @@ var createPolarisCmd = &cobra.Command{
 
 		// Update the Helm Chart Location
 		// TODO: allow user to specify --version and --chart-location
-		chartLocationFlag := cmd.Flag("chart-location-path")
+		chartLocationFlag := cmd.Flag("app-resources-path")
 		if chartLocationFlag.Changed {
 			polarisChartRepository = chartLocationFlag.Value.String()
 		} else {
@@ -588,7 +588,7 @@ var createPolarisNativeCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("chart-location-path")
+		chartLocationFlag := cmd.Flag("app-resources-path")
 		if chartLocationFlag.Changed {
 			polarisChartRepository = chartLocationFlag.Value.String()
 		} else {
@@ -654,7 +654,7 @@ var createPolarisReportingCmd = &cobra.Command{
 
 		// Update the Helm Chart Location
 		// TODO: allow user to specify --version and --chart-location
-		chartLocationFlag := cmd.Flag("chart-location-path")
+		chartLocationFlag := cmd.Flag("app-resources-path")
 		if chartLocationFlag.Changed {
 			polarisReportingChartRepository = chartLocationFlag.Value.String()
 		} else {
@@ -721,7 +721,7 @@ var createPolarisReportingNativeCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("chart-location-path")
+		chartLocationFlag := cmd.Flag("app-resources-path")
 		if chartLocationFlag.Changed {
 			polarisReportingChartRepository = chartLocationFlag.Value.String()
 		} else {
@@ -781,7 +781,7 @@ var createBDBACmd = &cobra.Command{
 
 		// Update the Helm Chart Location
 		// TODO: allow user to specify --version and --chart-location
-		chartLocationFlag := cmd.Flag("chart-location-path")
+		chartLocationFlag := cmd.Flag("app-resources-path")
 		if chartLocationFlag.Changed {
 			bdbaChartRepository = chartLocationFlag.Value.String()
 		} else {
@@ -831,7 +831,7 @@ var createBDBANativeCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("chart-location-path")
+		chartLocationFlag := cmd.Flag("app-resources-path")
 		if chartLocationFlag.Changed {
 			bdbaChartRepository = chartLocationFlag.Value.String()
 		} else {

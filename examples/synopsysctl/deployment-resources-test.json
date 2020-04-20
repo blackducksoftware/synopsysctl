@@ -1,0 +1,12 @@
+{
+    "postgres": {
+        "replicas": 1,
+        "resources": {
+            "requests": {
+                "cpu": "1000m",
+                "memory": "3072Mi"
+            }
+        },
+        "heapMaxMemory": "3096m"
+    }
+}

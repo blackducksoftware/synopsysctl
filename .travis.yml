@@ -60,6 +60,9 @@ before_install:
   - sudo mv /home/travis/gopath/src/github.com/blackducksoftware/synopsysctl/cmd/synopsysctl/synopsysctl /usr/local/bin/
   - which -a synopsysctl
 
+  # Run the smoke test
+  - hack/simple-synopsysctl-sanity.sh
+
 jobs:
   include:
     - stage: build
@@ -70,6 +73,5 @@ jobs:
     # - script: /home/travis/gopath/src/github.com/blackducksoftware/synopsysctl/hack/test_synopsysctl_native.sh
     # - script: /home/travis/gopath/src/github.com/blackducksoftware/synopsysctl/hack/create_k8s_cluster_and_run_synopsysctl.sh kindest/node:v1.16.2 kind-v1.16.2
     # - script: /home/travis/gopath/src/github.com/blackducksoftware/synopsysctl/hack/create_k8s_cluster_and_run_synopsysctl.sh kindest/node:v1.15.3 kind-v1.15.3
-
 # [TODO (ybhutwala)]: integrate kubeval (also conftest)
 

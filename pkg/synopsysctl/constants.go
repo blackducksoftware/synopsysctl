@@ -47,13 +47,13 @@ const (
 
 var nativeClusterType = clusterTypeKubernetes
 
-var baseChartRepository = "https://chartmuseum.cloudnative.sig-clops.synopsys.com"
+var baseChartRepository = "https://sig-repo.synopsys.com/sig-cloudnative"
 
 // AlertPostSuffix adds "-alert" to the end of the release (to differentiate if other apps are given the same name - ex: BlackDuck and Alert are both named "bd")
 const AlertPostSuffix = "-alert"
 
 // Alert Helm Chart Constants
-var alertVersion = "5.3.0"
+var alertVersion = "5.3.1"
 var alertChartName = "synopsys-alert"
 var alertChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, alertChartName, alertVersion)
 
@@ -83,4 +83,4 @@ var polarisReportingChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseCha
 var bdbaName = "bdba"
 var bdbaVersion = "2020.03"
 var bdbaChartName = "bdba"
-var bdbaChartRepository = fmt.Sprintf("%s/charts/bdba-%s.tgz", baseChartRepository, bdbaChartName, bdbaVersion)
+var bdbaChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, bdbaChartName, bdbaVersion)

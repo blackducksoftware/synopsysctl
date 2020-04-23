@@ -1,0 +1,67 @@
+{
+    "prometheus": {
+        "resources": {
+            "requests": {
+                "cpu": "123m",
+                "memory": "3072Mi"
+            }
+        }
+    },
+    "core": {
+        "resources": {
+            "requests": {
+                "cpu": "123m",
+                "memory": "3072Mi"
+            }
+        }
+    },
+    "podProcessor": {
+        "resources": {
+            "requests": {
+                "cpu": "123m",
+                "memory": "3072Mi"
+            }
+        }
+    },
+    "scanner": {
+        "replicas": 1,
+        "resources": {
+            "requests": {
+                "cpu": "123m",
+                "memory": "3072Mi"
+            }
+        }
+    },
+    "imageGetter": {
+        "resources": {
+            "requests": {
+                "cpu": "123m",
+                "memory": "3072Mi"
+            }
+        }
+    },
+    "imageProcessor": {
+        "resources": {
+            "requests": {
+                "cpu": "123m",
+                "memory": "3072Mi"
+            }
+        }
+    },
+    "quayProcessor": {
+        "resources": {
+            "requests": {
+                "cpu": "123m",
+                "memory": "3072Mi"
+            }
+        }
+    },
+    "artifactoryProcessor": {
+        "resources": {
+            "requests": {
+                "cpu": "123m",
+                "memory": "3072Mi"
+            }
+        }
+    }
+}

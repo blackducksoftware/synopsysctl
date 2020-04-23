@@ -457,7 +457,9 @@ func GetDeploymentResources(deploymentResourceFilePath string, valueMapPointer m
 		if value.Replicas != nil {
 			SetHelmValueInMap(valueMapPointer, []string{key, "replicas"}, *value.Replicas)
 		}
-		setStringPtrInHelmValueInMap(valueMapPointer, []string{key, heapMaxMemoryName}, value.HeapMaxMemory)
+		if value.HeapMaxMemory != nil {
+			setStringPtrInHelmValueInMap(valueMapPointer, []string{key, heapMaxMemoryName}, value.HeapMaxMemory)
+		}
 		setStringPtrInHelmValueInMap(valueMapPointer, []string{key, "resources", "limits", "cpu"}, value.Resources.Limits.CPU)
 		setStringPtrInHelmValueInMap(valueMapPointer, []string{key, "resources", "limits", "memory"}, value.Resources.Limits.Memory)
 		setStringPtrInHelmValueInMap(valueMapPointer, []string{key, "resources", "requests", "cpu"}, value.Resources.Requests.CPU)

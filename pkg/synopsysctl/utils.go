@@ -27,11 +27,11 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	alertclientset "github.com/blackducksoftware/synopsysctl/pkg/alert/client/clientset/versioned"
 	blackduckclientset "github.com/blackducksoftware/synopsysctl/pkg/blackduck/client/clientset/versioned"
 	opssightclientset "github.com/blackducksoftware/synopsysctl/pkg/opssight/client/clientset/versioned"
-	"github.com/blackducksoftware/synopsysctl/pkg/protoform"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -40,6 +40,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 var restconfig *rest.Config
@@ -78,10 +80,41 @@ func setGlobalKubeConfigPath(cmd *cobra.Command) error {
 	return nil
 }
 
+// GetKubeClientFromOutsideCluster returns the rest config of outside cluster
+func GetKubeClientFromOutsideCluster(kubeconfigpath string, insecureSkipTLSVerify bool) (*rest.Config, error) {
+	// Determine Config Paths
+	if home := homeDir(); len(kubeconfigpath) == 0 && home != "" {
+		kubeconfigpath = filepath.Join(home, ".kube", "config")
+	}
+
+	kubeConfig, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{
+			ExplicitPath: kubeconfigpath,
+		},
+		&clientcmd.ConfigOverrides{
+			ClusterInfo: clientcmdapi.Cluster{
+				Server:                "",
+				InsecureSkipTLSVerify: insecureSkipTLSVerify,
+			},
+		}).ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+	return kubeConfig, nil
+}
+
+// homeDir determines the user's home directory path
+func homeDir() string {
+	if h := os.Getenv("HOME"); h != "" {
+		return h
+	}
+	return os.Getenv("USERPROFILE") // windows
+}
+
 // setGlobalRestConfig sets the global variable 'restconfig' for other commands to use
 func setGlobalRestConfig() error {
 	var err error
-	restconfig, err = protoform.GetKubeClientFromOutsideCluster(kubeConfigPath, insecureSkipTLSVerify)
+	restconfig, err = GetKubeClientFromOutsideCluster(kubeConfigPath, insecureSkipTLSVerify)
 	log.Debugf("rest config: %+v", restconfig)
 	if err != nil {
 		return err

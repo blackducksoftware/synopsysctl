@@ -54,17 +54,18 @@ var baseURL = ""
 
 var baseChartRepository = "https://chartmuseum.cloudnative.sig-clops.synopsys.com"
 
-// Alert
-
-// AlertPostSuffix adds "-alert" to the end of the release
-const AlertPostSuffix = "-alert"
-
+// Alert Constants
+const AlertPostSuffix = "-alert" // AlertPostSuffix adds "-alert" to the end of the release
 var alertChartRepository = fmt.Sprintf("%s/charts/alert-helmchart-5.3.0.tgz", baseChartRepository)
 
-// Black Duck
+// Opssight Constants
+var opssightVersion = "0.0.0"
+var opssightChartRepository = fmt.Sprintf("%s/charts/opssight-%s.tgz", baseChartRepository, opssightVersion)
+
+// Black Duck Constants
 var blackduckChartRepository = fmt.Sprintf("%s/charts/blackduck-2020.4.0.tgz", baseChartRepository)
 
-// Polaris
+// Polaris Constants
 var polarisName = "polaris"
 var polarisChartRepository = fmt.Sprintf("%s/charts/polaris-helmchart-2020.03.tgz", baseChartRepository)
 

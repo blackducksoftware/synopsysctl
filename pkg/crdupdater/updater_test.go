@@ -23,17 +23,16 @@ package crdupdater
 import (
 	"testing"
 	// "github.com/blackducksoftware/horizon/pkg/components"
-	// "github.com/blackducksoftware/synopsysctl/pkg/protoform"
 )
 
 // TestUpdater will test the updater
 func TestUpdater(t *testing.T) {
-	// kubeConfig, err := protoform.GetKubeConfig("", false)
+	// kubeConfig, err := GetKubeConfig("", false)
 	// if err != nil {
 	// 	t.Errorf("unable to get the kube config due to %+v", err)
 	// }
 
-	// kubeClient, err := protoform.GetKubeClientSet(kubeConfig)
+	// kubeClient, err := GetKubeClientSet(kubeConfig)
 	// if err != nil {
 	// 	t.Errorf("unable to get the kube client due to %+v", err)
 	// }

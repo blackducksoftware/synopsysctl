@@ -70,7 +70,7 @@ var stopAlertCmd = &cobra.Command{
 		if chartLocationFlag.Changed {
 			alertChartRepository = chartLocationFlag.Value.String()
 		} else {
-			alertChartRepository = fmt.Sprintf("%s/charts/alert-%s.tgz", baseChartRepository, configAlertVersion)
+			alertChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, alertChartName, configAlertVersion)
 		}
 
 		helmValuesMap := map[string]interface{}{"status": "Stopped"}
@@ -111,7 +111,7 @@ var stopBlackDuckCmd = &cobra.Command{
 		if chartLocationFlag.Changed {
 			blackduckChartRepository = chartLocationFlag.Value.String()
 		} else {
-			blackduckChartRepository = fmt.Sprintf("%s/charts/blackduck-%s.tgz", baseChartRepository, instance.Chart.Values["imageTag"])
+			blackduckChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, blackDuckChartName, instance.Chart.Values["imageTag"])
 		}
 
 		helmValuesMap := make(map[string]interface{})
@@ -151,7 +151,7 @@ var stopOpsSightCmd = &cobra.Command{
 		if chartLocationFlag.Changed {
 			opssightChartRepository = chartLocationFlag.Value.String()
 		} else {
-			opssightChartRepository = fmt.Sprintf("%s/charts/opssight-%s.tgz", baseChartRepository, instance.Chart.Values["imageTag"])
+			opssightChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, opssightChartName, instance.Chart.Values["imageTag"])
 		}
 
 		helmValuesMap := make(map[string]interface{})

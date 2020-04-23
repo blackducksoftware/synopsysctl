@@ -85,7 +85,7 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 	} else {
 		versionFlag := flags.Lookup("version")
 		if versionFlag.Changed {
-			blackduckChartRepository = fmt.Sprintf("%s/charts/blackduck-%s.tgz", baseChartRepository, versionFlag.Value.String())
+			blackduckChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, blackDuckChartName, versionFlag.Value.String())
 		}
 	}
 

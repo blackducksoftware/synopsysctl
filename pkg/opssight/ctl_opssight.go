@@ -116,6 +116,8 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 // master=true is used to add all flags for creating an instance
 // master=false is used to add a subset of flags for updating an instance
 func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, master bool) {
+	// [DEV NOTE:] please organize flags in order of importance
+
 	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", ctl.flagTree.Version, "Version of the OpsSight instance")
 	if master {
 		cobra.MarkFlagRequired(cmd.Flags(), "version")
@@ -194,6 +196,8 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringVar(&ctl.flagTree.PerceiverEnableArtifactoryPerceiver, "enable-artifactory-processor", ctl.flagTree.PerceiverEnableArtifactoryPerceiver, "If true, Artifactory Processor discovers artifactory images for scanning [true|false]")
 	cmd.Flags().StringVar(&ctl.flagTree.PerceiverEnableArtifactoryPerceiverDumper, "enable-artifactory-processor-dumper", ctl.flagTree.PerceiverEnableArtifactoryPerceiverDumper, "If true, Artifactory Processor dumps all docker images in an artifactory instance for scanning [true|false]")
 	cmd.Flags().StringVar(&ctl.flagTree.PerceiverArtifactoryExpose, "expose-artifactory-processor", ctl.flagTree.PerceiverArtifactoryExpose, "Type of service for Artifactory processor [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]")
+
+	cmd.Flags().SortFlags = false
 }
 
 // CheckValuesFromFlags returns an error if a value stored in the struct will not be able to be

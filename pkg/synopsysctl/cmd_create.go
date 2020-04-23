@@ -102,7 +102,7 @@ var createAlertCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				alertChartRepository = fmt.Sprintf("%s/charts/alert-helmchart-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				alertChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, alertChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -196,7 +196,7 @@ var createAlertNativeCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				alertChartRepository = fmt.Sprintf("%s/charts/synopsys-alert-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				alertChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, alertChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -303,7 +303,7 @@ var createBlackDuckCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				blackduckChartRepository = fmt.Sprintf("%s/charts/blackduck-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				blackduckChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, blackDuckChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -378,7 +378,7 @@ var createBlackDuckNativeCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				blackduckChartRepository = fmt.Sprintf("%s/charts/blackduck-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				blackduckChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, blackDuckChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -436,7 +436,7 @@ var createOpsSightCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				opssightChartRepository = fmt.Sprintf("%s/charts/opssight-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				opssightChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, opssightChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -490,7 +490,7 @@ var createOpsSightNativeCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				opssightChartRepository = fmt.Sprintf("%s/charts/opssight-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				opssightChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, opssightChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -539,7 +539,7 @@ var createPolarisCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				polarisChartRepository = fmt.Sprintf("%s/charts/polaris-helmchart-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				polarisChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, polarisChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -589,7 +589,7 @@ var createPolarisNativeCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				polarisChartRepository = fmt.Sprintf("%s/charts/polaris-helmchart-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				polarisChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, polarisChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -655,7 +655,7 @@ var createPolarisReportingCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				polarisReportingChartRepository = fmt.Sprintf("%s/charts/polaris-helmchart-reporting-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				polarisReportingChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, polarisReportingChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -722,7 +722,7 @@ var createPolarisReportingNativeCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				polarisReportingChartRepository = fmt.Sprintf("%s/charts/polaris-helmchart-reporting-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				polarisReportingChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, polarisReportingChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -782,7 +782,7 @@ var createBDBACmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				bdbaChartRepository = fmt.Sprintf("%s/charts/bdba-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				bdbaChartRepository = fmt.Sprintf("%s/charts/bdba-%s.tgz", baseChartRepository, bdbaChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -832,7 +832,7 @@ var createBDBANativeCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				bdbaChartRepository = fmt.Sprintf("%s/charts/bdba-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				bdbaChartRepository = fmt.Sprintf("%s/charts/bdba-%s.tgz", baseChartRepository, bdbaChartName, versionFlag.Value.String())
 			}
 		}
 

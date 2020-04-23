@@ -82,9 +82,6 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 	// Delete the Current Instance's Resources (except PVCs)
 	log.Info("cleaning Current Alert resources")
 	// TODO wait for resources to be deleted
-	// if len(alert.Namespace) == 0 {
-	// 	alert.Namespace = alert.Name
-	// }
 	if err := deleteComponents(alert.Spec.Namespace, alert.Name, util.AlertName); err != nil {
 		return err
 	}
@@ -96,7 +93,7 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 	} else {
 		versionFlag := flags.Lookup("version")
 		if versionFlag.Changed {
-			alertChartRepository = fmt.Sprintf("%s/charts/synopys-alert-%s.tgz", baseChartRepository, versionFlag.Value.String())
+			alertChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, alertChartName, versionFlag.Value.String())
 		}
 	}
 

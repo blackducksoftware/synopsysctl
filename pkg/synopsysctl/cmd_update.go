@@ -96,7 +96,7 @@ var updateAlertCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				alertChartRepository = fmt.Sprintf("%s/charts/alert-helmchart-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				alertChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, alertChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -148,17 +148,15 @@ func updateAlertHelmBased(cmd *cobra.Command, alertName string, customerReleaseN
 		return err
 	}
 
-	// check whether the update Alert version is greater than or equal to 5.0.0
 	if cmd.Flag("version").Changed {
+		// if greater than or equal to 5.0.0, then copy PUBLIC_HUB_WEBSERVER_HOST to ALERT_HOSTNAME and PUBLIC_HUB_WEBSERVER_PORT to ALERT_SERVER_PORT
+		// and delete PUBLIC_HUB_WEBSERVER_HOST and PUBLIC_HUB_WEBSERVER_PORT from the environs. In future, we need to request the customer to use the new params
 		helmValuesMapAlertData := helmValuesMap["alert"].(map[string]interface{})
 		oldAlertVersion := helmValuesMapAlertData["imageTag"].(string)
 		isGreaterThanOrEqualTo, err := util.IsNotDefaultVersionGreaterThanOrEqualTo(oldAlertVersion, 5, 0, 0)
 		if err != nil {
 			return fmt.Errorf("failed to check Alert version: %+v", err)
 		}
-
-		// if greater than or equal to 5.0.0, then copy PUBLIC_HUB_WEBSERVER_HOST to ALERT_HOSTNAME and PUBLIC_HUB_WEBSERVER_PORT to ALERT_SERVER_PORT
-		// and delete PUBLIC_HUB_WEBSERVER_HOST and PUBLIC_HUB_WEBSERVER_PORT from the environs. In future, we need to request the customer to use the new params
 		if isGreaterThanOrEqualTo && helmValuesMap["environs"] != nil {
 			maps := helmValuesMap["environs"].(map[string]interface{})
 			isChanged := false
@@ -297,7 +295,7 @@ var updateBlackDuckCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				blackduckChartRepository = fmt.Sprintf("%s/charts/blackduck-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				blackduckChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, blackDuckChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -664,7 +662,7 @@ var updateOpsSightCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				opssightChartRepository = fmt.Sprintf("%s/charts/opssight-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				opssightChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, opssightChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -735,7 +733,7 @@ var updateOpsSightExternalHostCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				opssightChartRepository = fmt.Sprintf("%s/charts/opssight-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				opssightChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, opssightChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -821,7 +819,7 @@ var updateOpsSightExternalHostNativeCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				opssightChartRepository = fmt.Sprintf("%s/charts/opssight-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				opssightChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, opssightChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -894,7 +892,7 @@ var updateOpsSightAddRegistryCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				opssightChartRepository = fmt.Sprintf("%s/charts/opssight-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				opssightChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, opssightChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -956,7 +954,7 @@ var updateOpsSightAddRegistryNativeCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				opssightChartRepository = fmt.Sprintf("%s/charts/opssight-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				opssightChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, opssightChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -1025,7 +1023,7 @@ var updatePolarisCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				polarisChartRepository = fmt.Sprintf("%s/charts/polaris-helmchart-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				polarisChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, polarisChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -1075,7 +1073,7 @@ var updatePolarisReportingCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				polarisReportingChartRepository = fmt.Sprintf("%s/charts/polaris-helmchart-reporting-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				polarisReportingChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, polarisReportingChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -1125,7 +1123,7 @@ var updateBDBACmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				bdbaChartRepository = fmt.Sprintf("%s/charts/bdba-%s.tgz", baseChartRepository, versionFlag.Value.String())
+				bdbaChartRepository = fmt.Sprintf("%s/charts/bdba-%s.tgz", baseChartRepository, bdbaChartName, versionFlag.Value.String())
 			}
 		}
 
@@ -1189,13 +1187,11 @@ func init() {
 	// updateOpsSightExternalHostCmd
 	updateOpsSightCmd.AddCommand(updateOpsSightExternalHostCmd)
 
-	addNativeFormatFlag(updateOpsSightExternalHostNativeCmd)
 	updateOpsSightExternalHostCmd.AddCommand(updateOpsSightExternalHostNativeCmd)
 
 	// updateOpsSightAddRegistryCmd
 	updateOpsSightCmd.AddCommand(updateOpsSightAddRegistryCmd)
 
-	addNativeFormatFlag(updateOpsSightAddRegistryNativeCmd)
 	updateOpsSightAddRegistryCmd.AddCommand(updateOpsSightAddRegistryNativeCmd)
 
 	// Polaris

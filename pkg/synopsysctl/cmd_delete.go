@@ -328,7 +328,6 @@ func init() {
 	// Add Delete Polaris Command
 	deletePolarisCmd.Flags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
 	deletePolarisCmd.Flags().BoolVarP(&promptAnswerYes, "yes", "y", promptAnswerYes, "Automatic yes to prompts")
-	addbaseURLFlag(deletePolarisCmd)
 	deleteCmd.AddCommand(deletePolarisCmd)
 
 	// Add Delete Polaris-Reporting Command

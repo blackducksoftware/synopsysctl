@@ -87,14 +87,9 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 	}
 
 	// Update the Helm Chart Location
-	chartLocationFlag := flags.Lookup("app-resources-path")
-	if chartLocationFlag.Changed {
-		alertChartRepository = chartLocationFlag.Value.String()
-	} else {
-		versionFlag := flags.Lookup("version")
-		if versionFlag.Changed {
-			alertChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, alertChartName, versionFlag.Value.String())
-		}
+	err = SetHelmChartLocation(flags, alertChartName, &alertChartRepository)
+	if err != nil {
+		return fmt.Errorf("failed to set the app resources location due to %+v", err)
 	}
 
 	// check whether the update Alert version is greater than or equal to 5.0.0

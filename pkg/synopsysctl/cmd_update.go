@@ -90,14 +90,9 @@ var updateAlertCmd = &cobra.Command{
 		alertName := args[0]
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			alertChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				alertChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, alertChartName, versionFlag.Value.String())
-			}
+		err := SetHelmChartLocation(cmd.Flags(), alertChartName, &alertChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		// TODO verity we can download the chart
@@ -289,14 +284,9 @@ var updateBlackDuckCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			blackduckChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				blackduckChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, blackDuckChartName, versionFlag.Value.String())
-			}
+		err := SetHelmChartLocation(cmd.Flags(), blackDuckChartName, &blackduckChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		isOperatorBased := false
@@ -656,14 +646,9 @@ var updateOpsSightCmd = &cobra.Command{
 		opssightName := args[0]
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			opssightChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				opssightChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, opssightChartName, versionFlag.Value.String())
-			}
+		err := SetHelmChartLocation(cmd.Flags(), opssightChartName, &opssightChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		// Set flags from the current release in the updateOpsSightCobraHelper
@@ -727,14 +712,9 @@ var updateOpsSightExternalHostCmd = &cobra.Command{
 		scanLimit := args[6]
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			opssightChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				opssightChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, opssightChartName, versionFlag.Value.String())
-			}
+		err := SetHelmChartLocation(cmd.Flags(), opssightChartName, &opssightChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		// Get flags from the current release
@@ -813,14 +793,9 @@ var updateOpsSightExternalHostNativeCmd = &cobra.Command{
 		scanLimit := args[6]
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			opssightChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				opssightChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, opssightChartName, versionFlag.Value.String())
-			}
+		err := SetHelmChartLocation(cmd.Flags(), opssightChartName, &opssightChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		// Get flags from the current release
@@ -886,14 +861,9 @@ var updateOpsSightAddRegistryCmd = &cobra.Command{
 		pass := args[3]
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			opssightChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				opssightChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, opssightChartName, versionFlag.Value.String())
-			}
+		err := SetHelmChartLocation(cmd.Flags(), opssightChartName, &opssightChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		// Get flags from the current release
@@ -948,14 +918,9 @@ var updateOpsSightAddRegistryNativeCmd = &cobra.Command{
 		pass := args[3]
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			opssightChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				opssightChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, opssightChartName, versionFlag.Value.String())
-			}
+		err := SetHelmChartLocation(cmd.Flags(), opssightChartName, &opssightChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		// Get flags from the current release
@@ -1017,14 +982,9 @@ var updatePolarisCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			polarisChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				polarisChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, polarisChartName, versionFlag.Value.String())
-			}
+		err = SetHelmChartLocation(cmd.Flags(), polarisChartName, &polarisChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		// Deploy Polaris Resources
@@ -1067,14 +1027,9 @@ var updatePolarisReportingCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			polarisReportingChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				polarisReportingChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, polarisReportingChartName, versionFlag.Value.String())
-			}
+		err = SetHelmChartLocation(cmd.Flags(), polarisReportingChartName, &polarisReportingChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		// Update Polaris-Reporting Resources
@@ -1117,14 +1072,9 @@ var updateBDBACmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			bdbaChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				bdbaChartRepository = fmt.Sprintf("%s/charts/bdba-%s.tgz", baseChartRepository, bdbaChartName, versionFlag.Value.String())
-			}
+		err = SetHelmChartLocation(cmd.Flags(), bdbaChartName, &bdbaChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		// Update Resources

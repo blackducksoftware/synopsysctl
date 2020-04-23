@@ -299,7 +299,7 @@ var updateBlackDuckCmd = &cobra.Command{
 		} else {
 			versionFlag := cmd.Flag("version")
 			if versionFlag.Changed {
-				blackduckChartRepository = fmt.Sprintf("https://artifactory.internal.synopsys.com/artifactory/bds-hub-helm-snapshot-local/blackduck/blackduck-%s.tgz", versionFlag.Value.String())
+				blackduckChartRepository = fmt.Sprintf("%s/charts/blackduck-%s.tgz", baseChartRepository, versionFlag.Value.String())
 			}
 		}
 

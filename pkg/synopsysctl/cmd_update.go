@@ -226,7 +226,7 @@ func updateAlertHelmBased(cmd *cobra.Command, helmReleaseName string, alertName 
 	}
 
 	// Expose Services for Alert
-	err = alert.CRUDServiceOrRoute(restconfig, kubeClient, namespace, helmReleaseName, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], cmd.Flags().Lookup("expose-ui").Changed)
+	err = alert.CRUDServiceOrRoute(restconfig, kubeClient, namespace, alertName, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], cmd.Flags().Lookup("expose-ui").Changed)
 	if err != nil {
 		return fmt.Errorf("failed to update exposed service due to %+v", err)
 	}

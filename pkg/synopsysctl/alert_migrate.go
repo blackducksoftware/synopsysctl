@@ -200,8 +200,7 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 	}
 
 	// Update exposed Services for Alert
-	exposeUI := flags.Lookup("expose-ui").Changed && flags.Lookup("expose-ui").Value.String() != util.NONE
-	err = alertctl.CRUDServiceOrRoute(restconfig, kubeClient, namespace, newReleaseName, exposeUI, helmValuesMap["exposedServiceType"], true)
+	err = alertctl.CRUDServiceOrRoute(restconfig, kubeClient, namespace, newReleaseName, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], flags.Lookup("expose-ui").Changed)
 	if err != nil {
 		return fmt.Errorf("failed to update Alert's exposed service %+v", err)
 	}

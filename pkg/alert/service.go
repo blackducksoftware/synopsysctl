@@ -29,7 +29,7 @@ import (
 )
 
 // CRUDServiceOrRoute will create or update Alert exposed service, or route in case of OpenShift
-func CRUDServiceOrRoute(restConfig *rest.Config, kubeClient *kubernetes.Clientset, namespace string, name string, isExposedUI interface{}, exposedServiceType interface{}, isMigrate bool) error {
+func CRUDServiceOrRoute(restConfig *rest.Config, kubeClient *kubernetes.Clientset, namespace string, name string, isExposedUI interface{}, exposedServiceType interface{}, isChanged bool) error {
 	serviceName := util.GetResourceName(name, util.AlertName, "exposed")
 	routeName := util.GetResourceName(name, util.AlertName, "")
 	isOpenShift := util.IsOpenshift(kubeClient)
@@ -58,7 +58,7 @@ func CRUDServiceOrRoute(restConfig *rest.Config, kubeClient *kubernetes.Clientse
 			}
 		}
 	} else {
-		if isMigrate {
+		if isChanged {
 			if isOpenShift {
 				routeClient := util.GetRouteClient(restConfig, kubeClient, namespace)
 				if _, err = util.GetRoute(routeClient, namespace, routeName); err == nil {

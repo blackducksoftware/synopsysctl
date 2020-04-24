@@ -28,6 +28,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	alertclientset "github.com/blackducksoftware/synopsysctl/pkg/alert/client/clientset/versioned"
 	blackduckclientset "github.com/blackducksoftware/synopsysctl/pkg/blackduck/client/clientset/versioned"
@@ -396,4 +397,11 @@ func SetHelmChartLocation(flags *pflag.FlagSet, chartName string, chartVariable 
 		}
 	}
 	return nil
+}
+
+func cleanAlertHelmError(errString, releaseName, alertName string) string {
+	helmName := fmt.Sprintf("release '%s'", releaseName)
+	instanceName := fmt.Sprintf("instance '%s'", alertName)
+	cleanErrorMsg := strings.Replace(errString, helmName, instanceName, 1)
+	return cleanErrorMsg
 }

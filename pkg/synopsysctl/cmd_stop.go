@@ -57,13 +57,14 @@ var stopAlertCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		alertName := args[0]
+		helmReleaseName := fmt.Sprintf("%s%s", alertName, AlertPostSuffix)
 
-		instance, err := util.GetWithHelm3(alertName, namespace, kubeConfigPath)
+		instance, err := util.GetWithHelm3(helmReleaseName, namespace, kubeConfigPath)
 		if err != nil {
-			return fmt.Errorf("couldn't find instance %s in namespace %s", args[0], namespace)
+			return fmt.Errorf("couldn't find instance '%s' in namespace '%s'", alertName, namespace)
 		}
 
-		// Update the Helm Chart Location
+		// Update the Helm Chart Location../../pkg/synopsysctl/cmd_stop.go
 		configAlertData := instance.Config["alert"].(map[string]interface{})
 		configAlertVersion := configAlertData["imageTag"]
 		chartLocationFlag := cmd.Flag("app-resources-path")
@@ -75,9 +76,10 @@ var stopAlertCmd = &cobra.Command{
 
 		helmValuesMap := map[string]interface{}{"status": "Stopped"}
 
-		err = util.UpdateWithHelm3(alertName, namespace, alertChartRepository, helmValuesMap, kubeConfigPath)
+		err = util.UpdateWithHelm3(helmReleaseName, namespace, alertChartRepository, helmValuesMap, kubeConfigPath)
 		if err != nil {
-			return fmt.Errorf("failed to create Alert resources: %+v", err)
+			cleanErrorMsg := cleanAlertHelmError(err.Error(), helmReleaseName, alertName)
+			return fmt.Errorf("failed to create Alert resources: %+v", cleanErrorMsg)
 		}
 
 		log.Infof("successfully submitted stop Alert '%s' in namespace '%s'", alertName, namespace)

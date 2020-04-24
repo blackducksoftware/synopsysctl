@@ -58,13 +58,16 @@ var deleteAlertCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		alertName := fmt.Sprintf("%s%s", args[0], AlertPostSuffix)
+		alertName := args[0]
+		helmReleaseName := fmt.Sprintf("%s%s", alertName, AlertPostSuffix)
 
 		// Delete the Secrets
-		helmRelease, err := util.GetWithHelm3(alertName, namespace, kubeConfigPath)
+		helmRelease, err := util.GetWithHelm3(helmReleaseName, namespace, kubeConfigPath)
 		if err != nil {
-			return fmt.Errorf(strings.Replace(fmt.Sprintf("failed to get Alert values: %+v", err), fmt.Sprintf("instance '%s' ", alertName), fmt.Sprintf("instance '%s' ", args[0]), 0))
+			cleanErrorMsg := cleanAlertHelmError(err.Error(), helmReleaseName, alertName)
+			return fmt.Errorf("failed to get Alert values: %+v", cleanErrorMsg)
 		}
+
 		var name interface{}
 		var ok bool
 		if name, ok = helmRelease.Config["webserverCustomCertificatesSecretName"]; ok {
@@ -79,9 +82,10 @@ var deleteAlertCmd = &cobra.Command{
 		}
 
 		// Delete Alert Resources
-		err = util.DeleteWithHelm3(alertName, namespace, kubeConfigPath)
+		err = util.DeleteWithHelm3(helmReleaseName, namespace, kubeConfigPath)
 		if err != nil {
-			return fmt.Errorf("failed to delete Alert resources: %+v", err)
+			cleanErrorMsg := cleanAlertHelmError(err.Error(), helmReleaseName, alertName)
+			return fmt.Errorf("failed to delete Alert resources: %+v", cleanErrorMsg)
 		}
 
 		labelSelector := fmt.Sprintf("app=%s, name=%s", util.AlertName, alertName)

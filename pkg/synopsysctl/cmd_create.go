@@ -23,7 +23,6 @@ package synopsysctl
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/blackducksoftware/synopsysctl/pkg/alert"
@@ -88,7 +87,8 @@ var createAlertCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		alertName := fmt.Sprintf("%s%s", args[0], AlertPostSuffix)
+		alertName := args[0]
+		helmReleaseName := fmt.Sprintf("%s%s", alertName, AlertPostSuffix)
 
 		// Get the flags to set Helm values
 		helmValuesMap, err := createAlertCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
@@ -103,9 +103,10 @@ var createAlertCmd = &cobra.Command{
 		}
 
 		// Check Dry Run before deploying any resources
-		err = util.CreateWithHelm3(alertName, namespace, alertChartRepository, helmValuesMap, kubeConfigPath, true)
+		err = util.CreateWithHelm3(helmReleaseName, namespace, alertChartRepository, helmValuesMap, kubeConfigPath, true)
 		if err != nil {
-			return fmt.Errorf(strings.Replace(fmt.Sprintf("failed to create Alert resources: %+v", err), fmt.Sprintf("release '%s' ", alertName), fmt.Sprintf("release '%s' ", args[0]), 0))
+			cleanErrorMsg := cleanAlertHelmError(err.Error(), helmReleaseName, alertName)
+			return fmt.Errorf("failed to create Alert resources: %+v", cleanErrorMsg)
 		}
 
 		// Create secrets for Alert
@@ -150,9 +151,10 @@ var createAlertCmd = &cobra.Command{
 		}
 
 		// Deploy Alert Resources
-		err = util.CreateWithHelm3(alertName, namespace, alertChartRepository, helmValuesMap, kubeConfigPath, false)
+		err = util.CreateWithHelm3(helmReleaseName, namespace, alertChartRepository, helmValuesMap, kubeConfigPath, false)
 		if err != nil {
-			return fmt.Errorf(strings.Replace(fmt.Sprintf("failed to create Alert resources: %+v", err), fmt.Sprintf("release '%s' ", alertName), fmt.Sprintf("release '%s' ", args[0]), 0))
+			cleanErrorMsg := cleanAlertHelmError(err.Error(), helmReleaseName, alertName)
+			return fmt.Errorf("failed to create Alert resources: %+v", cleanErrorMsg)
 		}
 
 		log.Infof("Alert has been successfully Created!")
@@ -176,7 +178,8 @@ var createAlertNativeCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		alertName := fmt.Sprintf("%s%s", args[0], AlertPostSuffix)
+		alertName := args[0]
+		helmReleaseName := fmt.Sprintf("%s%s", alertName, AlertPostSuffix)
 
 		// Get the flags to set Helm values
 		helmValuesMap, err := createAlertCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
@@ -226,9 +229,10 @@ var createAlertNativeCmd = &cobra.Command{
 		}
 
 		// Deploy Alert Resources
-		err = util.TemplateWithHelm3(alertName, namespace, alertChartRepository, helmValuesMap)
+		err = util.TemplateWithHelm3(helmReleaseName, namespace, alertChartRepository, helmValuesMap)
 		if err != nil {
-			return fmt.Errorf("failed to create Alert resources: %+v", err)
+			cleanErrorMsg := cleanAlertHelmError(err.Error(), helmReleaseName, alertName)
+			return fmt.Errorf("failed to create Alert resources: %+v", cleanErrorMsg)
 		}
 
 		return nil

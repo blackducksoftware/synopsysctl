@@ -77,16 +77,11 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 	}
 
 	log.Info("upgrading Black Duck using Helm based deployment")
-	// Update the Helm Chart Location
 
-	chartLocationFlag := flags.Lookup("app-resources-path")
-	if chartLocationFlag.Changed {
-		blackduckChartRepository = chartLocationFlag.Value.String()
-	} else {
-		versionFlag := flags.Lookup("version")
-		if versionFlag.Changed {
-			blackduckChartRepository = fmt.Sprintf("%s/charts/blackduck-%s.tgz", baseChartRepository, versionFlag.Value.String())
-		}
+	// Update the Helm Chart Location
+	err = SetHelmChartLocation(flags, blackDuckChartName, &blackduckChartRepository)
+	if err != nil {
+		return fmt.Errorf("failed to set the app resources location due to %+v", err)
 	}
 
 	var extraFiles []string

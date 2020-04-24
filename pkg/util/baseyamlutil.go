@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
-	"path"
 	"reflect"
 	"regexp"
 	"strings"
@@ -66,19 +64,6 @@ func ConvertYamlFileToRuntimeObjects(stringContent string) (map[string]runtime.O
 		mapOfUniqueIDToDesiredRuntimeObject[uniqueID] = runtimeObject
 	}
 	return mapOfUniqueIDToDesiredRuntimeObject, nil
-}
-
-// GetBaseYaml returns the base yaml as string for the given app and version
-func GetBaseYaml(baseurl string, appName string, version string, fileName string) (string, error) {
-	// only fetch the location of the latest if the version in the spec is not given
-	url, err := url.Parse(baseurl)
-	if err != nil {
-		return "", err
-	}
-
-	url.Path = path.Join(url.Path, appName, version, fileName)
-
-	return downloadAndConvertYamlToByteArray(url.String())
 }
 
 func downloadAndConvertYamlToByteArray(url string) (string, error) {

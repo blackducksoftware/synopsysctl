@@ -40,9 +40,6 @@ const defaultBusyBoxImage string = "docker.io/busybox:1.28"
 // flag for all namespaces
 const allNamespacesFlag string = "--all-namespaces"
 
-// Flags for using native mode - doesn't deploy
-var nativeFormat = "json"
-
 const (
 	clusterTypeKubernetes = "KUBERNETES"
 	clusterTypeOpenshift  = "OPENSHIFT"
@@ -50,30 +47,40 @@ const (
 
 var nativeClusterType = clusterTypeKubernetes
 
-var baseURL = ""
+var baseChartRepository = "https://sig-repo.synopsys.com/sig-cloudnative"
 
-var baseChartRepository = "https://chartmuseum.cloudnative.sig-clops.synopsys.com"
+// AlertPostSuffix adds "-alert" to the end of the release (to differentiate if other apps are given the same name - ex: BlackDuck and Alert are both named "bd")
+const AlertPostSuffix = "-alert"
 
-// Alert Constants
-const AlertPostSuffix = "-alert" // AlertPostSuffix adds "-alert" to the end of the release
-var alertChartRepository = fmt.Sprintf("%s/charts/alert-helmchart-5.3.0.tgz", baseChartRepository)
+// Alert Helm Chart Constants
+var alertVersion = "5.3.1"
+var alertChartName = "synopsys-alert"
+var alertChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, alertChartName, alertVersion)
 
-// Opssight Constants
-var opssightVersion = "0.0.0"
-var opssightChartRepository = fmt.Sprintf("%s/charts/opssight-%s.tgz", baseChartRepository, opssightVersion)
+// Opssight Helm Chart Constants
+var opssightVersion = "2.2.5"
+var opssightChartName = "opssight"
+var opssightChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, opssightChartName, opssightVersion)
 
-// Black Duck Constants
-var blackduckChartRepository = fmt.Sprintf("%s/charts/blackduck-2020.4.0.tgz", baseChartRepository)
+// Black Duck Helm Chart Constants
+var blackDuckVersion = "2020.4.0"
+var blackDuckChartName = "blackduck"
+var blackduckChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, blackDuckChartName, blackDuckVersion)
 
-// Polaris Constants
+// Polaris Helm Chart Constants
 var polarisName = "polaris"
-var polarisChartRepository = fmt.Sprintf("%s/charts/polaris-helmchart-2020.03.tgz", baseChartRepository)
+var polarisVersion = "2020.03"
+var polarisChartName = "polaris-helmchart"
+var polarisChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, polarisChartName, polarisVersion)
 
-// Polaris Reporting Constants
+// Polaris Reporting Helm Chart Constants
 var polarisReportingName = "polaris-reporting"
-var polarisReportingChartRepository = fmt.Sprintf("%s/charts/polaris-helmchart-reporting-2020.03.tgz", baseChartRepository)
+var polarisReportingVersion = "2020.03"
+var polarisReportingChartName = "polaris-helmchart-reporting"
+var polarisReportingChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, polarisReportingChartName, polarisReportingVersion)
 
-// BDBA Constants
+// BDBA Helm Chart Constants
 var bdbaName = "bdba"
 var bdbaVersion = "2020.03"
-var bdbaChartRepository = fmt.Sprintf("%s/charts/bdba-%s.tgz", baseChartRepository, bdbaVersion)
+var bdbaChartName = "bdba"
+var bdbaChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, bdbaChartName, bdbaVersion)

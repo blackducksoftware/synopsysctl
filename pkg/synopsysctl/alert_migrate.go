@@ -82,22 +82,14 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 	// Delete the Current Instance's Resources (except PVCs)
 	log.Info("cleaning Current Alert resources")
 	// TODO wait for resources to be deleted
-	// if len(alert.Namespace) == 0 {
-	// 	alert.Namespace = alert.Name
-	// }
 	if err := deleteComponents(alert.Spec.Namespace, alert.Name, util.AlertName); err != nil {
 		return err
 	}
 
 	// Update the Helm Chart Location
-	chartLocationFlag := flags.Lookup("app-resources-path")
-	if chartLocationFlag.Changed {
-		alertChartRepository = chartLocationFlag.Value.String()
-	} else {
-		versionFlag := flags.Lookup("version")
-		if versionFlag.Changed {
-			alertChartRepository = fmt.Sprintf("%s/charts/synopys-alert-%s.tgz", baseChartRepository, versionFlag.Value.String())
-		}
+	err = SetHelmChartLocation(flags, alertChartName, &alertChartRepository)
+	if err != nil {
+		return fmt.Errorf("failed to set the app resources location due to %+v", err)
 	}
 
 	// check whether the update Alert version is greater than or equal to 5.0.0

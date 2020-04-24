@@ -35,6 +35,7 @@ import (
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -375,4 +376,24 @@ func getInstanceInfo(crdName string, appName string, namespace string, name stri
 	}
 
 	return namespace, crdNamespace, crdScope, nil
+}
+
+// SetHelmChartLocation uses --app-resources-path and --version to set the value at *chartVariable
+func SetHelmChartLocation(flags *pflag.FlagSet, chartName string, chartVariable *string) error {
+	chartLocationFlag := flags.Lookup("app-resources-path")
+	if chartLocationFlag == nil {
+		return fmt.Errorf("this command does not have flag --app-resources-path")
+	}
+	if chartLocationFlag.Changed {
+		*chartVariable = chartLocationFlag.Value.String()
+	} else {
+		versionFlag := flags.Lookup("version")
+		if versionFlag == nil {
+			return fmt.Errorf("this command does not have flag --version")
+		}
+		if versionFlag.Changed {
+			*chartVariable = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, chartName, versionFlag.Value.String())
+		}
+	}
+	return nil
 }

@@ -291,7 +291,7 @@ func GetWithHelm3(releaseName, namespace, kubeConfig string) (*release.Release, 
 			return release, nil
 		}
 	}
-	return nil, fmt.Errorf("unable to find instance '%s' in namespace '%s'", releaseName, namespace)
+	return nil, fmt.Errorf("unable to find release '%s' in namespace '%s'", releaseName, namespace)
 }
 
 // CreateHelmActionConfiguration creates an action.Configuration that points to the specified cluster and namespace

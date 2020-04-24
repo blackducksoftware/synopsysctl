@@ -34,7 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string, flags *pflag.FlagSet) error {
+func migrateAlert(alert *v1.Alert, helmReleaseName string, operatorNamespace string, crdNamespace string, flags *pflag.FlagSet) error {
 	// TODO ensure operator is installed and running a recent version that doesn't require additional migration
 
 	log.Info("stopping Synopsys Operator")
@@ -128,10 +128,8 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 		}
 	}
 
-	newReleaseName := fmt.Sprintf("%s%s", alert.Name, AlertPostSuffix)
-
 	// Verify Alert can be created with Dry-Run before creating resources
-	err = util.CreateWithHelm3(newReleaseName, alert.Spec.Namespace, alertChartRepository, helmValuesMap, kubeConfigPath, true)
+	err = util.CreateWithHelm3(helmReleaseName, alert.Spec.Namespace, alertChartRepository, helmValuesMap, kubeConfigPath, true)
 	if err != nil {
 		return fmt.Errorf("failed to update Alert resources: %+v", err)
 	}
@@ -166,25 +164,25 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 
 	// Rename the old exposed service/route to use the new Alert's release name
 	isOpenShift := util.IsOpenshift(kubeClient)
-	svc, err := util.GetService(kubeClient, namespace, fmt.Sprintf("%s-exposed", newReleaseName))
+	svc, err := util.GetService(kubeClient, namespace, fmt.Sprintf("%s-exposed", helmReleaseName))
 	if err == nil {
 		svc.Kind = "Service"
 		svc.APIVersion = "v1"
 		svc.Labels = util.InitLabels(svc.Labels)
-		svc.Labels["name"] = newReleaseName
+		svc.Labels["name"] = helmReleaseName
 		svc.Spec.Selector = util.InitLabels(svc.Spec.Selector)
-		svc.Spec.Selector["name"] = newReleaseName
+		svc.Spec.Selector["name"] = helmReleaseName
 		if _, err = kubeClient.CoreV1().Services(namespace).Update(svc); err != nil {
 			return fmt.Errorf("failed to update Alert's exposed service due to %s", err)
 		}
 	} else if isOpenShift {
 		routeClient := util.GetRouteClient(restconfig, kubeClient, namespace)
-		route, err := util.GetRoute(routeClient, namespace, fmt.Sprintf("%s-exposed", newReleaseName))
+		route, err := util.GetRoute(routeClient, namespace, fmt.Sprintf("%s-exposed", helmReleaseName))
 		if err == nil {
 			route.Kind = "Route"
 			route.APIVersion = "v1"
 			route.Labels = util.InitLabels(route.Labels)
-			route.Labels["name"] = newReleaseName
+			route.Labels["name"] = helmReleaseName
 			if _, err = routeClient.Routes(namespace).Update(route); err != nil {
 				return fmt.Errorf("failed to update Alert's route due to %s", err)
 			}
@@ -192,15 +190,16 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 	}
 
 	// Update exposed Services for Alert
-	err = alertctl.CRUDServiceOrRoute(restconfig, kubeClient, namespace, newReleaseName, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], flags.Lookup("expose-ui").Changed)
+	err = alertctl.CRUDServiceOrRoute(restconfig, kubeClient, namespace, helmReleaseName, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], flags.Lookup("expose-ui").Changed)
 	if err != nil {
 		return fmt.Errorf("failed to update Alert's exposed service %+v", err)
 	}
 
 	// Deploy new Resources
-	err = util.CreateWithHelm3(newReleaseName, alert.Spec.Namespace, alertChartRepository, helmValuesMap, kubeConfigPath, false)
+	err = util.CreateWithHelm3(helmReleaseName, alert.Spec.Namespace, alertChartRepository, helmValuesMap, kubeConfigPath, false)
 	if err != nil {
-		return fmt.Errorf("failed to update Alert resources: %+v", err)
+		cleanErrorMsg := strings.Replace(err.Error(), helmReleaseName, alert.Name, 0)
+		return fmt.Errorf("failed to update Alert resources: %+v", cleanErrorMsg)
 	}
 
 	log.Info("deleting Alert custom resource")
@@ -210,7 +209,7 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 
 	_, err = util.CheckAndUpdateNamespace(kubeClient, util.AlertName, alert.Spec.Namespace, alert.Name, "", true)
 	if err != nil {
-		log.Warnf("unable to patch the namespace to remove an app labels due to %+v", err)
+		log.Warnf("unable to patch the namespace to remove app labels due to %+v", err)
 	}
 
 	return destroyOperator(operatorNamespace, crdNamespace)

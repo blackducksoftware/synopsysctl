@@ -88,6 +88,7 @@ var updateAlertCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		alertName := args[0]
+		helmReleaseName := fmt.Sprintf("%s%s", alertName, AlertPostSuffix)
 
 		// Update the Helm Chart Location
 		err := SetHelmChartLocation(cmd.Flags(), alertChartName, &alertChartRepository)
@@ -97,13 +98,13 @@ var updateAlertCmd = &cobra.Command{
 
 		// TODO verity we can download the chart
 		isOperatorBased := false
-		instance, err := util.GetWithHelm3(fmt.Sprintf("%s%s", alertName, AlertPostSuffix), namespace, kubeConfigPath)
+		instance, err := util.GetWithHelm3(helmReleaseName, namespace, kubeConfigPath)
 		if err != nil {
 			isOperatorBased = true
 		}
 
 		if !isOperatorBased && instance != nil {
-			err = updateAlertHelmBased(cmd, fmt.Sprintf("%s%s", alertName, AlertPostSuffix), alertName)
+			err = updateAlertHelmBased(cmd, helmReleaseName, alertName)
 		} else if isOperatorBased {
 			versionFlag := cmd.Flag("version")
 			if !versionFlag.Changed {
@@ -117,7 +118,7 @@ var updateAlertCmd = &cobra.Command{
 			// if !isGreaterThanOrEqualTo {
 			// 	return fmt.Errorf("you must upgrade this Alert to version 6.0.0 or after in order to use this synopsysctl binary - you gave version %+v", versionFlag.Value.String())
 			// }
-			err = updateAlertOperatorBased(cmd, alertName)
+			err = updateAlertOperatorBased(cmd, helmReleaseName, alertName)
 		}
 		if err != nil {
 			return err
@@ -129,11 +130,12 @@ var updateAlertCmd = &cobra.Command{
 	},
 }
 
-func updateAlertHelmBased(cmd *cobra.Command, alertName string, customerReleaseName string) error {
+func updateAlertHelmBased(cmd *cobra.Command, helmReleaseName string, alertName string) error {
 	// Set flags from the current release in the updateAlertCobraHelper
-	helmRelease, err := util.GetWithHelm3(alertName, namespace, kubeConfigPath)
+	helmRelease, err := util.GetWithHelm3(helmReleaseName, namespace, kubeConfigPath)
 	if err != nil {
-		return fmt.Errorf(strings.Replace(fmt.Sprintf("failed to get previous user defined values: %+v", err), fmt.Sprintf("instance '%s' ", alertName), fmt.Sprintf("instance '%s' ", customerReleaseName), 0))
+		cleanErrorMsg := cleanAlertHelmError(err.Error(), helmReleaseName, alertName)
+		return fmt.Errorf("failed to get previous user defined values: %+v", cleanErrorMsg)
 	}
 	updateAlertCobraHelper.SetArgs(helmRelease.Config)
 
@@ -224,20 +226,21 @@ func updateAlertHelmBased(cmd *cobra.Command, alertName string, customerReleaseN
 	}
 
 	// Expose Services for Alert
-	err = alert.CRUDServiceOrRoute(restconfig, kubeClient, namespace, alertName, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], cmd.Flags().Lookup("expose-ui").Changed)
+	err = alert.CRUDServiceOrRoute(restconfig, kubeClient, namespace, helmReleaseName, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], cmd.Flags().Lookup("expose-ui").Changed)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update exposed service due to %+v", err)
 	}
 
 	// Update Alert Resources
-	err = util.UpdateWithHelm3(alertName, namespace, alertChartRepository, helmValuesMap, kubeConfigPath)
+	err = util.UpdateWithHelm3(helmReleaseName, namespace, alertChartRepository, helmValuesMap, kubeConfigPath)
 	if err != nil {
-		return fmt.Errorf("failed to update Alert resources due to %+v", err)
+		cleanErrorMsg := cleanAlertHelmError(err.Error(), helmReleaseName, alertName)
+		return fmt.Errorf("failed to update Alert resources due to %+v", cleanErrorMsg)
 	}
 	return nil
 }
 
-func updateAlertOperatorBased(cmd *cobra.Command, alertName string) error {
+func updateAlertOperatorBased(cmd *cobra.Command, newReleaseName string, alertName string) error {
 	operatorNamespace := namespace
 	isClusterScoped := util.GetClusterScope(apiExtensionClient)
 	if isClusterScoped {
@@ -261,7 +264,7 @@ func updateAlertOperatorBased(cmd *cobra.Command, alertName string) error {
 		return fmt.Errorf("error getting Alert '%s' in namespace '%s' due to %+v", alertName, crdNamespace, err)
 	}
 
-	if err := migrateAlert(currAlert, operatorNamespace, crdNamespace, cmd.Flags()); err != nil {
+	if err := migrateAlert(currAlert, newReleaseName, operatorNamespace, crdNamespace, cmd.Flags()); err != nil {
 		// TODO restart operator if migration failed?
 		return err
 	}

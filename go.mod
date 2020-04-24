@@ -5,12 +5,11 @@ go 1.13
 require (
 	github.com/blackducksoftware/horizon v0.0.0-20190625151958-16cafa9109a3
 	github.com/ghodss/yaml v1.0.0
-	github.com/gin-gonic/gin v1.4.0 // indirect
 	github.com/imdario/mergo v0.3.7
 	github.com/juju/errors v0.0.0-20190806202954-0232dcc7464d
 	github.com/juju/loggo v0.0.0-20190526231331-6e530bcce5d8 // indirect
 	github.com/juju/testing v0.0.0-20191001232224-ce9dec17d28b // indirect
-	github.com/lib/pq v1.3.0
+	github.com/mattn/go-isatty v0.0.7 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/onsi/ginkgo v1.10.3 // indirect
 	github.com/onsi/gomega v1.7.1 // indirect

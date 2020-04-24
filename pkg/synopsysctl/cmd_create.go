@@ -24,6 +24,7 @@ package synopsysctl
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/blackducksoftware/synopsysctl/pkg/alert"
 	alertctl "github.com/blackducksoftware/synopsysctl/pkg/alert"
@@ -148,8 +149,7 @@ var createAlertCmd = &cobra.Command{
 		}
 
 		// Expose Services for Alert
-		exposeUI := cmd.Flags().Lookup("expose-ui").Changed && cmd.Flags().Lookup("expose-ui").Value.String() != util.NONE
-		err = alert.CRUDServiceOrRoute(restconfig, kubeClient, namespace, alertName, exposeUI, helmValuesMap["exposedServiceType"], false)
+		err = alert.CRUDServiceOrRoute(restconfig, kubeClient, namespace, alertName, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], cmd.Flags().Lookup("expose-ui").Changed)
 		if err != nil {
 			return err
 		}
@@ -291,6 +291,15 @@ var createBlackDuckCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ok, err := util.IsVersionGreaterThanOrEqualTo(cmd.Flag("version").Value.String(), 2020, time.April, 0)
+		if err != nil {
+			return err
+		}
+
+		if !ok {
+			return fmt.Errorf("creation of Black Duck instance is only suported for version 2020.4.0 and above")
+		}
+
 		helmValuesMap, err := createBlackDuckCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
 		if err != nil {
 			return err
@@ -335,7 +344,7 @@ var createBlackDuckCmd = &cobra.Command{
 			return fmt.Errorf("failed to create Blackduck resources: %+v", err)
 		}
 
-		err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, namespace, args[0], helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], false)
+		err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, namespace, args[0], helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], cmd.Flags().Lookup("expose-ui").Changed)
 		if err != nil {
 			return err
 		}

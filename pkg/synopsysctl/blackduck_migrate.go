@@ -125,7 +125,7 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 		return fmt.Errorf("failed to create Blackduck resources: %+v", err)
 	}
 
-	err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, bd.Spec.Namespace, bd.Name, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], true)
+	err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, bd.Spec.Namespace, bd.Name, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], flags.Lookup("expose-ui").Changed)
 	if err != nil {
 		return err
 	}

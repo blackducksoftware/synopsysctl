@@ -79,11 +79,30 @@ func migrateAlert(alert *v1.Alert, helmReleaseName string, operatorNamespace str
 
 	log.Info("upgrading Alert instance")
 
-	// Delete the Current Instance's Resources (except PVCs)
+	// Delete the Current Instance's Resources (except PVCs and exposed service)
 	log.Info("cleaning Current Alert resources")
 	// TODO wait for resources to be deleted
 	if err := deleteComponents(alert.Spec.Namespace, alert.Name, util.AlertName); err != nil {
 		return err
+	}
+
+	// if the services was exposed by the operator, we will not delete the service so that the IP
+	// address remains the same. Thus we need to set this field to false so "Helm Create" does not try
+	// to update the resource
+	updateService := false
+	if alert.Spec.ExposeService != util.NONE {
+		if alert.Spec.ExposeService == strings.ToUpper(helmValuesMap["exposedServiceType"].(string)) {
+			helmValuesMap["exposeui"] = false // synopsysctl will manage the exposed service
+		} else {
+			updateService = true
+			helmValuesMap["exposeui"] = true // helm chart needs to update the exposed service type
+		}
+	}
+
+	// Update exposed Services for Alert
+	err = alertctl.CRUDServiceOrRoute(restconfig, kubeClient, namespace, alert.Name, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], updateService)
+	if err != nil {
+		return fmt.Errorf("failed to update Alert's exposed service %+v", err)
 	}
 
 	// Update the Helm Chart Location
@@ -131,7 +150,7 @@ func migrateAlert(alert *v1.Alert, helmReleaseName string, operatorNamespace str
 	// Verify Alert can be created with Dry-Run before creating resources
 	err = util.CreateWithHelm3(helmReleaseName, alert.Spec.Namespace, alertChartRepository, helmValuesMap, kubeConfigPath, true)
 	if err != nil {
-		return fmt.Errorf("failed to update Alert resources: %+v", err)
+		return fmt.Errorf("failed to update Alert resources dry-run: %+v", err)
 	}
 
 	// Update the Secrets
@@ -162,7 +181,7 @@ func migrateAlert(alert *v1.Alert, helmReleaseName string, operatorNamespace str
 		}
 	}
 
-	// Rename the old exposed service/route to use the new Alert's release name
+	// If it exists, rename the old exposed service/route to use the new Alert's release name
 	isOpenShift := util.IsOpenshift(kubeClient)
 	svc, err := util.GetService(kubeClient, namespace, fmt.Sprintf("%s-exposed", helmReleaseName))
 	if err == nil {
@@ -187,12 +206,6 @@ func migrateAlert(alert *v1.Alert, helmReleaseName string, operatorNamespace str
 				return fmt.Errorf("failed to update Alert's route due to %s", err)
 			}
 		}
-	}
-
-	// Update exposed Services for Alert
-	err = alertctl.CRUDServiceOrRoute(restconfig, kubeClient, namespace, helmReleaseName, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], flags.Lookup("expose-ui").Changed)
-	if err != nil {
-		return fmt.Errorf("failed to update Alert's exposed service %+v", err)
 	}
 
 	// Deploy new Resources

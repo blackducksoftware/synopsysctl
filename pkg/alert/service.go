@@ -29,20 +29,20 @@ import (
 )
 
 // CRUDServiceOrRoute will create or update Alert exposed service, or route in case of OpenShift
-func CRUDServiceOrRoute(restConfig *rest.Config, kubeClient *kubernetes.Clientset, namespace string, resourcesName string, isExposedUI interface{}, exposedServiceType interface{}, isChanged bool) error {
-	serviceName := util.GetResourceName(resourcesName, util.AlertName, "exposed")
-	routeName := util.GetResourceName(resourcesName, util.AlertName, "")
+func CRUDServiceOrRoute(restConfig *rest.Config, kubeClient *kubernetes.Clientset, namespace string, customerAppName string, isExposedUI interface{}, exposedServiceType interface{}, isChanged bool) error {
+	serviceName := util.GetResourceName(customerAppName, util.AlertName, "exposed")
+	routeName := util.GetResourceName(customerAppName, util.AlertName, "")
 	isOpenShift := util.IsOpenshift(kubeClient)
 	var err error
 	if isExposedUI != nil && isExposedUI.(bool) {
 		switch exposedServiceType.(string) {
 		case "NodePort":
-			err = crudExposedService(restConfig, kubeClient, namespace, resourcesName, corev1.ServiceTypeNodePort)
+			err = crudExposedService(restConfig, kubeClient, namespace, customerAppName, corev1.ServiceTypeNodePort)
 			if err != nil {
 				return err
 			}
 		case "LoadBalancer":
-			err = crudExposedService(restConfig, kubeClient, namespace, resourcesName, corev1.ServiceTypeLoadBalancer)
+			err = crudExposedService(restConfig, kubeClient, namespace, customerAppName, corev1.ServiceTypeLoadBalancer)
 			if err != nil {
 				return err
 			}
@@ -81,9 +81,9 @@ func CRUDServiceOrRoute(restConfig *rest.Config, kubeClient *kubernetes.Clientse
 }
 
 // crudExposedService crud for webserver exposed service
-func crudExposedService(restConfig *rest.Config, kubeClient *kubernetes.Clientset, namespace string, resourcesName string, serviceType corev1.ServiceType) error {
-	serviceName := util.GetResourceName(resourcesName, util.AlertName, "exposed")
-	routeName := util.GetResourceName(resourcesName, util.AlertName, "")
+func crudExposedService(restConfig *rest.Config, kubeClient *kubernetes.Clientset, namespace string, customerAppName string, serviceType corev1.ServiceType) error {
+	serviceName := util.GetResourceName(customerAppName, util.AlertName, "exposed")
+	routeName := util.GetResourceName(customerAppName, util.AlertName, "")
 	if util.IsOpenshift(kubeClient) {
 		routeClient := util.GetRouteClient(restConfig, kubeClient, namespace)
 		if route, err := util.GetRoute(routeClient, namespace, routeName); err == nil {

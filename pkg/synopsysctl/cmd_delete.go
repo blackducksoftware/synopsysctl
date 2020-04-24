@@ -91,23 +91,23 @@ var deleteAlertCmd = &cobra.Command{
 		labelSelector := fmt.Sprintf("app=%s, name=%s", util.AlertName, alertName)
 		svcs, err := util.ListServices(kubeClient, namespace, labelSelector)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to list services: %+v", err)
 		}
 		for _, svc := range svcs.Items {
 			if strings.HasSuffix(svc.Name, "-exposed") {
 				if err := util.DeleteService(kubeClient, namespace, svc.Name); !k8serrors.IsNotFound(err) {
-					return err
+					return fmt.Errorf("failed to delete the Alert exposed service: %+v", err)
 				}
 			}
 		}
 
 		pvcs, err := util.ListPVCs(kubeClient, namespace, labelSelector)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to list PVCs: %+v", err)
 		}
 		for _, pvc := range pvcs.Items {
 			if err := util.DeletePVC(kubeClient, namespace, pvc.Name); !k8serrors.IsNotFound(err) {
-				return err
+				return fmt.Errorf("failed to delete PVC '%s': %+v", pvc.Name, err)
 			}
 		}
 
@@ -317,6 +317,7 @@ func init() {
 
 	// Add Delete Alert Command
 	deleteAlertCmd.Flags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
+	cobra.MarkFlagRequired(deleteBlackDuckCmd.Flags(), "namespace")
 	deleteCmd.AddCommand(deleteAlertCmd)
 
 	// Add Delete Black Duck Command

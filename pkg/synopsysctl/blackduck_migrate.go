@@ -109,6 +109,24 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 		}
 	}
 
+	// if the services was exposed by the operator, we will not delete the service so that the IP
+	// address remains the same. Thus we need to set this field to false so "Helm Create" does not try
+	// to update the resource
+	updateService := false
+	if bd.Spec.ExposeService != util.NONE {
+		if bd.Spec.ExposeService == strings.ToUpper(helmValuesMap["exposedServiceType"].(string)) {
+			helmValuesMap["exposeui"] = false // synopsysctl will manage the exposed service
+		} else {
+			helmValuesMap["exposeui"] = true // helm chart needs to update the exposed service type
+			updateService = true
+		}
+	}
+
+	err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, bd.Spec.Namespace, bd.Name, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], updateService)
+	if err != nil {
+		return err
+	}
+
 	err = util.CreateWithHelm3(bd.Name, bd.Spec.Namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath, true, extraFiles...)
 	if err != nil {
 		return fmt.Errorf("failed to create Blackduck resources: %+v", err)
@@ -118,11 +136,6 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 	err = util.CreateWithHelm3(bd.Name, bd.Spec.Namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath, false, extraFiles...)
 	if err != nil {
 		return fmt.Errorf("failed to create Blackduck resources: %+v", err)
-	}
-
-	err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, bd.Spec.Namespace, bd.Name, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], flags.Lookup("expose-ui").Changed)
-	if err != nil {
-		return err
 	}
 
 	log.Info("removing Black Duck custom resource")

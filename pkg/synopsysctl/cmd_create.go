@@ -32,7 +32,6 @@ import (
 	"github.com/blackducksoftware/synopsysctl/pkg/opssight"
 	"github.com/blackducksoftware/synopsysctl/pkg/polaris"
 	polarisreporting "github.com/blackducksoftware/synopsysctl/pkg/polaris-reporting"
-	polarisreportingctl "github.com/blackducksoftware/synopsysctl/pkg/polaris-reporting"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 
 	log "github.com/sirupsen/logrus"
@@ -625,23 +624,6 @@ var createPolarisReportingCmd = &cobra.Command{
 			return fmt.Errorf("failed to create Polaris-Reporting resources: %+v", err)
 		}
 
-		// Get Secret For the GCP Key
-		gcpServiceAccountPath := cmd.Flag("gcp-service-account-path").Value.String()
-		gcpServiceAccountData, err := util.ReadFileData(gcpServiceAccountPath)
-		if err != nil {
-			return fmt.Errorf("failed to read gcp service account file at location: '%s', error: %+v", gcpServiceAccountPath, err)
-		}
-		gcpServiceAccountSecrets, err := polarisreportingctl.GetPolarisReportingSecrets(namespace, gcpServiceAccountData)
-		if err != nil {
-			return fmt.Errorf("failed to create GCP Service Account Secrets: %+v", err)
-		}
-
-		// Deploy the Secret
-		err = KubectlApplyRuntimeObjects(gcpServiceAccountSecrets)
-		if err != nil {
-			return fmt.Errorf("failed to deploy the gcpServiceAccount Secrets: %s", err)
-		}
-
 		// Deploy Polaris-Reporting Resources
 		err = util.CreateWithHelm3(polarisReportingName, namespace, polarisReportingChartRepository, helmValuesMap, kubeConfigPath, false)
 		if err != nil {
@@ -679,22 +661,6 @@ var createPolarisReportingNativeCmd = &cobra.Command{
 		err = SetHelmChartLocation(cmd.Flags(), polarisReportingChartName, &polarisReportingChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
-		}
-
-		// Get Secret For the GCP Key
-		gcpServiceAccountPath := cmd.Flag("gcp-service-account-path").Value.String()
-		gcpServiceAccountData, err := util.ReadFileData(gcpServiceAccountPath)
-		if err != nil {
-			return fmt.Errorf("failed to read gcp service account file at location: '%s', error: %+v", gcpServiceAccountPath, err)
-		}
-		gcpServiceAccountSecrets, err := polarisreportingctl.GetPolarisReportingSecrets(namespace, gcpServiceAccountData)
-		if err != nil {
-			return fmt.Errorf("failed to create GCP Service Account Secrets: %+v", err)
-		}
-
-		// Print the Secret
-		for _, obj := range gcpServiceAccountSecrets {
-			PrintComponent(obj, "YAML") // helm only supports yaml
 		}
 
 		// Print Polaris-Reporting Resources
@@ -824,7 +790,6 @@ func init() {
 	createBlackDuckCmd.AddCommand(createBlackDuckNativeCmd)
 
 	// Add OpsSight Command
-	createOpsSightCmd.PersistentFlags().StringVar(&baseOpsSightSpec, "template", baseOpsSightSpec, "Base resource configuration to modify with flags [empty|upstream|default|disabledBlackDuck]")
 	createOpsSightCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
 	cobra.MarkFlagRequired(createOpsSightCmd.PersistentFlags(), "namespace")
 	addChartLocationPathFlag(createOpsSightCmd)

@@ -35,7 +35,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func destroyOperator(namespace string, crdNamespace string) error {
+func destroyOperator(namespace string, crdNamespace string, skipDestroyorRestartOperator bool) error {
+	if skipDestroyorRestartOperator {
+		log.Infof("other migration is in progress and hence skipping...")
+		return nil
+	}
 	// delete namespace
 	isNamespaceExist, err := util.CheckResourceNamespace(kubeClient, namespace, "", true)
 	if isNamespaceExist {

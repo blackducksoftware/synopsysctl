@@ -35,7 +35,6 @@ import (
 	"github.com/blackducksoftware/horizon/pkg/components"
 	"github.com/blackducksoftware/synopsysctl/pkg/alert"
 	alertctl "github.com/blackducksoftware/synopsysctl/pkg/alert"
-	blackduckapi "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
 	"github.com/blackducksoftware/synopsysctl/pkg/bdba"
 	blackduck "github.com/blackducksoftware/synopsysctl/pkg/blackduck"
 	opssight "github.com/blackducksoftware/synopsysctl/pkg/opssight"
@@ -44,6 +43,7 @@ import (
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"helm.sh/helm/v3/pkg/release"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -474,11 +474,11 @@ var updateBlackDuckMasterKeyCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_, err := util.GetWithHelm3(args[0], namespace, kubeConfigPath)
+		release, err := util.GetWithHelm3(args[0], namespace, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("couldn't find instance %s in namespace %s", args[0], namespace)
 		}
-		if err := updateMasterKey(namespace, args[0], args[1], args[2], false); err != nil {
+		if err := updateMasterKey(namespace, args[0], args[1], args[2], false, release, cmd); err != nil {
 			return err
 		}
 		return nil
@@ -504,7 +504,7 @@ var updateBlackDuckMasterKeyNativeCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := updateMasterKey(namespace, args[0], args[1], args[2], true); err != nil {
+		if err := updateMasterKey(namespace, args[0], args[1], args[2], true, nil, nil); err != nil {
 			return err
 		}
 		return nil
@@ -512,7 +512,7 @@ var updateBlackDuckMasterKeyNativeCmd = &cobra.Command{
 }
 
 // updateMasterKey updates the master key and encoded with new seal key
-func updateMasterKey(namespace string, name string, oldMasterKeyFilePath string, newSealKey string, isNative bool) error {
+func updateMasterKey(namespace string, name string, oldMasterKeyFilePath string, newSealKey string, isNative bool, release *release.Release, cmd *cobra.Command) error {
 
 	// getting the seal key secret to retrieve the seal key
 	secret, err := util.GetSecret(kubeClient, namespace, fmt.Sprintf("%s-blackduck-upload-cache", name))
@@ -563,8 +563,18 @@ func updateMasterKey(namespace string, name string, oldMasterKeyFilePath string,
 
 		log.Infof("successfully deleted an upload cache pod for Black Duck '%s' in namespace '%s' to reflect the new seal key. Wait for upload cache pod to restart to resume the source code upload", name, namespace)
 	} else {
-		helmValuesMap := make(map[string]interface{})
+		// Get the flags to set Helm values
+		helmValuesMap := release.Config
+
+		// Update the Helm Chart Location
+		err = SetHelmChartLocation(cmd.Flags(), blackDuckChartName, &blackduckChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
+
+		// set the new seal key
 		util.SetHelmValueInMap(helmValuesMap, []string{"sealKey"}, newSealKey)
+
 		if err := util.UpdateWithHelm3(name, namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath); err != nil {
 			return err
 		}
@@ -589,9 +599,17 @@ var updateBlackDuckAddEnvironCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_, err := util.GetWithHelm3(args[0], namespace, kubeConfigPath)
+		helmRelease, err := util.GetWithHelm3(args[0], namespace, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("couldn't find instance %s in namespace %s", args[0], namespace)
+		}
+
+		helmValuesMap := helmRelease.Config
+
+		// Update the Helm Chart Location
+		err = SetHelmChartLocation(cmd.Flags(), blackDuckChartName, &blackduckChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		vals := strings.Split(args[1], ":")
@@ -600,7 +618,6 @@ var updateBlackDuckAddEnvironCmd = &cobra.Command{
 		}
 		log.Infof("updating Black Duck '%s' with environ '%s' in namespace '%s'...", args[0], args[1], namespace)
 
-		helmValuesMap := make(map[string]interface{})
 		util.SetHelmValueInMap(helmValuesMap, []string{"environs", vals[0]}, vals[1])
 
 		if err := util.UpdateWithHelm3(args[0], namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath); err != nil {
@@ -610,31 +627,6 @@ var updateBlackDuckAddEnvironCmd = &cobra.Command{
 		log.Infof("successfully submitted updates to Black Duck '%s' in namespace '%s'", args[0], namespace)
 		return nil
 	},
-}
-
-func updateBlackDuckSetImageRegistry(bd *blackduckapi.Blackduck, imageRegistry string) (*blackduckapi.Blackduck, error) {
-	// Get the name of the container
-	baseContainerName, err := util.GetImageName(imageRegistry)
-	if err != nil {
-		return nil, err
-	}
-	// Add Registry to Spec
-	var found bool
-	for i, imageReg := range bd.Spec.ImageRegistries {
-		existingBaseContainerName, err := util.GetImageName(imageReg)
-		if err != nil {
-			return nil, err
-		}
-		found = strings.EqualFold(existingBaseContainerName, baseContainerName)
-		if found {
-			bd.Spec.ImageRegistries[i] = imageRegistry // replace existing imageReg
-			break
-		}
-	}
-	if !found { // if didn't already exist, add new imageReg
-		bd.Spec.ImageRegistries = append(bd.Spec.ImageRegistries, imageRegistry)
-	}
-	return bd, nil
 }
 
 /*
@@ -1131,18 +1123,21 @@ func init() {
 
 	// updateBlackDuckMasterKeyCmd
 	updateBlackDuckCmd.AddCommand(updateBlackDuckMasterKeyCmd)
+	addChartLocationPathFlag(updateBlackDuckMasterKeyCmd)
 
 	// updateBlackDuckMasterKeyNativeCmd
 	updateBlackDuckMasterKeyCmd.AddCommand(updateBlackDuckMasterKeyNativeCmd)
+	addChartLocationPathFlag(updateBlackDuckMasterKeyNativeCmd)
 
 	// updateBlackDuckAddEnvironCmd
 	updateBlackDuckCmd.AddCommand(updateBlackDuckAddEnvironCmd)
+	addChartLocationPathFlag(updateBlackDuckAddEnvironCmd)
 
 	/* Update OpsSight Comamnds */
 
 	// updateOpsSightCmd
 	updateOpsSightCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
-	cobra.MarkFlagRequired(updateBlackDuckCmd.PersistentFlags(), "namespace")
+	cobra.MarkFlagRequired(updateOpsSightCmd.PersistentFlags(), "namespace")
 	addChartLocationPathFlag(updateOpsSightCmd)
 	updateOpsSightCobraHelper.AddCobraFlagsToCommand(updateOpsSightCmd, false)
 	updateCmd.AddCommand(updateOpsSightCmd)

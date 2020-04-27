@@ -233,6 +233,8 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 	if f.Changed {
 		log.Debugf("flag '%s': CHANGED", f.Name)
 		switch f.Name {
+		case "version":
+			util.SetHelmValueInMap(ctl.args, []string{"imageTag"}, ctl.flagTree.Version)
 		case "size":
 			util.SetHelmValueInMap(ctl.args, []string{"size"}, ctl.flagTree.Size)
 		case "expose-ui":

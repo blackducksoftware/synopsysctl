@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,8 +42,10 @@ import (
 	"github.com/blackducksoftware/synopsysctl/pkg/polaris"
 	polarisreporting "github.com/blackducksoftware/synopsysctl/pkg/polaris-reporting"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"helm.sh/helm/v3/pkg/release"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -285,6 +288,9 @@ var updateBlackDuckCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		blackDuckName := args[0]
+		blackDuckNamespace := namespace
+
 		// Update the Helm Chart Location
 		err := SetHelmChartLocation(cmd.Flags(), blackDuckChartName, &blackduckChartRepository)
 		if err != nil {
@@ -296,6 +302,9 @@ var updateBlackDuckCmd = &cobra.Command{
 		if err != nil {
 			isOperatorBased = true
 		}
+
+		oldVersion := util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
+		fmt.Printf("[HERE] %+v\n", oldVersion)
 
 		if !isOperatorBased && instance != nil {
 			if cmd.Flag("version").Changed {
@@ -337,6 +346,12 @@ var updateBlackDuckCmd = &cobra.Command{
 			size, found := instance.Config["size"]
 			if found {
 				extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", size.(string)))
+			}
+
+			// Update Security Context Permissions
+			err = runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion, helmValuesMap, instance, cmd.Flags())
+			if err != nil {
+				return fmt.Errorf("failed to update File Ownerships in PVs: %+v", err)
 			}
 
 			if err := util.UpdateWithHelm3(args[0], namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath, extraFiles...); err != nil {
@@ -392,6 +407,125 @@ var updateBlackDuckCmd = &cobra.Command{
 		log.Infof("Black Duck has been successfully Updated in namespace '%s'!", namespace)
 		return nil
 	},
+}
+
+func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion string, helmValuesMap map[string]interface{}, helmRelease *release.Release, flags *pflag.FlagSet) error {
+	newVersion := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
+	currState := util.GetValueFromRelease(helmRelease, []string{"status"}).(string)
+	persistentStroage := util.GetValueFromRelease(helmRelease, []string{"enablePersistentStorage"}).(bool)
+
+	// Update the File Owernship in Persistent Volumes if Security Context changes are needed
+	oldVersionIsGreaterThanOrEqualv2019x12x0, err := util.IsVersionGreaterThanOrEqualTo(oldVersion, 2019, time.December, 0)
+	if err != nil {
+		return err
+	}
+	newVersionIsGreaterThanOrEqualv2019x12x0, err := util.IsVersionGreaterThanOrEqualTo(newVersion, 2019, time.December, 0)
+	if err != nil {
+		return err
+	}
+	if !newVersionIsGreaterThanOrEqualv2019x12x0 && flags.Changed("security-context-file-path") {
+		return fmt.Errorf("security contexts from --security-context-file-path cannot be set for versions before 2019.12.0, you're using version %s", newVersion)
+	}
+	if util.IsOpenshift(kubeClient) && flags.Changed("security-context-file-path") {
+		return fmt.Errorf("cannot set security contexts with --security-context-file-path in an Openshift environment")
+	}
+
+	// case: Security Contexts are set in an old version and then upgrade to a version that requires changes
+	bdUpdatedToVersionWithSecurityContexts := flags.Lookup("version").Changed && (!oldVersionIsGreaterThanOrEqualv2019x12x0 && newVersionIsGreaterThanOrEqualv2019x12x0)
+
+	// case: Black Duck will be restarted during update and no changes to PVs are needed
+	bdUpdatedToVersionWithSecurityContextsAndNoPersistentStorage := bdUpdatedToVersionWithSecurityContexts && !persistentStroage
+
+	// case: Security Contexts are changed and it's a version with support for security contexts
+	bdSecurityContextsWereChanged := flags.Lookup("security-context-file-path").Changed && newVersionIsGreaterThanOrEqualv2019x12x0
+
+	if (bdUpdatedToVersionWithSecurityContexts || bdSecurityContextsWereChanged) && !bdUpdatedToVersionWithSecurityContextsAndNoPersistentStorage && !util.IsOpenshift(kubeClient) {
+		// Stop the BlackDuck instance
+		if strings.ToUpper(currState) != "STOPPED" {
+			log.Infof("stopping Black Duck to apply Security Context changes")
+			helmValuesMap := make(map[string]interface{})
+			util.SetHelmValueInMap(helmValuesMap, []string{"status"}, "Stopped")
+			err = util.UpdateWithHelm3(blackDuckName, namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath)
+			if err != nil {
+				return fmt.Errorf("failed to create Blackduck resources: %+v", err)
+			}
+			// Wait for Black Duck to Stop
+			log.Infof("waiting for Black Duck to stop...")
+			waitCount := 0
+			for {
+				// ... wait for the Black Duck to stop
+				pods, err := util.ListPodsWithLabels(kubeClient, blackDuckNamespace, fmt.Sprintf("app=blackduck,name=%s", blackDuckName))
+				if err != nil {
+					return errors.Wrap(err, "failed to list pods to stop Black Duck for setting group ownership")
+				}
+				if len(pods.Items) == 0 {
+					break
+				}
+				time.Sleep(time.Second * 5)
+				waitCount = waitCount + 1
+				if waitCount%5 == 0 {
+					log.Debugf("waiting for Black Duck to stop - %d pods remaining", len(pods.Items))
+				}
+			}
+		}
+
+		// Get a list of Persistent Volumes based on Persistent Volume Claims
+		pvcList, err := util.ListPVCs(kubeClient, blackDuckNamespace, fmt.Sprintf("app=blackduck,component=pvc,name=%s", blackDuckName))
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("failed to list PVCs to update the group ownership"))
+		}
+
+		// Map the Persistent Volume to the respective Security Context File Ownership value
+		// - if security contexts are not provided then this map will be empty
+		pvcNameToFileOwnershipMap := map[string]int64{}
+		pvcIDNameToHelmPath := map[string][]string{
+			"blackduck-postgres":         {"postgres"},
+			"blackduck-authentication":   {"authentication"},
+			"blackduck-cfssl":            {"cfssl"},
+			"blackduck-registration":     {"registration"},
+			"blackduck-webapp":           {"webapp"},
+			"blackduck-logstash":         {"logstash"},
+			"blackduck-uploadcache-data": {"uploadcache"},
+		}
+		for _, pvc := range pvcList.Items {
+			r, _ := regexp.Compile("blackduck-.*")
+			pvcNameKey := r.FindString(pvc.Name) // removes the "<blackduckName>-" from the PvcName
+
+			pvcHelmPath := pvcIDNameToHelmPath[pvcNameKey]
+			scInterface := util.GetHelmValueFromMap(helmValuesMap, append(pvcHelmPath, "securityContext"))
+			if scInterface != nil {
+				sc := scInterface.(map[string]interface{})
+				// if runAsUser exists, add the File Ownership value to map
+				if val, ok := sc["runAsUser"]; ok {
+					pvcNameToFileOwnershipMap[pvc.Name] = val.(int64)
+				}
+			}
+		}
+
+		// Update the Persistent Volumes that have a File Ownership value set
+		if len(pvcNameToFileOwnershipMap) > 0 { // skip if no File Ownerships are set
+			log.Infof("updating file ownership in Persistent Volumes...")
+			// Create Jobs to set the File Owernship in each Persistent Volume
+			var wg sync.WaitGroup
+			wg.Add(len(pvcNameToFileOwnershipMap))
+			for pvcName, ownership := range pvcNameToFileOwnershipMap {
+				log.Infof("creating file owernship job to set ownership value to '%d' in PV '%s'", ownership, pvcName)
+				go setBlackDuckFileOwnershipJob(blackDuckNamespace, blackDuckName, pvcName, ownership, &wg)
+			}
+			log.Infof("waiting for file owernship jobs to finish...")
+			wg.Wait()
+			if len(pvcNameToFileOwnershipMap) != len(pvcList.Items) {
+				log.Warnf("a Job was not created for every Persistent Volume in namespace '%s'", blackDuckNamespace)
+			}
+		}
+
+		// Restart the Black Duck instance
+		util.SetHelmValueInMap(helmValuesMap, []string{"status"}, currState)
+		if err := util.UpdateWithHelm3(blackDuckName, namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath); err != nil {
+			return fmt.Errorf("Failed to restart BlackDuck after setting File Ownerships: %+v", err)
+		}
+	}
+	return nil
 }
 
 // setBlackDuckFileOwnershipJob that sets the Owner of the files

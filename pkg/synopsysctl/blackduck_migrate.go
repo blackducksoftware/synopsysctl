@@ -347,7 +347,7 @@ func blackDuckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 
 	//SecurityContexts
 	for k, v := range bd.Spec.SecurityContexts {
-		util.SetHelmValueInMap(helmConfig, []string{k, "securityContext"}, blackduck.OperatorSecurityContextTok8sAffinity(v))
+		util.SetHelmValueInMap(helmConfig, []string{k, "securityContext"}, blackduck.OperatorSecurityContextToHelm(v))
 	}
 
 	// Environs

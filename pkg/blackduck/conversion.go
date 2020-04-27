@@ -78,13 +78,59 @@ func OperatorAffinityTok8sAffinity(opAffinity []v1.NodeAffinity) corev1.Affinity
 	return af
 }
 
+// OperatorAffinityToHelm ...
+func OperatorAffinityToHelm(opAffinity []v1.NodeAffinity) map[string]interface{} {
+	hardTerms := make([]map[string]interface{}, 0)
+	softTerms := make([]map[string]interface{}, 0)
+	for _, aValue := range opAffinity {
+		// Create Helm Values for each nodeSelectorTerm
+		nodeSelectorRequirements := []map[string]interface{}{
+			map[string]interface{
+				"key": aValue.Key,
+				operator: corev1.NodeSelectorOperator(aValue.Op),
+				"values": aValue.Values,
+			},
+		}
+		nodeSelectorTerm := map[string]interface{}{
+			"matchExpressions": nodeSelectorRequirements,
+		}
+
+		// Divide each nodeSelectorTerm into hard and soft lists
+		if strings.EqualFold(aValue.AffinityType, "hard") {
+			hardTerms = append(hardTerms, nodeSelectorTerm)
+		} else if strings.EqualFold(aValue.AffinityType, "soft") {
+			softTerms = append(hardTerms, nodeSelectorTerm)
+		}
+	}
+
+	affinity = make(map[string]interface{}, 0)
+	if len(hardTerms) > 0 || len(softTerms) > 0 {
+		if len(hardTerms) > 0 {
+			nodeSelector := map[string]interface{}{
+				"nodeSelectorTerms": hardTerms,
+			}
+			util.SetHelmValueInMap(affinity, "nodeAffinity", "requiredDuringSchedulingIgnoredDuringExecution", nodeSelector)
+		}
+		if len(softTerms) > 0 {
+			for _, s := range softTerms {
+				preferredSchedulingTerm = map[string]interface{}{
+					"weight": 100,
+					"preference": s,
+				}
+				currPrefferedNodeAfinities := util.GetHelmValueFromMap(affinity, []string{"nodeAffinity", "preferredDuringSchedulingIgnoredDuringExecution"}).([]map[string]interface{})
+				updatedPrefferedNodeAfinities := append(currPrefferedNodeAfinities, preferredSchedulingTerm)
+				util.SetHelmValueInMap(affinity, []string{"nodeAffinity", "preferredDuringSchedulingIgnoredDuringExecution"}, updatedPrefferedNodeAfinities)
+			}
+		}
+	}
+
+	return affinity
+}
+
 // OperatorSecurityContextToHelm converts synopsysctl security context format for Helm Values
+// NOTE: SecurityContext doens't have fsGroup (PodSecurityContext has fsGroup)
 func OperatorSecurityContextToHelm(opSecurityContext api.SecurityContext) map[string]interface{} {
 	helmSecurityContexts := make(map[string]interface{}, 0)
-
-	if opSecurityContext.FsGroup != nil {
-		util.SetHelmValueInMap(helmSecurityContexts, []string{"fsGroup"}, *opSecurityContext.FsGroup)
-	}
 	if opSecurityContext.RunAsUser != nil {
 		util.SetHelmValueInMap(helmSecurityContexts, []string{"runAsUser"}, *opSecurityContext.RunAsUser)
 	}

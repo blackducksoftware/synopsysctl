@@ -43,13 +43,16 @@ func migrateAlert(alert *v1.Alert, helmReleaseName string, operatorNamespace str
 		return err
 	}
 
-	soOperatorDeploy, err = util.PatchDeploymentForReplicas(kubeClient, soOperatorDeploy, util.IntToInt32(0))
+	soOperatorDeploy.Spec.Replicas = util.IntToInt32(0)
+	soOperatorDeploy.Labels = util.InitLabels(soOperatorDeploy.Labels)
+	soOperatorDeploy.Labels[fmt.Sprintf("synopsys.migrate.com/%s.%s", util.AlertName, alert.Name)] = "true"
+	_, err = util.UpdateDeployment(kubeClient, operatorNamespace, soOperatorDeploy)
 	if err != nil {
 		return err
 	}
 
 	// Generate Helm values for the current CR Instance
-	currHelmValuesMap, err := AlertV1ToHelmValues(alert, operatorNamespace)
+	currHelmValuesMap, err := alertV1ToHelmValues(alert, operatorNamespace)
 	if err != nil {
 		return err
 	}
@@ -225,11 +228,31 @@ func migrateAlert(alert *v1.Alert, helmReleaseName string, operatorNamespace str
 		log.Warnf("unable to patch the namespace to remove app labels due to %+v", err)
 	}
 
-	return destroyOperator(operatorNamespace, crdNamespace)
+	// get the deployment, delete the migrate label and patch the deployment
+	soOperatorDeploy, err = util.GetDeployment(kubeClient, operatorNamespace, "synopsys-operator")
+	if err != nil {
+		return err
+	}
+	soOperatorDeploy.Labels = util.InitLabels(soOperatorDeploy.Labels)
+	delete(soOperatorDeploy.Labels, fmt.Sprintf("synopsys.migrate.com/%s.%s", util.AlertName, alert.Name))
+	soOperatorDeploy, err = util.UpdateDeployment(kubeClient, operatorNamespace, soOperatorDeploy)
+	if err != nil {
+		return err
+	}
+
+	skipDestroyorRestartOperator := false
+	for key := range soOperatorDeploy.Labels {
+		if strings.HasPrefix(key, "synopsys.migrate.com") {
+			skipDestroyorRestartOperator = true
+			break
+		}
+	}
+
+	return destroyOperator(operatorNamespace, crdNamespace, skipDestroyorRestartOperator)
 }
 
-// AlertV1ToHelmValues converts an Alert v1 Spec to a Helm Values Map
-func AlertV1ToHelmValues(alert *v1.Alert, operatorNamespace string) (map[string]interface{}, error) {
+// alertV1ToHelmValues converts an Alert v1 Spec to a Helm Values Map
+func alertV1ToHelmValues(alert *v1.Alert, operatorNamespace string) (map[string]interface{}, error) {
 	helmValuesMap := make(map[string]interface{})
 
 	if len(alert.Spec.Version) > 0 {

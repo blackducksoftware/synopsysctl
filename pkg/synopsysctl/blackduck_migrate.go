@@ -46,13 +46,17 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 		return err
 	}
 
-	soOperatorDeploy, err = util.PatchDeploymentForReplicas(kubeClient, soOperatorDeploy, util.IntToInt32(0))
+	soOperatorDeploy.Spec.Replicas = util.IntToInt32(0)
+	soOperatorDeploy.Labels = util.InitLabels(soOperatorDeploy.Labels)
+	soOperatorDeploy.Labels[fmt.Sprintf("synopsys.migrate.com/%s.%s", util.BlackDuckName, bd.Name)] = "true"
+
+	_, err = util.UpdateDeployment(kubeClient, operatorNamespace, soOperatorDeploy)
 	if err != nil {
 		return err
 	}
 
 	// Generate Helm configuration
-	helmValuesMap, err := BlackduckV1ToHelm(bd, operatorNamespace)
+	helmValuesMap, err := blackDuckV1ToHelm(bd, operatorNamespace)
 	if err != nil {
 		return err
 	}
@@ -145,10 +149,30 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 
 	_, err = util.CheckAndUpdateNamespace(kubeClient, util.BlackDuckName, bd.Spec.Namespace, bd.Name, "", true)
 	if err != nil {
-		log.Warnf("unable to patch the namespace to remove an app labels due to %+v", err)
+		log.Warnf("unable to patch the namespace to remove app labels due to %+v", err)
 	}
 
-	return destroyOperator(operatorNamespace, crdNamespace)
+	// get the deployment, delete the migrate label and patch the deployment
+	soOperatorDeploy, err = util.GetDeployment(kubeClient, operatorNamespace, "synopsys-operator")
+	if err != nil {
+		return err
+	}
+	soOperatorDeploy.Labels = util.InitLabels(soOperatorDeploy.Labels)
+	delete(soOperatorDeploy.Labels, fmt.Sprintf("synopsys.migrate.com/%s.%s", util.BlackDuckName, bd.Name))
+	soOperatorDeploy, err = util.UpdateDeployment(kubeClient, operatorNamespace, soOperatorDeploy)
+	if err != nil {
+		return err
+	}
+
+	skipDestroyorRestartOperator := false
+	for key := range soOperatorDeploy.Labels {
+		if strings.HasPrefix(key, "synopsys.migrate.com") {
+			skipDestroyorRestartOperator = true
+			break
+		}
+	}
+
+	return destroyOperator(operatorNamespace, crdNamespace, skipDestroyorRestartOperator)
 }
 
 // isFeatureEnabled check whether the feature is enabled by reading through the Black Duck environment variables
@@ -168,8 +192,8 @@ func isFeatureEnabled(environs []string, featureName string, expectedValue strin
 	return false
 }
 
-// BlackduckV1ToHelm converts Black Duck custom resources to helm flags
-func BlackduckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]interface{}, error) {
+// blackDuckV1ToHelm converts Black Duck custom resources to helm flags
+func blackDuckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]interface{}, error) {
 	helmConfig := make(map[string]interface{})
 
 	// Seal key

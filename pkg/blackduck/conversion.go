@@ -78,13 +78,20 @@ func OperatorAffinityTok8sAffinity(opAffinity []v1.NodeAffinity) corev1.Affinity
 	return af
 }
 
-// OperatorSecurityContextTok8sAffinity converts synopsysctl security context format to kube affinity format
-func OperatorSecurityContextTok8sAffinity(opSecurityContext api.SecurityContext) corev1.PodSecurityContext {
-	return corev1.PodSecurityContext{
-		FSGroup:    opSecurityContext.FsGroup,
-		RunAsUser:  opSecurityContext.RunAsUser,
-		RunAsGroup: opSecurityContext.RunAsGroup,
+// OperatorSecurityContextToHelm converts synopsysctl security context format for Helm Values
+func OperatorSecurityContextToHelm(opSecurityContext api.SecurityContext) map[string]interface{} {
+	helmSecurityContexts := make(map[string]interface{}, 0)
+
+	if opSecurityContext.FsGroup != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"fsGroup"}, *opSecurityContext.FsGroup)
 	}
+	if opSecurityContext.RunAsUser != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"runAsUser"}, *opSecurityContext.RunAsUser)
+	}
+	if opSecurityContext.RunAsGroup != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"runAsGroup"}, *opSecurityContext.RunAsGroup)
+	}
+	return helmSecurityContexts
 }
 
 // GetCertsFromFlagsAndSetHelmValue converts synopsysctl certificate files to kube secrets

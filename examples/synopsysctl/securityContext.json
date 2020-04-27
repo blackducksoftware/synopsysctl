@@ -9,47 +9,12 @@
         "runAsUser": 1234,
         "runAsGroup": 1234
     },
-    "blackduck-cfssl": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
-    },
     "blackduck-postgres": {
         "fsGroup": 26,
         "runAsUser": 26,
         "runAsGroup": 26
     },
-    "blackduck-nginx": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
-    },
-    "blackduck-documentation": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
-    },
-    "blackduck-solr": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
-    },
-    "blackduck-registration": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
-    },
-    "blackduck-zookeeper": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
-    },
-    "blackduck-jobrunner": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
-    },
-    "blackduck-scan": {
+    "blackduck-init": {
         "fsGroup": 1234,
         "runAsUser": 1234,
         "runAsGroup": 1234
@@ -59,7 +24,37 @@
         "runAsUser": 1234,
         "runAsGroup": 1234
     },
-    "blackduck-webapp": {
+    "blackduck-binaryscanner": {
+        "fsGroup": 1234,
+        "runAsUser": 1234,
+        "runAsGroup": 1234
+    },
+    "blackduck-cfssl": {
+        "fsGroup": 1234,
+        "runAsUser": 1234,
+        "runAsGroup": 1234
+    },
+    "blackduck-documentation": {
+        "fsGroup": 1234,
+        "runAsUser": 1234,
+        "runAsGroup": 1234
+    },
+    "blackduck-jobrunner": {
+        "fsGroup": 1234,
+        "runAsUser": 1234,
+        "runAsGroup": 1234
+    },
+    "rabbitmq": {
+        "fsGroup": 1234,
+        "runAsUser": 1234,
+        "runAsGroup": 1234
+    },
+    "blackduck-registration": {
+        "fsGroup": 1234,
+        "runAsUser": 1234,
+        "runAsGroup": 1234
+    },
+    "blackduck-scan": {
         "fsGroup": 1234,
         "runAsUser": 1234,
         "runAsGroup": 1234
@@ -69,12 +64,17 @@
         "runAsUser": 1234,
         "runAsGroup": 1234
     },
-    "appcheck-worker": {
+    "blackduck-webapp": {
         "fsGroup": 1234,
         "runAsUser": 1234,
         "runAsGroup": 1234
     },
-    "rabbitmq": {
+    "blackduck-logstash": {
+        "fsGroup": 1234,
+        "runAsUser": 1234,
+        "runAsGroup": 1234
+    },
+    "blackduck-nginx": {
         "fsGroup": 1234,
         "runAsUser": 1234,
         "runAsGroup": 1234

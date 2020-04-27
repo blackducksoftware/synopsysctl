@@ -344,8 +344,25 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 				log.Errorf("failed to unmarshal security contexts: %+v", err)
 				return
 			}
+			securityContextIDNameToHelmPath := map[string][]string{
+				"blackduck-postgres":         {"postgres"},
+				"blackduck-init":             {"init"},
+				"blackduck-authentication":   {"authentication"},
+				"blackduck-binnaryscanner":   {"binaryscanner"},
+				"blackduck-cfssl":            {"cfssl"},
+				"blackduck-documentation":    {"documentation"},
+				"blackduck-jobrunner":        {"jobrunner"},
+				"blackduck-rabbitmq":         {"rabbitmq"},
+				"blackduck-registration":     {"registration"},
+				"blackduck-scan":             {"scan"},
+				"blackduck-uploadcache-data": {"uploadcache"},
+				"blackduck-webapp":           {"webapp"},
+				"blackduck-logstash":         {"logstash"},
+				"blackduck-nginx":            {"webserver"},
+			}
 			for k, v := range SecurityContexts {
-				util.SetHelmValueInMap(ctl.args, []string{k, "securityContext"}, OperatorSecurityContextTok8sAffinity(v))
+				helmValuePath := securityContextIDNameToHelmPath[k]
+				util.SetHelmValueInMap(ctl.args, append(helmValuePath, "securityContext"), OperatorSecurityContextToHelm(v))
 			}
 		case "postgres-claim-size":
 			util.SetHelmValueInMap(ctl.args, []string{"postgres", "claimSize"}, ctl.flagTree.PostgresClaimSize)

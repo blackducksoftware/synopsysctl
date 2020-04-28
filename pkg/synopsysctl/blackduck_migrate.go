@@ -142,6 +142,16 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 		return fmt.Errorf("failed to create Blackduck resources: %+v", err)
 	}
 
+	// Update Security Context Permissions
+	instance, err := util.GetWithHelm3(bd.Name, bd.Spec.Namespace, kubeConfigPath)
+	if err != nil {
+		return fmt.Errorf("could not find Black Duck after migrate: %+v", err)
+	}
+	err = runBlackDuckFileOwnershipJobs(bd.Name, bd.Spec.Namespace, bd.Spec.Version, instance, flags)
+	if err != nil {
+		return fmt.Errorf("failed to update File Ownerships in PVs: %+v", err)
+	}
+
 	log.Info("removing Black Duck custom resource")
 	if err := util.DeleteBlackduck(blackDuckClient, bd.Name, bd.Namespace, &metav1.DeleteOptions{}); err != nil {
 		return err

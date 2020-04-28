@@ -348,17 +348,21 @@ var updateBlackDuckCmd = &cobra.Command{
 				extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", size.(string)))
 			}
 
+			if err := util.UpdateWithHelm3(blackDuckName, blackDuckNamespace, blackduckChartRepository, helmValuesMap, kubeConfigPath, extraFiles...); err != nil {
+				return fmt.Errorf("failed to update Black Duck due to %+v", err)
+			}
+
 			// Update Security Context Permissions
-			err = runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion, helmValuesMap, instance, cmd.Flags())
+			release, err := util.GetWithHelm3(blackDuckName, blackDuckNamespace, kubeConfigPath)
+			if err != nil {
+				return fmt.Errorf("could not find Black Duck after migrate: %+v", err)
+			}
+			err = runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion, release, cmd.Flags())
 			if err != nil {
 				return fmt.Errorf("failed to update File Ownerships in PVs: %+v", err)
 			}
 
-			if err := util.UpdateWithHelm3(args[0], namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath, extraFiles...); err != nil {
-				return err
-			}
-
-			err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, namespace, args[0], helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], cmd.Flags().Lookup("expose-ui").Changed)
+			err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, blackDuckNamespace, args[0], helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], cmd.Flags().Lookup("expose-ui").Changed)
 			if err != nil {
 				return err
 			}
@@ -409,7 +413,7 @@ var updateBlackDuckCmd = &cobra.Command{
 	},
 }
 
-func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion string, helmValuesMap map[string]interface{}, helmRelease *release.Release, flags *pflag.FlagSet) error {
+func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion string, helmRelease *release.Release, flags *pflag.FlagSet) error {
 	newVersion := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
 	currState := util.GetValueFromRelease(helmRelease, []string{"status"}).(string)
 	persistentStroage := util.GetValueFromRelease(helmRelease, []string{"enablePersistentStorage"}).(bool)
@@ -443,9 +447,9 @@ func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion
 		// Stop the BlackDuck instance
 		if strings.ToUpper(currState) != "STOPPED" {
 			log.Infof("stopping Black Duck to apply Security Context changes")
-			helmValuesMap := make(map[string]interface{})
-			util.SetHelmValueInMap(helmValuesMap, []string{"status"}, "Stopped")
-			err = util.UpdateWithHelm3(blackDuckName, namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath)
+			tmpValuesMap := make(map[string]interface{})
+			util.SetHelmValueInMap(tmpValuesMap, []string{"status"}, "Stopped")
+			err = util.UpdateWithHelm3(blackDuckName, namespace, blackduckChartRepository, tmpValuesMap, kubeConfigPath)
 			if err != nil {
 				return fmt.Errorf("failed to create Blackduck resources: %+v", err)
 			}
@@ -458,6 +462,7 @@ func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion
 				if err != nil {
 					return errors.Wrap(err, "failed to list pods to stop Black Duck for setting group ownership")
 				}
+				// TODO - check if its a job (pods.Items[0].Status)
 				if len(pods.Items) == 0 {
 					break
 				}
@@ -487,6 +492,8 @@ func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion
 			"blackduck-logstash":         {"logstash", "securityContext"},
 			"blackduck-uploadcache-data": {"uploadcache", "podSecurityContext"},
 		}
+		log.Infof("checking Persistent Volumes...")
+		log.Infof("[HERE] Found %+v PVCs", len(pvcList.Items))
 		for _, pvc := range pvcList.Items {
 			r, _ := regexp.Compile("blackduck-.*")
 			pvcNameKey := r.FindString(pvc.Name) // removes the "<blackduckName>-" from the PvcName
@@ -496,19 +503,19 @@ func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion
 				pvcHelmPath = newPathToHelmValue
 			}
 
-			scInterface := util.GetHelmValueFromMap(helmValuesMap, pvcHelmPath)
+			scInterface := util.GetValueFromRelease(helmRelease, pvcHelmPath)
 			if scInterface != nil {
 				sc := scInterface.(map[string]interface{})
 				// if runAsUser exists, add the File Ownership value to the map
 				if val, ok := sc["runAsUser"]; ok {
-					pvcNameToFileOwnershipMap[pvc.Name] = val.(int64)
+					pvcNameToFileOwnershipMap[pvc.Name] = int64(val.(float64))
 				}
 			}
 		}
 
 		// Update the Persistent Volumes that have a File Ownership values in the map
+		log.Infof("updating file ownership in Persistent Volumes...")
 		if len(pvcNameToFileOwnershipMap) > 0 { // skip if no File Ownerships are set
-			log.Infof("updating file ownership in Persistent Volumes...")
 			// Create Jobs to set the File Owernship in the Persistent Volume
 			var wg sync.WaitGroup
 			wg.Add(len(pvcNameToFileOwnershipMap))
@@ -524,15 +531,20 @@ func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion
 		}
 
 		// Restart the Black Duck instance
-		util.SetHelmValueInMap(helmValuesMap, []string{"status"}, currState)
-		if err := util.UpdateWithHelm3(blackDuckName, namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath); err != nil {
-			return fmt.Errorf("Failed to restart BlackDuck after setting File Ownerships: %+v", err)
+		if strings.ToUpper(currState) != "STOPPED" {
+			log.Infof("restarting Black Duck")
+			tmpValuesMap := make(map[string]interface{})
+			util.SetHelmValueInMap(tmpValuesMap, []string{"status"}, currState)
+			if err := util.UpdateWithHelm3(blackDuckName, namespace, blackduckChartRepository, tmpValuesMap, kubeConfigPath); err != nil {
+				return fmt.Errorf("Failed to restart BlackDuck after setting File Ownerships: %+v", err)
+			}
 		}
 	}
 	return nil
 }
 
 // setBlackDuckFileOwnershipJob that sets the Owner of the files
+// ownership - string representation of an integer "21"
 func setBlackDuckFileOwnershipJob(namespace string, name string, pvcName string, ownership int64, wg *sync.WaitGroup) error {
 	busyBoxImage := defaultBusyBoxImage
 	volumeClaim := components.NewPVCVolume(horizonapi.PVCVolumeConfig{PVCName: pvcName})

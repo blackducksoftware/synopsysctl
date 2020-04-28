@@ -554,7 +554,6 @@ func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion
 }
 
 // setBlackDuckFileOwnershipJob that sets the Owner of the files
-// ownership - string representation of an integer "21"
 func setBlackDuckFileOwnershipJob(namespace string, name string, pvcName string, ownership int64, wg *sync.WaitGroup) error {
 	busyBoxImage := defaultBusyBoxImage
 	volumeClaim := components.NewPVCVolume(horizonapi.PVCVolumeConfig{PVCName: pvcName})

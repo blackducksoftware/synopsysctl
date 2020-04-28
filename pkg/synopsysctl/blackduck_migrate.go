@@ -368,7 +368,8 @@ func blackDuckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 		if newPathToHelmValue, ok := securityContextIDNameToHelmPath[k]; ok { // Override the security if it's present in the list
 			pathToHelmValue = newPathToHelmValue
 		}
-		util.SetHelmValueInMap(helmConfig, pathToHelmValue, v)
+
+		util.SetHelmValueInMap(helmConfig, pathToHelmValue, blackduck.OperatorAPISecurityContextToHelm(v))
 	}
 
 	// Environs

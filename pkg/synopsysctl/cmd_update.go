@@ -479,33 +479,37 @@ func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion
 		// - if security contexts are not provided then this map will be empty
 		pvcNameToFileOwnershipMap := map[string]int64{}
 		pvcIDNameToHelmPath := map[string][]string{
-			"blackduck-postgres":         {"postgres"},
-			"blackduck-authentication":   {"authentication"},
-			"blackduck-cfssl":            {"cfssl"},
-			"blackduck-registration":     {"registration"},
-			"blackduck-webapp":           {"webapp"},
-			"blackduck-logstash":         {"logstash"},
-			"blackduck-uploadcache-data": {"uploadcache"},
+			"blackduck-postgres":         {"postgres", "podSecurityContext"},
+			"blackduck-authentication":   {"authentication", "podSecurityContext"},
+			"blackduck-cfssl":            {"cfssl", "podSecurityContext"},
+			"blackduck-registration":     {"registration", "podSecurityContext"},
+			"blackduck-webapp":           {"webapp", "podSecurityContext"},
+			"blackduck-logstash":         {"logstash", "securityContext"},
+			"blackduck-uploadcache-data": {"uploadcache", "podSecurityContext"},
 		}
 		for _, pvc := range pvcList.Items {
 			r, _ := regexp.Compile("blackduck-.*")
 			pvcNameKey := r.FindString(pvc.Name) // removes the "<blackduckName>-" from the PvcName
 
-			pvcHelmPath := pvcIDNameToHelmPath[pvcNameKey]
-			scInterface := util.GetHelmValueFromMap(helmValuesMap, append(pvcHelmPath, "securityContext"))
+			pvcHelmPath := []string{pvcNameKey, "podSecurityContext"}          // default path for new pods
+			if newPathToHelmValue, ok := pvcIDNameToHelmPath[pvcNameKey]; ok { // override the security if it's present in the list
+				pvcHelmPath = newPathToHelmValue
+			}
+
+			scInterface := util.GetHelmValueFromMap(helmValuesMap, pvcHelmPath)
 			if scInterface != nil {
 				sc := scInterface.(map[string]interface{})
-				// if runAsUser exists, add the File Ownership value to map
+				// if runAsUser exists, add the File Ownership value to the map
 				if val, ok := sc["runAsUser"]; ok {
 					pvcNameToFileOwnershipMap[pvc.Name] = val.(int64)
 				}
 			}
 		}
 
-		// Update the Persistent Volumes that have a File Ownership value set
+		// Update the Persistent Volumes that have a File Ownership values in the map
 		if len(pvcNameToFileOwnershipMap) > 0 { // skip if no File Ownerships are set
 			log.Infof("updating file ownership in Persistent Volumes...")
-			// Create Jobs to set the File Owernship in each Persistent Volume
+			// Create Jobs to set the File Owernship in the Persistent Volume
 			var wg sync.WaitGroup
 			wg.Add(len(pvcNameToFileOwnershipMap))
 			for pvcName, ownership := range pvcNameToFileOwnershipMap {

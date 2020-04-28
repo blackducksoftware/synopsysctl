@@ -328,7 +328,8 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 			}
 
 			for k, v := range nodeAffinities {
-				util.SetHelmValueInMap(ctl.args, []string{k, "affinity"}, OperatorAffinityTok8sAffinity(v))
+				kubeAff := OperatorAffinityTok8sAffinity(v)
+				util.SetHelmValueInMap(ctl.args, []string{k, "affinity"}, kubeAff)
 			}
 		case "security-context-file-path":
 			data, err := util.ReadFileData(ctl.flagTree.SecurityContextFilePath)
@@ -364,7 +365,7 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 				if newPathToHelmValue, ok := securityContextIDNameToHelmPath[k]; ok { // Override the security if it's present in the list
 					pathToHelmValue = newPathToHelmValue
 				}
-				util.SetHelmValueInMap(ctl.args, pathToHelmValue, v)
+				util.SetHelmValueInMap(ctl.args, pathToHelmValue, CorePodSecurityContextToHelm(v))
 			}
 		case "postgres-claim-size":
 			util.SetHelmValueInMap(ctl.args, []string{"postgres", "claimSize"}, ctl.flagTree.PostgresClaimSize)

@@ -78,17 +78,17 @@ func OperatorAffinityTok8sAffinity(opAffinity []v1.NodeAffinity) corev1.Affinity
 	return af
 }
 
-// OperatorAffinityToHelm ...
+// // OperatorAffinityToHelm ...
 // func OperatorAffinityToHelm(opAffinity []v1.NodeAffinity) map[string]interface{} {
 // 	hardTerms := make([]map[string]interface{}, 0)
 // 	softTerms := make([]map[string]interface{}, 0)
 // 	for _, aValue := range opAffinity {
 // 		// Create Helm Values for each nodeSelectorTerm
 // 		nodeSelectorRequirements := []map[string]interface{}{
-// 			map[string]interface{
-// 				"key": aValue.Key,
-// 				operator: corev1.NodeSelectorOperator(aValue.Op),
-// 				"values": aValue.Values,
+// 			map[string]interface{}{
+// 				"key":      aValue.Key,
+// 				"operator": corev1.NodeSelectorOperator(aValue.Op),
+// 				"values":   aValue.Values,
 // 			},
 // 		}
 // 		nodeSelectorTerm := map[string]interface{}{
@@ -103,23 +103,29 @@ func OperatorAffinityTok8sAffinity(opAffinity []v1.NodeAffinity) corev1.Affinity
 // 		}
 // 	}
 
-// 	affinity = make(map[string]interface{}, 0)
+// 	affinity := make(map[string]interface{}, 0)
 // 	if len(hardTerms) > 0 || len(softTerms) > 0 {
 // 		if len(hardTerms) > 0 {
 // 			nodeSelector := map[string]interface{}{
 // 				"nodeSelectorTerms": hardTerms,
 // 			}
-// 			util.SetHelmValueInMap(affinity, "nodeAffinity", "requiredDuringSchedulingIgnoredDuringExecution", nodeSelector)
+// 			util.SetHelmValueInMap(affinity, []string{"nodeAffinity", "requiredDuringSchedulingIgnoredDuringExecution"}, nodeSelector)
 // 		}
 // 		if len(softTerms) > 0 {
 // 			for _, s := range softTerms {
-// 				preferredSchedulingTerm = map[string]interface{}{
-// 					"weight": 100,
+// 				preferredSchedulingTerm := map[string]interface{}{
+// 					"weight":     100,
 // 					"preference": s,
 // 				}
-// 				currPrefferedNodeAfinities := util.GetHelmValueFromMap(affinity, []string{"nodeAffinity", "preferredDuringSchedulingIgnoredDuringExecution"}).([]map[string]interface{})
-// 				updatedPrefferedNodeAfinities := append(currPrefferedNodeAfinities, preferredSchedulingTerm)
-// 				util.SetHelmValueInMap(affinity, []string{"nodeAffinity", "preferredDuringSchedulingIgnoredDuringExecution"}, updatedPrefferedNodeAfinities)
+// 				currPrefferedNodeAffinities := util.GetHelmValueFromMap(affinity, []string{"nodeAffinity", "preferredDuringSchedulingIgnoredDuringExecution"})
+// 				if currPrefferedNodeAffinities != nil {
+// 					listPrefferredNodeAffinities := currPrefferedNodeAffinities.([]map[string]interface{})
+// 					updatedPrefferedNodeAfinities := append(listPrefferredNodeAffinities, preferredSchedulingTerm)
+// 					util.SetHelmValueInMap(affinity, []string{"nodeAffinity", "preferredDuringSchedulingIgnoredDuringExecution"}, updatedPrefferedNodeAfinities)
+// 				} else {
+// 					util.SetHelmValueInMap(affinity, []string{"nodeAffinity", "preferredDuringSchedulingIgnoredDuringExecution"}, []map[string]interface{}{preferredSchedulingTerm})
+// 				}
+
 // 			}
 // 		}
 // 	}
@@ -127,10 +133,44 @@ func OperatorAffinityTok8sAffinity(opAffinity []v1.NodeAffinity) corev1.Affinity
 // 	return affinity
 // }
 
-// OperatorSecurityContextToHelm converts synopsysctl security context format for Helm Values
+// CorePodSecurityContextToHelm converts pod security context format for Helm Values
 // NOTE: SecurityContext doens't have fsGroup (PodSecurityContext has fsGroup)
-func OperatorSecurityContextToHelm(opSecurityContext api.SecurityContext) map[string]interface{} {
+func CorePodSecurityContextToHelm(psc corev1.PodSecurityContext) map[string]interface{} {
 	helmSecurityContexts := make(map[string]interface{}, 0)
+	if psc.SELinuxOptions != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"seLinuxOptions"}, *psc.SELinuxOptions)
+	}
+	if psc.WindowsOptions != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"windowsOptions"}, *psc.WindowsOptions)
+	}
+	if psc.RunAsUser != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"runAsUser"}, *psc.RunAsUser)
+	}
+	if psc.RunAsGroup != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"runAsGroup"}, *psc.RunAsGroup)
+	}
+	if psc.RunAsNonRoot != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"runAsNonRoot"}, *psc.RunAsNonRoot)
+	}
+	if psc.SupplementalGroups != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"supplementalGroups"}, psc.SupplementalGroups)
+	}
+	if psc.FSGroup != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"fsGroup"}, *psc.FSGroup)
+	}
+	if psc.Sysctls != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"sysctls"}, psc.Sysctls)
+	}
+	return helmSecurityContexts
+}
+
+// OperatorAPISecurityContextToHelm converts security context format for Helm Values
+// NOTE: SecurityContext doens't have fsGroup (PodSecurityContext has fsGroup)
+func OperatorAPISecurityContextToHelm(opSecurityContext api.SecurityContext) map[string]interface{} {
+	helmSecurityContexts := make(map[string]interface{}, 0)
+	if opSecurityContext.FsGroup != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"fsGroup"}, *opSecurityContext.FsGroup)
+	}
 	if opSecurityContext.RunAsUser != nil {
 		util.SetHelmValueInMap(helmSecurityContexts, []string{"runAsUser"}, *opSecurityContext.RunAsUser)
 	}

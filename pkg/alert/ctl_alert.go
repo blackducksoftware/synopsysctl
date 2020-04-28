@@ -273,18 +273,8 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 				log.Errorf("failed to unmarshal security contexts: %+v", err)
 				return
 			}
-			securityContextIDNameToHelmPath := map[string][]string{
-				"alert":          {"alert", "podSecurityContext"},
-				"alert-cfssl":    {"cfssl", "podSecurityContext"},
-				"alert-postgres": {"postgres", "podSecurityContext"},
-				"alert-init":     {"init", "securityContext"},
-			}
 			for k, v := range securityContexts {
-				pathToHelmValue := []string{k, "podSecurityContext"}                  // default path for new pods
-				if newPathToHelmValue, ok := securityContextIDNameToHelmPath[k]; ok { // Override the security if it's present in the list
-					pathToHelmValue = newPathToHelmValue
-				}
-				util.SetHelmValueInMap(ctl.args, pathToHelmValue, v)
+				util.SetHelmValueInMap(ctl.args, []string{k, "podSecurityContext"}, v)
 			}
 		default:
 			log.Debugf("flag '%s': NOT FOUND", f.Name)

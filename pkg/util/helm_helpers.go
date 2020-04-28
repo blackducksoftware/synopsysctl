@@ -446,12 +446,12 @@ func GetHelmValueFromMap(valueMapPointer map[string]interface{}, keyList []strin
 func GetValueFromRelease(release *release.Release, keyList []string) interface{} {
 	chartValues := release.Chart.Values
 	userConfig := release.Config
-	releaseValues := mergeMaps(chartValues, userConfig)
+	releaseValues := MergeMaps(chartValues, userConfig)
 	return GetHelmValueFromMap(releaseValues, keyList)
 }
 
-// Copied from https://github.com/helm/helm/blob/9b42702a4bced339ff424a78ad68dd6be6e1a80a/pkg/cli/values/options.go#L88
-func mergeMaps(a, b map[string]interface{}) map[string]interface{} {
+// MergeMaps Copied from https://github.com/helm/helm/blob/9b42702a4bced339ff424a78ad68dd6be6e1a80a/pkg/cli/values/options.go#L88
+func MergeMaps(a, b map[string]interface{}) map[string]interface{} {
 	out := make(map[string]interface{}, len(a))
 	for k, v := range a {
 		out[k] = v
@@ -460,7 +460,7 @@ func mergeMaps(a, b map[string]interface{}) map[string]interface{} {
 		if v, ok := v.(map[string]interface{}); ok {
 			if bv, ok := out[k]; ok {
 				if bv, ok := bv.(map[string]interface{}); ok {
-					out[k] = mergeMaps(bv, v)
+					out[k] = MergeMaps(bv, v)
 					continue
 				}
 			}

@@ -1,61 +1,61 @@
 {
     "blackduck-authentication": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+        "fsGroup": 4321,
+        "runAsUser": 4321,
+        "runAsGroup": 4321
     },
     "blackduck-binaryscanner": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+        "fsGroup": 4321,
+        "runAsUser": 4321,
+        "runAsGroup": 4321
     },
     "blackduck-cfssl": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+        "fsGroup": 4321,
+        "runAsUser": 4321,
+        "runAsGroup": 4321
     },
     "blackduck-documentation": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+        "fsGroup": 4321,
+        "runAsUser": 4321,
+        "runAsGroup": 4321
     },
     "blackduck-jobrunner": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+        "fsGroup": 4321,
+        "runAsUser": 4321,
+        "runAsGroup": 4321
     },
     "blackduck-rabbitmq": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+        "fsGroup": 4321,
+        "runAsUser": 4321,
+        "runAsGroup": 4321
     },
     "blackduck-registration": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+        "fsGroup": 4321,
+        "runAsUser": 4321,
+        "runAsGroup": 4321
     },
     "blackduck-scan": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+        "fsGroup": 4321,
+        "runAsUser": 4321,
+        "runAsGroup": 4321
     },
     "blackduck-uploadcache": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+        "fsGroup": 4321,
+        "runAsUser": 4321,
+        "runAsGroup": 4321
     },
     "blackduck-webapp": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+        "fsGroup": 4321,
+        "runAsUser": 4321,
+        "runAsGroup": 4321
     },
     "blackduck-logstash": {
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+        "runAsUser": 4321,
+        "runAsGroup": 4321
     },
     "blackduck-nginx": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+        "fsGroup": 4321,
+        "runAsUser": 4321,
+        "runAsGroup": 4321
     }
 }

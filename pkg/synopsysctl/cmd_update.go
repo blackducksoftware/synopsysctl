@@ -348,18 +348,16 @@ var updateBlackDuckCmd = &cobra.Command{
 				extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", size.(string)))
 			}
 
-			if err := util.UpdateWithHelm3(blackDuckName, blackDuckNamespace, blackduckChartRepository, helmValuesMap, kubeConfigPath, extraFiles...); err != nil {
-				return fmt.Errorf("failed to update Black Duck due to %+v", err)
-			}
-
 			// Update Security Context Permissions
-			release, err := util.GetWithHelm3(blackDuckName, blackDuckNamespace, kubeConfigPath)
-			if err != nil {
-				return fmt.Errorf("could not find Black Duck after migrate: %+v", err)
-			}
-			err = runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion, release, cmd.Flags())
+			newVals := util.MergeMaps(instance.Chart.Values, helmValuesMap)
+			err = runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion, newVals, cmd.Flags())
 			if err != nil {
 				return fmt.Errorf("failed to update File Ownerships in PVs: %+v", err)
+			}
+
+			// Deploy resources
+			if err := util.UpdateWithHelm3(blackDuckName, blackDuckNamespace, blackduckChartRepository, helmValuesMap, kubeConfigPath, extraFiles...); err != nil {
+				return fmt.Errorf("failed to update Black Duck due to %+v", err)
 			}
 
 			err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, blackDuckNamespace, args[0], helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], cmd.Flags().Lookup("expose-ui").Changed)
@@ -413,10 +411,10 @@ var updateBlackDuckCmd = &cobra.Command{
 	},
 }
 
-func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion string, helmRelease *release.Release, flags *pflag.FlagSet) error {
-	newVersion := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
-	currState := util.GetValueFromRelease(helmRelease, []string{"status"}).(string)
-	persistentStroage := util.GetValueFromRelease(helmRelease, []string{"enablePersistentStorage"}).(bool)
+func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion string, helmReleaseValues map[string]interface{}, flags *pflag.FlagSet) error {
+	newVersion := util.GetHelmValueFromMap(helmReleaseValues, []string{"imageTag"}).(string)
+	currState := util.GetHelmValueFromMap(helmReleaseValues, []string{"status"}).(string)
+	persistentStroage := util.GetHelmValueFromMap(helmReleaseValues, []string{"enablePersistentStorage"}).(bool)
 
 	// Update the File Owernship in Persistent Volumes if Security Context changes are needed
 	oldVersionIsGreaterThanOrEqualv2019x12x0, err := util.IsVersionGreaterThanOrEqualTo(oldVersion, 2019, time.December, 0)
@@ -485,6 +483,7 @@ func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion
 				}
 			}
 		}
+		// TODO delete job and its pod
 
 		// Get a list of Persistent Volumes based on Persistent Volume Claims
 		pvcList, err := util.ListPVCs(kubeClient, blackDuckNamespace, fmt.Sprintf("app=blackduck,component=pvc,name=%s", blackDuckName))
@@ -514,12 +513,12 @@ func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion
 				pvcHelmPath = newPathToHelmValue
 			}
 
-			scInterface := util.GetValueFromRelease(helmRelease, pvcHelmPath)
+			scInterface := util.GetHelmValueFromMap(helmReleaseValues, pvcHelmPath)
 			if scInterface != nil {
 				sc := scInterface.(map[string]interface{})
 				// if runAsUser exists, add the File Ownership value to the map
 				if val, ok := sc["runAsUser"]; ok {
-					pvcNameToFileOwnershipMap[pvc.Name] = int64(val.(float64))
+					pvcNameToFileOwnershipMap[pvc.Name] = val.(int64)
 				}
 			}
 		}
@@ -541,15 +540,15 @@ func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion
 			}
 		}
 
-		// Restart the Black Duck instance
-		if strings.ToUpper(currState) != "STOPPED" {
-			log.Infof("restarting Black Duck")
-			tmpValuesMap := make(map[string]interface{})
-			util.SetHelmValueInMap(tmpValuesMap, []string{"status"}, currState)
-			if err := util.UpdateWithHelm3(blackDuckName, namespace, blackduckChartRepository, tmpValuesMap, kubeConfigPath); err != nil {
-				return fmt.Errorf("failed to restart BlackDuck after setting File Ownerships: %+v", err)
-			}
-		}
+		// // Restart the Black Duck instance
+		// if strings.ToUpper(currState) != "STOPPED" {
+		// 	log.Infof("restarting Black Duck")
+		// 	tmpValuesMap := make(map[string]interface{})
+		// 	util.SetHelmValueInMap(tmpValuesMap, []string{"status"}, currState)
+		// 	if err := util.UpdateWithHelm3(blackDuckName, namespace, blackduckChartRepository, tmpValuesMap, kubeConfigPath); err != nil {
+		// 		return fmt.Errorf("failed to restart BlackDuck after setting File Ownerships: %+v", err)
+		// 	}
+		// }
 	}
 	return nil
 }

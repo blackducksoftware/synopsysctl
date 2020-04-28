@@ -462,9 +462,21 @@ func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion
 				if err != nil {
 					return errors.Wrap(err, "failed to list pods to stop Black Duck for setting group ownership")
 				}
-				// TODO - check if its a job (pods.Items[0].Status)
+				// Break if there are no pods or if all jobs are Succeeded
 				if len(pods.Items) == 0 {
+					log.Debugf("Black Duck is stopped - no remaining pods in namespace %+v", blackDuckNamespace)
 					break
+				} else {
+					foundAllSucceeded := true
+					for _, po := range pods.Items {
+						if po.Status.Phase != corev1.PodSucceeded {
+							foundAllSucceeded = false
+						}
+					}
+					if foundAllSucceeded {
+						log.Debugf("Black Duck is stopped - no remaining pods and all jobs are completed in namespace %+v", blackDuckNamespace)
+						break
+					}
 				}
 				time.Sleep(time.Second * 5)
 				waitCount = waitCount + 1
@@ -493,7 +505,6 @@ func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion
 			"blackduck-uploadcache-data": {"uploadcache", "podSecurityContext"},
 		}
 		log.Infof("checking Persistent Volumes...")
-		log.Infof("[HERE] Found %+v PVCs", len(pvcList.Items))
 		for _, pvc := range pvcList.Items {
 			r, _ := regexp.Compile("blackduck-.*")
 			pvcNameKey := r.FindString(pvc.Name) // removes the "<blackduckName>-" from the PvcName
@@ -536,7 +547,7 @@ func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion
 			tmpValuesMap := make(map[string]interface{})
 			util.SetHelmValueInMap(tmpValuesMap, []string{"status"}, currState)
 			if err := util.UpdateWithHelm3(blackDuckName, namespace, blackduckChartRepository, tmpValuesMap, kubeConfigPath); err != nil {
-				return fmt.Errorf("Failed to restart BlackDuck after setting File Ownerships: %+v", err)
+				return fmt.Errorf("failed to restart BlackDuck after setting File Ownerships: %+v", err)
 			}
 		}
 	}

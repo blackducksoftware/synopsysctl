@@ -9,13 +9,21 @@
         "runAsUser": 4321,
         "runAsGroup": 4321
     },
+    "alert-postgres": {
+        "fsGroup": 26,
+        "runAsUser": 26,
+        "runAsGroup": 26
+    },
+    "alert-init": {
+        "runAsUser": 4321,
+        "runAsGroup": 4321
+    },
     "blackduck-postgres": {
         "fsGroup": 26,
         "runAsUser": 26,
         "runAsGroup": 26
     },
     "blackduck-init": {
-        "fsGroup": 4321,
         "runAsUser": 4321,
         "runAsGroup": 4321
     },
@@ -44,7 +52,7 @@
         "runAsUser": 4321,
         "runAsGroup": 4321
     },
-    "rabbitmq": {
+    "blackduck-rabbitmq": {
         "fsGroup": 4321,
         "runAsUser": 4321,
         "runAsGroup": 4321
@@ -70,7 +78,6 @@
         "runAsGroup": 4321
     },
     "blackduck-logstash": {
-        "fsGroup": 4321,
         "runAsUser": 4321,
         "runAsGroup": 4321
     },

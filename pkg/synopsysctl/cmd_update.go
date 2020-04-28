@@ -303,10 +303,10 @@ var updateBlackDuckCmd = &cobra.Command{
 			isOperatorBased = true
 		}
 
-		oldVersion := util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
-		fmt.Printf("[HERE] %+v\n", oldVersion)
-
 		if !isOperatorBased && instance != nil {
+			oldVersion := util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
+			log.Debugf("old version: %+v", oldVersion)
+
 			if cmd.Flag("version").Changed {
 				ok, err := util.IsVersionGreaterThanOrEqualTo(cmd.Flag("version").Value.String(), 2020, time.April, 0)
 				if err != nil {

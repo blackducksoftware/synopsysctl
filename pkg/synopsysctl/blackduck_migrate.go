@@ -346,8 +346,29 @@ func blackDuckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 	}
 
 	//SecurityContexts
+	securityContextIDNameToHelmPath := map[string][]string{
+		"blackduck-postgres":       {"postgres", "podSecurityContext"},
+		"blackduck-init":           {"init", "securityContext"},
+		"blackduck-authentication": {"authentication", "podSecurityContext"},
+		"blackduck-binnaryscanner": {"binaryscanner", "podSecurityContext"},
+		"blackduck-cfssl":          {"cfssl", "podSecurityContext"},
+		"blackduck-documentation":  {"documentation", "podSecurityContext"},
+		"blackduck-jobrunner":      {"jobrunner", "podSecurityContext"},
+		"blackduck-rabbitmq":       {"rabbitmq", "podSecurityContext"},
+		"blackduck-registration":   {"registration", "podSecurityContext"},
+		"blackduck-scan":           {"scan", "podSecurityContext"},
+		"blackduck-uploadcache":    {"uploadcache", "podSecurityContext"},
+		"blackduck-webapp":         {"webapp", "podSecurityContext"},
+		"blackduck-logstash":       {"logstash", "securityContext"},
+		"blackduck-nginx":          {"webserver", "podSecurityContext"},
+		"appcheck-worker":          {"binaryscanner", "podSecurityContext"},
+	}
 	for k, v := range bd.Spec.SecurityContexts {
-		util.SetHelmValueInMap(helmConfig, []string{k, "securityContext"}, blackduck.OperatorSecurityContextToHelm(v))
+		pathToHelmValue := []string{k, "podSecurityContext"}                  // default path for new pods
+		if newPathToHelmValue, ok := securityContextIDNameToHelmPath[k]; ok { // Override the security if it's present in the list
+			pathToHelmValue = newPathToHelmValue
+		}
+		util.SetHelmValueInMap(helmConfig, pathToHelmValue, v)
 	}
 
 	// Environs

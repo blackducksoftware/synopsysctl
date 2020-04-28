@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blackducksoftware/synopsysctl/pkg/api"
 	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
@@ -95,7 +94,6 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 		return nil, err
 	}
 	flagset.VisitAll(ctl.AddHelmValueByCobraFlag)
-
 	return ctl.args, nil
 }
 
@@ -338,31 +336,35 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 				log.Errorf("failed to read security context file: %+v", err)
 				return
 			}
-			SecurityContexts := map[string]api.SecurityContext{}
-			err = json.Unmarshal([]byte(data), &SecurityContexts)
+			securityContexts := map[string]corev1.PodSecurityContext{}
+			err = json.Unmarshal([]byte(data), &securityContexts)
 			if err != nil {
 				log.Errorf("failed to unmarshal security contexts: %+v", err)
 				return
 			}
 			securityContextIDNameToHelmPath := map[string][]string{
-				"blackduck-postgres":         {"postgres"},
-				"blackduck-init":             {"init"},
-				"blackduck-authentication":   {"authentication"},
-				"blackduck-binnaryscanner":   {"binaryscanner"},
-				"blackduck-cfssl":            {"cfssl"},
-				"blackduck-documentation":    {"documentation"},
-				"blackduck-jobrunner":        {"jobrunner"},
-				"blackduck-rabbitmq":         {"rabbitmq"},
-				"blackduck-registration":     {"registration"},
-				"blackduck-scan":             {"scan"},
-				"blackduck-uploadcache-data": {"uploadcache"},
-				"blackduck-webapp":           {"webapp"},
-				"blackduck-logstash":         {"logstash"},
-				"blackduck-nginx":            {"webserver"},
+				"blackduck-postgres":       {"postgres", "podSecurityContext"},
+				"blackduck-init":           {"init", "securityContext"},
+				"blackduck-authentication": {"authentication", "podSecurityContext"},
+				"blackduck-binnaryscanner": {"binaryscanner", "podSecurityContext"},
+				"blackduck-cfssl":          {"cfssl", "podSecurityContext"},
+				"blackduck-documentation":  {"documentation", "podSecurityContext"},
+				"blackduck-jobrunner":      {"jobrunner", "podSecurityContext"},
+				"blackduck-rabbitmq":       {"rabbitmq", "podSecurityContext"},
+				"blackduck-registration":   {"registration", "podSecurityContext"},
+				"blackduck-scan":           {"scan", "podSecurityContext"},
+				"blackduck-uploadcache":    {"uploadcache", "podSecurityContext"},
+				"blackduck-webapp":         {"webapp", "podSecurityContext"},
+				"blackduck-logstash":       {"logstash", "securityContext"},
+				"blackduck-nginx":          {"webserver", "podSecurityContext"},
+				"appcheck-worker":          {"binaryscanner", "podSecurityContext"},
 			}
-			for k, v := range SecurityContexts {
-				helmValuePath := securityContextIDNameToHelmPath[k]
-				util.SetHelmValueInMap(ctl.args, append(helmValuePath, "securityContext"), OperatorSecurityContextToHelm(v))
+			for k, v := range securityContexts {
+				pathToHelmValue := []string{k, "podSecurityContext"}                  // default path for new pods
+				if newPathToHelmValue, ok := securityContextIDNameToHelmPath[k]; ok { // Override the security if it's present in the list
+					pathToHelmValue = newPathToHelmValue
+				}
+				util.SetHelmValueInMap(ctl.args, pathToHelmValue, v)
 			}
 		case "postgres-claim-size":
 			util.SetHelmValueInMap(ctl.args, []string{"postgres", "claimSize"}, ctl.flagTree.PostgresClaimSize)

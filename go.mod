@@ -15,6 +15,7 @@ require (
 	github.com/onsi/gomega v1.7.1 // indirect
 	github.com/openshift/api v0.0.0-20200217161739-c99157bc6492
 	github.com/openshift/client-go v0.0.0-20200116152001-92a2713fa240
+	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5

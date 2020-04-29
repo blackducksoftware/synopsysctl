@@ -1,82 +1,61 @@
 {
-    "alert": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+    "blackduck-authentication": {
+        "fsGroup": 1000,
+        "runAsUser": 1000,
+        "runAsGroup": 1000
     },
-    "alert-cfssl": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+    "blackduck-binaryscanner": {
+        "fsGroup": 1000,
+        "runAsUser": 1000,
+        "runAsGroup": 1000
     },
     "blackduck-cfssl": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
-    },
-    "blackduck-postgres": {
-        "fsGroup": 26,
-        "runAsUser": 26,
-        "runAsGroup": 26
-    },
-    "blackduck-nginx": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+        "fsGroup": 1000,
+        "runAsUser": 1000,
+        "runAsGroup": 1000
     },
     "blackduck-documentation": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
-    },
-    "blackduck-solr": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
-    },
-    "blackduck-registration": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
-    },
-    "blackduck-zookeeper": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+        "fsGroup": 1000,
+        "runAsUser": 1000,
+        "runAsGroup": 1000
     },
     "blackduck-jobrunner": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+        "fsGroup": 1000,
+        "runAsUser": 1000,
+        "runAsGroup": 1000
+    },
+    "blackduck-rabbitmq": {
+        "fsGroup": 1000,
+        "runAsUser": 1000,
+        "runAsGroup": 1000
+    },
+    "blackduck-registration": {
+        "fsGroup": 1000,
+        "runAsUser": 1000,
+        "runAsGroup": 1000
     },
     "blackduck-scan": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
-    },
-    "blackduck-authentication": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
-    },
-    "blackduck-webapp": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+        "fsGroup": 1000,
+        "runAsUser": 1000,
+        "runAsGroup": 1000
     },
     "blackduck-uploadcache": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+        "fsGroup": 1000,
+        "runAsUser": 1000,
+        "runAsGroup": 1000
     },
-    "appcheck-worker": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+    "blackduck-webapp": {
+        "fsGroup": 1000,
+        "runAsUser": 1000,
+        "runAsGroup": 1000
     },
-    "rabbitmq": {
-        "fsGroup": 1234,
-        "runAsUser": 1234,
-        "runAsGroup": 1234
+    "blackduck-logstash": {
+        "runAsUser": 1000,
+        "runAsGroup": 1000
+    },
+    "blackduck-nginx": {
+        "fsGroup": 1000,
+        "runAsUser": 1000,
+        "runAsGroup": 1000
     }
 }

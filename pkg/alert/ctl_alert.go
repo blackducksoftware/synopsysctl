@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/blackduck"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -274,7 +275,7 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 				return
 			}
 			for k, v := range securityContexts {
-				util.SetHelmValueInMap(ctl.args, []string{k, "podSecurityContext"}, v)
+				util.SetHelmValueInMap(ctl.args, []string{k, "podSecurityContext"}, blackduck.CorePodSecurityContextToHelm(v))
 			}
 		default:
 			log.Debugf("flag '%s': NOT FOUND", f.Name)

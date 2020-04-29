@@ -34,7 +34,8 @@ import (
 
 // OperatorAffinityTok8sAffinity converts synopsysctl affinity format to kube affinity format
 func OperatorAffinityTok8sAffinity(opAffinity []v1.NodeAffinity) corev1.Affinity {
-	var hardTerms, softTerms []corev1.NodeSelectorTerm
+	hardTerms := make([]corev1.NodeSelectorTerm, 0)
+	softTerms := make([]corev1.NodeSelectorTerm, 0)
 	for _, aValue := range opAffinity {
 		if strings.EqualFold(aValue.AffinityType, "hard") {
 			hardTerms = append(hardTerms, corev1.NodeSelectorTerm{

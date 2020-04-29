@@ -1,13 +1,13 @@
 {
     "alert": {
-        "fsGroup": 1212,
-        "runAsUser": 1212,
-        "runAsGroup": 1212
+        "fsGroup": 1234,
+        "runAsUser": 1234,
+        "runAsGroup": 1234
     },
     "cfssl": {
-        "fsGroup": 1212,
-        "runAsUser": 1212,
-        "runAsGroup": 1212
+        "fsGroup": 1234,
+        "runAsUser": 1234,
+        "runAsGroup": 1234
     },
     "postgres": {
         "fsGroup": 26,
@@ -15,7 +15,7 @@
         "runAsGroup": 26
     },
     "init": {
-        "runAsUser": 1212,
-        "runAsGroup": 1212
+        "runAsUser": 1234,
+        "runAsGroup": 1234
     }
 }

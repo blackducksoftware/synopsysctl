@@ -55,32 +55,32 @@ const AlertPostSuffix = "-alert"
 // Alert Helm Chart Constants
 var alertVersion = "5.3.1"
 var alertChartName = "synopsys-alert"
-var alertChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, alertChartName, alertVersion)
+var alertChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, alertChartName, alertVersion)
 
 // Opssight Helm Chart Constants
 var opssightVersion = "2.2.5"
 var opssightChartName = "opssight"
-var opssightChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, opssightChartName, opssightVersion)
+var opssightChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, opssightChartName, opssightVersion)
 
 // Black Duck Helm Chart Constants
 var blackDuckVersion = "2020.4.0"
 var blackDuckChartName = "blackduck"
-var blackduckChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, blackDuckChartName, blackDuckVersion)
+var blackduckChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, blackDuckChartName, blackDuckVersion)
 
 // Polaris Helm Chart Constants
 var polarisName = "polaris"
 var polarisVersion = "2020.03"
 var polarisChartName = "polaris-helmchart"
-var polarisChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, polarisChartName, polarisVersion)
+var polarisChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, polarisChartName, polarisVersion)
 
 // Polaris Reporting Helm Chart Constants
 var polarisReportingName = "polaris-reporting"
 var polarisReportingVersion = "2020.03"
 var polarisReportingChartName = "polaris-helmchart-reporting"
-var polarisReportingChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, polarisReportingChartName, polarisReportingVersion)
+var polarisReportingChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, polarisReportingChartName, polarisReportingVersion)
 
 // BDBA Helm Chart Constants
 var bdbaName = "bdba"
 var bdbaVersion = "2020.03"
 var bdbaChartName = "bdba"
-var bdbaChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, bdbaChartName, bdbaVersion)
+var bdbaChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, bdbaChartName, bdbaVersion)

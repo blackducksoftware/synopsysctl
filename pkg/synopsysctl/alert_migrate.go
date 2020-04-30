@@ -109,44 +109,42 @@ func migrateAlert(alert *v1.Alert, helmReleaseName string, operatorNamespace str
 	}
 
 	// Update the Helm Chart Location
-	err = SetHelmChartLocation(flags, alertChartName, &alertChartRepository)
+	helmValuesMapAlertData := helmValuesMap["alert"].(map[string]interface{})
+	alertVersion := helmValuesMapAlertData["imageTag"].(string)
+	err = SetHelmChartLocation(flags, alertChartName, alertVersion, &alertChartRepository)
 	if err != nil {
 		return fmt.Errorf("failed to set the app resources location due to %+v", err)
 	}
 
 	// check whether the update Alert version is greater than or equal to 5.0.0
-	if flags.Lookup("version").Changed {
-		helmValuesMapAlertData := helmValuesMap["alert"].(map[string]interface{})
-		oldAlertVersion := helmValuesMapAlertData["imageTag"].(string)
-		isGreaterThanOrEqualTo, err := util.IsNotDefaultVersionGreaterThanOrEqualTo(oldAlertVersion, 5, 0, 0)
-		if err != nil {
-			return fmt.Errorf("failed to check Alert version: %+v", err)
+	isGreaterThanOrEqualTo, err := util.IsNotDefaultVersionGreaterThanOrEqualTo(alertVersion, 5, 0, 0)
+	if err != nil {
+		return fmt.Errorf("failed to check Alert version: %+v", err)
+	}
+
+	// if greater than or equal to 5.0.0, then copy PUBLIC_HUB_WEBSERVER_HOST to ALERT_HOSTNAME and PUBLIC_HUB_WEBSERVER_PORT to ALERT_SERVER_PORT
+	// and delete PUBLIC_HUB_WEBSERVER_HOST and PUBLIC_HUB_WEBSERVER_PORT from the environs. In future, we need to request the customer to use the new params
+	if isGreaterThanOrEqualTo && helmValuesMap["environs"] != nil {
+		maps := helmValuesMap["environs"].(map[string]interface{})
+		isChanged := false
+		if _, ok := maps["PUBLIC_HUB_WEBSERVER_HOST"]; ok {
+			if _, ok1 := maps["ALERT_HOSTNAME"]; !ok1 {
+				maps["ALERT_HOSTNAME"] = maps["PUBLIC_HUB_WEBSERVER_HOST"]
+				isChanged = true
+			}
+			delete(maps, "PUBLIC_HUB_WEBSERVER_HOST")
 		}
 
-		// if greater than or equal to 5.0.0, then copy PUBLIC_HUB_WEBSERVER_HOST to ALERT_HOSTNAME and PUBLIC_HUB_WEBSERVER_PORT to ALERT_SERVER_PORT
-		// and delete PUBLIC_HUB_WEBSERVER_HOST and PUBLIC_HUB_WEBSERVER_PORT from the environs. In future, we need to request the customer to use the new params
-		if isGreaterThanOrEqualTo && helmValuesMap["environs"] != nil {
-			maps := helmValuesMap["environs"].(map[string]interface{})
-			isChanged := false
-			if _, ok := maps["PUBLIC_HUB_WEBSERVER_HOST"]; ok {
-				if _, ok1 := maps["ALERT_HOSTNAME"]; !ok1 {
-					maps["ALERT_HOSTNAME"] = maps["PUBLIC_HUB_WEBSERVER_HOST"]
-					isChanged = true
-				}
-				delete(maps, "PUBLIC_HUB_WEBSERVER_HOST")
+		if _, ok := maps["PUBLIC_HUB_WEBSERVER_PORT"]; ok {
+			if _, ok1 := maps["ALERT_SERVER_PORT"]; !ok1 {
+				maps["ALERT_SERVER_PORT"] = maps["PUBLIC_HUB_WEBSERVER_PORT"]
+				isChanged = true
 			}
+			delete(maps, "PUBLIC_HUB_WEBSERVER_PORT")
+		}
 
-			if _, ok := maps["PUBLIC_HUB_WEBSERVER_PORT"]; ok {
-				if _, ok1 := maps["ALERT_SERVER_PORT"]; !ok1 {
-					maps["ALERT_SERVER_PORT"] = maps["PUBLIC_HUB_WEBSERVER_PORT"]
-					isChanged = true
-				}
-				delete(maps, "PUBLIC_HUB_WEBSERVER_PORT")
-			}
-
-			if isChanged {
-				util.SetHelmValueInMap(helmValuesMap, []string{"environs"}, maps)
-			}
+		if isChanged {
+			util.SetHelmValueInMap(helmValuesMap, []string{"environs"}, maps)
 		}
 	}
 

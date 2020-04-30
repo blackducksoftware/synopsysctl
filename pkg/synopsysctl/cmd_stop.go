@@ -64,14 +64,11 @@ var stopAlertCmd = &cobra.Command{
 			return fmt.Errorf("couldn't find instance '%s' in namespace '%s'", alertName, namespace)
 		}
 
-		// Update the Helm Chart Location../../pkg/synopsysctl/cmd_stop.go
-		configAlertData := instance.Config["alert"].(map[string]interface{})
-		configAlertVersion := configAlertData["imageTag"]
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			alertChartRepository = chartLocationFlag.Value.String()
-		} else {
-			alertChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, alertChartName, configAlertVersion)
+		// Update the Helm Chart Location
+		alertVersion := util.GetValueFromRelease(instance, []string{"alert", "imageTag"})
+		err = SetHelmChartLocation(cmd.Flags(), alertChartName, alertVersion.(string), &alertChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		helmValuesMap := map[string]interface{}{"status": "Stopped"}
@@ -109,11 +106,10 @@ var stopBlackDuckCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			blackduckChartRepository = chartLocationFlag.Value.String()
-		} else {
-			blackduckChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, blackDuckChartName, instance.Chart.Values["imageTag"])
+		blackDuckVersion := util.GetValueFromRelease(instance, []string{"imageTag"})
+		err = SetHelmChartLocation(cmd.Flags(), blackDuckChartName, blackDuckVersion.(string), &blackduckChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		helmValuesMap := make(map[string]interface{})
@@ -149,11 +145,10 @@ var stopOpsSightCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			opssightChartRepository = chartLocationFlag.Value.String()
-		} else {
-			opssightChartRepository = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, opssightChartName, instance.Chart.Values["imageTag"])
+		opssightVersion := util.GetValueFromRelease(instance, []string{"imageTag"})
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion.(string), &opssightChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		helmValuesMap := make(map[string]interface{})

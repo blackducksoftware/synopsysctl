@@ -380,7 +380,7 @@ func getInstanceInfo(crdName string, appName string, namespace string, name stri
 }
 
 // SetHelmChartLocation uses --app-resources-path and --version to set the value at *chartVariable
-func SetHelmChartLocation(flags *pflag.FlagSet, chartName string, chartVariable *string) error {
+func SetHelmChartLocation(flags *pflag.FlagSet, chartName, version string, chartVariable *string) error {
 	chartLocationFlag := flags.Lookup("app-resources-path")
 	if chartLocationFlag == nil {
 		return fmt.Errorf("this command does not have flag --app-resources-path")
@@ -388,12 +388,8 @@ func SetHelmChartLocation(flags *pflag.FlagSet, chartName string, chartVariable 
 	if chartLocationFlag.Changed {
 		*chartVariable = chartLocationFlag.Value.String()
 	} else {
-		versionFlag := flags.Lookup("version")
-		if versionFlag == nil {
-			return fmt.Errorf("this command does not have flag --version")
-		}
-		if versionFlag.Changed {
-			*chartVariable = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, chartName, versionFlag.Value.String())
+		if len(version) > 0 {
+			*chartVariable = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, chartName, version)
 		}
 	}
 	return nil

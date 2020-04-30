@@ -93,17 +93,31 @@ var updateAlertCmd = &cobra.Command{
 		alertName := args[0]
 		helmReleaseName := fmt.Sprintf("%s%s", alertName, AlertPostSuffix)
 
-		// Update the Helm Chart Location
-		err := SetHelmChartLocation(cmd.Flags(), alertChartName, &alertChartRepository)
-		if err != nil {
-			return fmt.Errorf("failed to set the app resources location due to %+v", err)
-		}
-
 		// TODO verity we can download the chart
 		isOperatorBased := false
 		instance, err := util.GetWithHelm3(helmReleaseName, namespace, kubeConfigPath)
 		if err != nil {
 			isOperatorBased = true
+		}
+
+		// Update the Helm Chart Location
+		alertVersion = util.GetValueFromRelease(instance, []string{"alert", "imageTag"}).(string)
+		if cmd.Flags().Lookup("version").Changed {
+			alertVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), alertChartName, alertVersion, &alertChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
+
+		if cmd.Flag("version").Changed {
+			ok, err := util.IsNotDefaultVersionGreaterThanOrEqualTo(cmd.Flag("version").Value.String(), 5, 3, 1)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				return fmt.Errorf("updating of Alert instance is only suported for version 5.3.1 and above")
+			}
 		}
 
 		if !isOperatorBased && instance != nil {
@@ -291,16 +305,20 @@ var updateBlackDuckCmd = &cobra.Command{
 		blackDuckName := args[0]
 		blackDuckNamespace := namespace
 
-		// Update the Helm Chart Location
-		err := SetHelmChartLocation(cmd.Flags(), blackDuckChartName, &blackduckChartRepository)
-		if err != nil {
-			return fmt.Errorf("failed to set the app resources location due to %+v", err)
-		}
-
 		isOperatorBased := false
 		instance, err := util.GetWithHelm3(args[0], namespace, kubeConfigPath)
 		if err != nil {
 			isOperatorBased = true
+		}
+
+		// Update the Helm Chart Location
+		blackDuckVersion = util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
+		if cmd.Flags().Lookup("version").Changed {
+			blackDuckVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), blackDuckChartName, blackDuckVersion, &blackduckChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		if !isOperatorBased && instance != nil {
@@ -726,7 +744,11 @@ func updateMasterKey(namespace string, name string, oldMasterKeyFilePath string,
 		helmValuesMap := release.Config
 
 		// Update the Helm Chart Location
-		err = SetHelmChartLocation(cmd.Flags(), blackDuckChartName, &blackduckChartRepository)
+		blackDuckVersion = util.GetValueFromRelease(release, []string{"imageTag"}).(string)
+		if cmd.Flags().Lookup("version").Changed {
+			blackDuckVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), blackDuckChartName, blackDuckVersion, &blackduckChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -766,7 +788,11 @@ var updateBlackDuckAddEnvironCmd = &cobra.Command{
 		helmValuesMap := helmRelease.Config
 
 		// Update the Helm Chart Location
-		err = SetHelmChartLocation(cmd.Flags(), blackDuckChartName, &blackduckChartRepository)
+		blackDuckVersion = util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
+		if cmd.Flags().Lookup("version").Changed {
+			blackDuckVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), blackDuckChartName, blackDuckVersion, &blackduckChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -809,18 +835,22 @@ var updateOpsSightCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		opssightName := args[0]
 
-		// Update the Helm Chart Location
-		err := SetHelmChartLocation(cmd.Flags(), opssightChartName, &opssightChartRepository)
-		if err != nil {
-			return fmt.Errorf("failed to set the app resources location due to %+v", err)
-		}
-
 		// Set flags from the current release in the updateOpsSightCobraHelper
 		helmRelease, err := util.GetWithHelm3(opssightName, namespace, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("failed to get previous user defined values: %+v", err)
 		}
 		updateOpsSightCobraHelper.SetArgs(helmRelease.Config)
+
+		// Update the Helm Chart Location
+		opssightVersion = util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
+		if cmd.Flags().Lookup("version").Changed {
+			opssightVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion, &opssightChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
 
 		// Update Helm Values with flags
 		helmValuesMap, err := updateOpsSightCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
@@ -875,18 +905,22 @@ var updateOpsSightExternalHostCmd = &cobra.Command{
 		pass := args[5]
 		scanLimit := args[6]
 
-		// Update the Helm Chart Location
-		err := SetHelmChartLocation(cmd.Flags(), opssightChartName, &opssightChartRepository)
-		if err != nil {
-			return fmt.Errorf("failed to set the app resources location due to %+v", err)
-		}
-
 		// Get flags from the current release
 		helmRelease, err := util.GetWithHelm3(opssightName, namespace, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("failed to get previous user defined values: %+v", err)
 		}
 		helmValuesMap := helmRelease.Config
+
+		// Update the Helm Chart Location
+		opssightVersion = util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
+		if cmd.Flags().Lookup("version").Changed {
+			opssightVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion, &opssightChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
 
 		// Update Helm Values with External BlackDuck values
 		currExternalBlackDucks := make([]map[string]interface{}, 0)
@@ -956,18 +990,22 @@ var updateOpsSightExternalHostNativeCmd = &cobra.Command{
 		pass := args[5]
 		scanLimit := args[6]
 
-		// Update the Helm Chart Location
-		err := SetHelmChartLocation(cmd.Flags(), opssightChartName, &opssightChartRepository)
-		if err != nil {
-			return fmt.Errorf("failed to set the app resources location due to %+v", err)
-		}
-
 		// Get flags from the current release
 		helmRelease, err := util.GetWithHelm3(opssightName, namespace, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("failed to get previous user defined values: %+v", err)
 		}
 		helmValuesMap := helmRelease.Config
+
+		// Update the Helm Chart Location
+		opssightVersion = util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
+		if cmd.Flags().Lookup("version").Changed {
+			opssightVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion, &opssightChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
 
 		// Update Helm Values with External BlackDuck values
 		currExternalBlackDucks := make([]map[string]interface{}, 0)
@@ -1024,18 +1062,22 @@ var updateOpsSightAddRegistryCmd = &cobra.Command{
 		user := args[2]
 		pass := args[3]
 
-		// Update the Helm Chart Location
-		err := SetHelmChartLocation(cmd.Flags(), opssightChartName, &opssightChartRepository)
-		if err != nil {
-			return fmt.Errorf("failed to set the app resources location due to %+v", err)
-		}
-
 		// Get flags from the current release
 		helmRelease, err := util.GetWithHelm3(opssightName, namespace, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("failed to get previous user defined values: %+v", err)
 		}
 		helmValuesMap := helmRelease.Config
+
+		// Update the Helm Chart Location
+		opssightVersion = util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
+		if cmd.Flags().Lookup("version").Changed {
+			opssightVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion, &opssightChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
 
 		// Update Helm Values with Secured Registry values
 		currRegistries := make([]map[string]interface{}, 0)
@@ -1081,18 +1123,22 @@ var updateOpsSightAddRegistryNativeCmd = &cobra.Command{
 		user := args[2]
 		pass := args[3]
 
-		// Update the Helm Chart Location
-		err := SetHelmChartLocation(cmd.Flags(), opssightChartName, &opssightChartRepository)
-		if err != nil {
-			return fmt.Errorf("failed to set the app resources location due to %+v", err)
-		}
-
 		// Get flags from the current release
 		helmRelease, err := util.GetWithHelm3(opssightName, namespace, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("failed to get previous user defined values: %+v", err)
 		}
 		helmValuesMap := helmRelease.Config
+
+		// Update the Helm Chart Location
+		opssightVersion = util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
+		if cmd.Flags().Lookup("version").Changed {
+			opssightVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion, &opssightChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
 
 		// Update Helm Values with Secured Registry values
 		currRegistries := make([]map[string]interface{}, 0)
@@ -1146,7 +1192,11 @@ var updatePolarisCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		err = SetHelmChartLocation(cmd.Flags(), polarisChartName, &polarisChartRepository)
+		polarisVersion = util.GetValueFromRelease(helmRelease, []string{"version"}).(string)
+		if cmd.Flags().Lookup("version").Changed {
+			polarisVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), polarisChartName, polarisVersion, &polarisChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -1191,7 +1241,11 @@ var updatePolarisReportingCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		err = SetHelmChartLocation(cmd.Flags(), polarisReportingChartName, &polarisReportingChartRepository)
+		polarisReportingVersion = util.GetValueFromRelease(helmRelease, []string{"version"}).(string)
+		if cmd.Flags().Lookup("version").Changed {
+			polarisReportingVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), polarisReportingChartName, polarisReportingVersion, &polarisReportingChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -1236,7 +1290,11 @@ var updateBDBACmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		err = SetHelmChartLocation(cmd.Flags(), bdbaChartName, &bdbaChartRepository)
+		bdbaVersion = util.GetValueFromRelease(helmRelease, []string{"version"}).(string)
+		if cmd.Flags().Lookup("version").Changed {
+			bdbaVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), bdbaChartName, bdbaVersion, &bdbaChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}

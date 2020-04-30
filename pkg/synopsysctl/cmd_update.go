@@ -524,8 +524,8 @@ func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion
 		}
 
 		// Update the Persistent Volumes that have a File Ownership values in the map
-		log.Infof("updating file ownership in Persistent Volumes...")
 		if len(pvcNameToFileOwnershipMap) > 0 { // skip if no File Ownerships are set
+			log.Infof("updating file ownership in Persistent Volumes...")
 			// Create Jobs to set the File Owernship in the Persistent Volume
 			var wg sync.WaitGroup
 			wg.Add(len(pvcNameToFileOwnershipMap))

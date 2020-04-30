@@ -393,7 +393,7 @@ func SetHelmChartLocation(flags *pflag.FlagSet, chartName string, chartVariable 
 			return fmt.Errorf("this command does not have flag --version")
 		}
 		if versionFlag.Changed {
-			*chartVariable = fmt.Sprintf("%s/charts/%s-%s.tgz", baseChartRepository, chartName, versionFlag.Value.String())
+			*chartVariable = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, chartName, versionFlag.Value.String())
 		}
 	}
 	return nil

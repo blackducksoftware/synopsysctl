@@ -36,6 +36,7 @@ func verifyClusterType(cType string) error {
 }
 
 func addChartLocationPathFlag(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&baseChartRepository, "app-resources-path", "", "", "Absolute path to an application Tarball for air-gapped customer")
+	var tmp string
+	cmd.Flags().StringVarP(&tmp, "app-resources-path", "", "", "Absolute path to an application Tarball for air-gapped customer")
 	// cmd.Flags().MarkHidden("app-resources-path")
 }

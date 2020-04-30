@@ -298,6 +298,11 @@ var createBlackDuckCmd = &cobra.Command{
 			return err
 		}
 
+		// Set Persistent Storage to true by default (TODO: remove after changed in Helm Chart)
+		if !cmd.Flag("persistent-storage").Changed {
+			util.SetHelmValueInMap(helmValuesMap, []string{"enablePersistentStorage"}, true)
+		}
+
 		// Update the Helm Chart Location
 		err = SetHelmChartLocation(cmd.Flags(), blackDuckChartName, &blackduckChartRepository)
 		if err != nil {

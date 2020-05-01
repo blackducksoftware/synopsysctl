@@ -40,3 +40,7 @@ func addChartLocationPathFlag(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&tmp, "app-resources-path", "", "", "Absolute path to an application Tarball for air-gapped customer")
 	// cmd.Flags().MarkHidden("app-resources-path")
 }
+
+func addNativeFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&nativeClusterType, "target", nativeClusterType, "Type of cluster to generate the resources for [KUBERNETES|OPENSHIFT]")
+}

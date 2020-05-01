@@ -409,8 +409,12 @@ var createBlackDuckNativeCmd = &cobra.Command{
 			return err
 		}
 
-		// default is Kubernetes for Native Mode
-		util.SetHelmValueInMap(helmValuesMap, []string{"isKubernetes"}, true)
+		// Check if the configuration is for Openshift
+		if strings.upper(nativeClusterType) == clusterTypeOpenshift {
+			util.SetHelmValueInMap(helmValuesMap, []string{"isKubernetes"}, false)
+		} else {
+			util.SetHelmValueInMap(helmValuesMap, []string{"isKubernetes"}, true)
+		}
 
 		// Set Persistent Storage to true by default (TODO: remove after changed in Helm Chart)
 		if !cmd.Flag("persistent-storage").Changed {
@@ -869,6 +873,7 @@ func init() {
 	createCmd.AddCommand(createAlertCmd)
 
 	createAlertCobraHelper.AddCobraFlagsToCommand(createAlertNativeCmd, true)
+	addNativeFlags(createAlertNativeCmd)
 	addChartLocationPathFlag(createAlertNativeCmd)
 	createAlertCmd.AddCommand(createAlertNativeCmd)
 
@@ -880,6 +885,7 @@ func init() {
 	createCmd.AddCommand(createBlackDuckCmd)
 
 	createBlackDuckCobraHelper.AddCRSpecFlagsToCommand(createBlackDuckNativeCmd, true)
+	addNativeFlags(createBlackDuckNativeCmd)
 	addChartLocationPathFlag(createBlackDuckNativeCmd)
 	createBlackDuckCmd.AddCommand(createBlackDuckNativeCmd)
 
@@ -891,6 +897,7 @@ func init() {
 	createCmd.AddCommand(createOpsSightCmd)
 
 	createOpsSightCobraHelper.AddCobraFlagsToCommand(createOpsSightNativeCmd, true)
+	addNativeFlags(createOpsSightNativeCmd)
 	addChartLocationPathFlag(createOpsSightNativeCmd)
 	createOpsSightCmd.AddCommand(createOpsSightNativeCmd)
 
@@ -902,6 +909,7 @@ func init() {
 	createCmd.AddCommand(createPolarisCmd)
 
 	createPolarisCobraHelper.AddCobraFlagsToCommand(createPolarisNativeCmd, true)
+	addNativeFlags(createPolarisNativeCmd)
 	addChartLocationPathFlag(createPolarisNativeCmd)
 	createPolarisCmd.AddCommand(createPolarisNativeCmd)
 
@@ -913,6 +921,7 @@ func init() {
 	createCmd.AddCommand(createPolarisReportingCmd)
 
 	createPolarisReportingCobraHelper.AddCobraFlagsToCommand(createPolarisReportingNativeCmd, true)
+	addNativeFlags(createPolarisReportingNativeCmd)
 	addChartLocationPathFlag(createPolarisReportingNativeCmd)
 	createPolarisReportingCmd.AddCommand(createPolarisReportingNativeCmd)
 
@@ -924,6 +933,7 @@ func init() {
 	createCmd.AddCommand(createBDBACmd)
 
 	createBDBACobraHelper.AddCobraFlagsToCommand(createBDBANativeCmd, true)
+	addNativeFlags(createBDBANativeCmd)
 	addChartLocationPathFlag(createBDBANativeCmd)
 	createBDBACmd.AddCommand(createBDBANativeCmd)
 

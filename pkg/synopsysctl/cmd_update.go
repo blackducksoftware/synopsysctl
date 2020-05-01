@@ -311,17 +311,17 @@ var updateBlackDuckCmd = &cobra.Command{
 			isOperatorBased = true
 		}
 
-		// Update the Helm Chart Location
-		blackDuckVersion = util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
-		if cmd.Flags().Lookup("version").Changed {
-			blackDuckVersion = cmd.Flags().Lookup("version").Value.String()
-		}
-		err = SetHelmChartLocation(cmd.Flags(), blackDuckChartName, blackDuckVersion, &blackduckChartRepository)
-		if err != nil {
-			return fmt.Errorf("failed to set the app resources location due to %+v", err)
-		}
-
 		if !isOperatorBased && instance != nil {
+			// Update the Helm Chart Location
+			blackDuckVersion = util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
+			if cmd.Flags().Lookup("version").Changed {
+				blackDuckVersion = cmd.Flags().Lookup("version").Value.String()
+			}
+			err = SetHelmChartLocation(cmd.Flags(), blackDuckChartName, blackDuckVersion, &blackduckChartRepository)
+			if err != nil {
+				return fmt.Errorf("failed to set the app resources location due to %+v", err)
+			}
+
 			oldVersion := util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
 			log.Debugf("old version: %+v", oldVersion)
 
@@ -745,9 +745,6 @@ func updateMasterKey(namespace string, name string, oldMasterKeyFilePath string,
 
 		// Update the Helm Chart Location
 		blackDuckVersion = util.GetValueFromRelease(release, []string{"imageTag"}).(string)
-		if cmd.Flags().Lookup("version").Changed {
-			blackDuckVersion = cmd.Flags().Lookup("version").Value.String()
-		}
 		err = SetHelmChartLocation(cmd.Flags(), blackDuckChartName, blackDuckVersion, &blackduckChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
@@ -758,6 +755,12 @@ func updateMasterKey(namespace string, name string, oldMasterKeyFilePath string,
 
 		if err := util.UpdateWithHelm3(name, namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath); err != nil {
 			return err
+		}
+
+		// delete the upload cache pod. TODO: remove after the Black Duck is merged...
+		err = util.DeletePod(kubeClient, namespace, uploadCachePod.Name)
+		if err != nil {
+			return fmt.Errorf("unable to delete an upload cache pod in namespace '%s' due to %+v", namespace, err)
 		}
 
 		log.Infof("successfully submitted updates to Black Duck '%s' in namespace '%s'. Wait for upload cache pod to restart to resume the source code upload", name, namespace)

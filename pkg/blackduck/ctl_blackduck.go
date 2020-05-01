@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blackducksoftware/synopsysctl/pkg/api"
 	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
@@ -95,7 +94,6 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 		return nil, err
 	}
 	flagset.VisitAll(ctl.AddHelmValueByCobraFlag)
-
 	return ctl.args, nil
 }
 
@@ -233,6 +231,8 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 	if f.Changed {
 		log.Debugf("flag '%s': CHANGED", f.Name)
 		switch f.Name {
+		case "version":
+			util.SetHelmValueInMap(ctl.args, []string{"imageTag"}, ctl.flagTree.Version)
 		case "size":
 			util.SetHelmValueInMap(ctl.args, []string{"size"}, ctl.flagTree.Size)
 		case "expose-ui":
@@ -328,7 +328,8 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 			}
 
 			for k, v := range nodeAffinities {
-				util.SetHelmValueInMap(ctl.args, []string{k, "affinity"}, OperatorAffinityTok8sAffinity(v))
+				kubeAff := OperatorAffinityTok8sAffinity(v)
+				util.SetHelmValueInMap(ctl.args, []string{k, "affinity"}, kubeAff)
 			}
 		case "security-context-file-path":
 			data, err := util.ReadFileData(ctl.flagTree.SecurityContextFilePath)
@@ -336,14 +337,35 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 				log.Errorf("failed to read security context file: %+v", err)
 				return
 			}
-			SecurityContexts := map[string]api.SecurityContext{}
-			err = json.Unmarshal([]byte(data), &SecurityContexts)
+			securityContexts := map[string]corev1.PodSecurityContext{}
+			err = json.Unmarshal([]byte(data), &securityContexts)
 			if err != nil {
 				log.Errorf("failed to unmarshal security contexts: %+v", err)
 				return
 			}
-			for k, v := range SecurityContexts {
-				util.SetHelmValueInMap(ctl.args, []string{k, "securityContext"}, OperatorSecurityContextTok8sAffinity(v))
+			securityContextIDNameToHelmPath := map[string][]string{
+				"blackduck-postgres":       {"postgres", "podSecurityContext"},
+				"blackduck-init":           {"init", "securityContext"},
+				"blackduck-authentication": {"authentication", "podSecurityContext"},
+				"blackduck-binnaryscanner": {"binaryscanner", "podSecurityContext"},
+				"blackduck-cfssl":          {"cfssl", "podSecurityContext"},
+				"blackduck-documentation":  {"documentation", "podSecurityContext"},
+				"blackduck-jobrunner":      {"jobrunner", "podSecurityContext"},
+				"blackduck-rabbitmq":       {"rabbitmq", "podSecurityContext"},
+				"blackduck-registration":   {"registration", "podSecurityContext"},
+				"blackduck-scan":           {"scan", "podSecurityContext"},
+				"blackduck-uploadcache":    {"uploadcache", "podSecurityContext"},
+				"blackduck-webapp":         {"webapp", "podSecurityContext"},
+				"blackduck-logstash":       {"logstash", "securityContext"},
+				"blackduck-nginx":          {"webserver", "podSecurityContext"},
+				"appcheck-worker":          {"binaryscanner", "podSecurityContext"},
+			}
+			for k, v := range securityContexts {
+				pathToHelmValue := []string{k, "podSecurityContext"}                  // default path for new pods
+				if newPathToHelmValue, ok := securityContextIDNameToHelmPath[k]; ok { // Override the security if it's present in the list
+					pathToHelmValue = newPathToHelmValue
+				}
+				util.SetHelmValueInMap(ctl.args, pathToHelmValue, CorePodSecurityContextToHelm(v))
 			}
 		case "postgres-claim-size":
 			util.SetHelmValueInMap(ctl.args, []string{"postgres", "claimSize"}, ctl.flagTree.PostgresClaimSize)

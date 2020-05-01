@@ -24,9 +24,6 @@ package synopsysctl
 import (
 	"fmt"
 
-	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	alertctl "github.com/blackducksoftware/synopsysctl/pkg/alert"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
@@ -60,27 +57,26 @@ var stopAlertCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		alertName := args[0]
+		helmReleaseName := fmt.Sprintf("%s%s", alertName, AlertPostSuffix)
 
-		instance, err := util.GetWithHelm3(alertName, namespace, kubeConfigPath)
+		instance, err := util.GetWithHelm3(helmReleaseName, namespace, kubeConfigPath)
 		if err != nil {
-			return fmt.Errorf("couldn't find instance %s in namespace %s", args[0], namespace)
+			return fmt.Errorf("couldn't find instance '%s' in namespace '%s'", alertName, namespace)
 		}
 
 		// Update the Helm Chart Location
-		configAlertData := instance.Config["alert"].(map[string]interface{})
-		configAlertVersion := configAlertData["imageTag"]
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			alertChartRepository = chartLocationFlag.Value.String()
-		} else {
-			alertChartRepository = fmt.Sprintf("%s/charts/alert-%s.tgz", baseChartRepository, configAlertVersion)
+		alertVersion := util.GetValueFromRelease(instance, []string{"alert", "imageTag"})
+		err = SetHelmChartLocation(cmd.Flags(), alertChartName, alertVersion.(string), &alertChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		helmValuesMap := map[string]interface{}{"status": "Stopped"}
 
-		err = util.UpdateWithHelm3(alertName, namespace, alertChartRepository, helmValuesMap, kubeConfigPath)
+		err = util.UpdateWithHelm3(helmReleaseName, namespace, alertChartRepository, helmValuesMap, kubeConfigPath)
 		if err != nil {
-			return fmt.Errorf("failed to create Alert resources: %+v", err)
+			cleanErrorMsg := cleanAlertHelmError(err.Error(), helmReleaseName, alertName)
+			return fmt.Errorf("failed to create Alert resources: %+v", cleanErrorMsg)
 		}
 
 		log.Infof("successfully submitted stop Alert '%s' in namespace '%s'", alertName, namespace)
@@ -110,11 +106,10 @@ var stopBlackDuckCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			blackduckChartRepository = chartLocationFlag.Value.String()
-		} else {
-			blackduckChartRepository = fmt.Sprintf("%s/charts/blackduck-%s.tgz", baseChartRepository, instance.Chart.Values["imageTag"])
+		blackDuckVersion := util.GetValueFromRelease(instance, []string{"imageTag"})
+		err = SetHelmChartLocation(cmd.Flags(), blackDuckChartName, blackDuckVersion.(string), &blackduckChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		helmValuesMap := make(map[string]interface{})
@@ -130,52 +125,38 @@ var stopBlackDuckCmd = &cobra.Command{
 
 // stopOpsSightCmd stops an OpsSight instance
 var stopOpsSightCmd = &cobra.Command{
-	Use:           "opssight NAME",
-	Example:       "synopsysctl stop opssight <name>\nsynopsysctl stop opssight <name1> <name2>",
+	Use:           "opssight NAME -n NAMESPACE",
+	Example:       "synopsysctl stop opssight <name> -n <namespace>",
 	Short:         "Stop an OpsSight instance",
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	Args: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
+		if len(args) != 1 {
 			cmd.Help()
-			return fmt.Errorf("this command takes one or more arguments")
+			return fmt.Errorf("this command takes 1 argument, but got %+v", args)
 		}
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		errors := []error{}
-		for _, opsSightName := range args {
-			opsSightNamespace, crdNamespace, scope, err := getInstanceInfo(util.OpsSightCRDName, util.OpsSightName, namespace, opsSightName)
-			if err != nil {
-				if len(opsSightNamespace) == 0 && scope == apiextensions.ClusterScoped {
-					err = fmt.Errorf("%s %s doesn't appear to be running: %v", util.OpsSightName, opsSightName, err)
-				}
-				errors = append(errors, err)
-				continue
-			}
-			log.Infof("stopping OpsSight '%s' in namespace '%s'...", opsSightName, opsSightNamespace)
-
-			// Get the OpsSight
-			currOpsSight, err := util.GetOpsSight(opsSightClient, crdNamespace, opsSightName, metav1.GetOptions{})
-			if err != nil {
-				errors = append(errors, fmt.Errorf("error getting OpsSight '%s' in namespace '%s' due to %+v", opsSightName, opsSightNamespace, err))
-				continue
-			}
-
-			// Make changes to Spec
-			currOpsSight.Spec.DesiredState = "STOP"
-			// Update OpsSight
-			_, err = util.UpdateOpsSight(opsSightClient,
-				currOpsSight.Spec.Namespace, currOpsSight)
-			if err != nil {
-				errors = append(errors, fmt.Errorf("error stopping OpsSight '%s' in namespace '%s' due to %+v", opsSightName, opsSightNamespace, err))
-				continue
-			}
-
-			log.Infof("successfully submitted stop OpsSight '%s' in namespace '%s'", opsSightName, opsSightNamespace)
+		opssightName := args[0]
+		instance, err := util.GetWithHelm3(opssightName, namespace, kubeConfigPath)
+		if err != nil {
+			return fmt.Errorf("couldn't find instance %s in namespace %s", opssightName, namespace)
 		}
-		if len(errors) > 0 {
-			return fmt.Errorf("%v", errors)
+
+		// Update the Helm Chart Location
+		opssightVersion := util.GetValueFromRelease(instance, []string{"imageTag"})
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion.(string), &opssightChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
+
+		helmValuesMap := make(map[string]interface{})
+		util.SetHelmValueInMap(helmValuesMap, []string{"status"}, "Stopped")
+
+		err = util.UpdateWithHelm3(opssightName, namespace, opssightChartRepository, helmValuesMap, kubeConfigPath)
+		if err != nil {
+			return fmt.Errorf("failed to create OpsSight resources: %+v", err)
 		}
 		return nil
 	},
@@ -196,5 +177,8 @@ func init() {
 	addChartLocationPathFlag(stopBlackDuckCmd)
 	stopCmd.AddCommand(stopBlackDuckCmd)
 
+	stopOpsSightCmd.Flags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
+	cobra.MarkFlagRequired(stopOpsSightCmd.PersistentFlags(), "namespace")
+	addChartLocationPathFlag(stopOpsSightCmd)
 	stopCmd.AddCommand(stopOpsSightCmd)
 }

@@ -19,20 +19,26 @@ specific language governing permissions and limitations
 under the License.
 */
 
-package apps
+package util
 
-import (
-	"github.com/blackducksoftware/synopsysctl/pkg/protoform"
-	"k8s.io/client-go/rest"
+const (
+	// AlertCRDName is the name of an Alert CRD
+	AlertCRDName = "alerts.synopsys.com"
+	// BlackDuckCRDName is the name of the Black Duck CRD
+	BlackDuckCRDName = "blackducks.synopsys.com"
+	// OpsSightCRDName is the name of an OpsSight CRD
+	OpsSightCRDName = "opssights.synopsys.com"
+	// PrmCRDName is the name of the Polaris Reporting Module CRD
+	PrmCRDName = "prms.synopsys.com"
+
+	// OperatorName is the name of an Operator
+	OperatorName = "synopsys-operator"
+	// AlertName is the name of an Alert app
+	AlertName = "alert"
+	// BlackDuckName is the name of the Black Duck app
+	BlackDuckName = "blackduck"
+	// OpsSightName is the name of an OpsSight app
+	OpsSightName = "opssight"
+	// PrmName is the name of the Prm app
+	PrmName = "prm"
 )
-
-// App struct
-type App struct {
-	config     *protoform.Config
-	kubeConfig *rest.Config
-}
-
-// NewApp will return an App
-func NewApp(config *protoform.Config, kubeConfig *rest.Config) *App {
-	return &App{config: config, kubeConfig: kubeConfig}
-}

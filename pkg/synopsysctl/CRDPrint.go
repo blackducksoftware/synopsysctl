@@ -24,19 +24,11 @@ package synopsysctl
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"strings"
 
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/yaml"
 
-	"github.com/blackducksoftware/horizon/pkg/components"
 	"github.com/blackducksoftware/synopsysctl/pkg/api"
-	opssightapi "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
-	"github.com/blackducksoftware/synopsysctl/pkg/apps"
-	"github.com/blackducksoftware/synopsysctl/pkg/opssight"
-	"github.com/blackducksoftware/synopsysctl/pkg/protoform"
-	"github.com/blackducksoftware/synopsysctl/pkg/soperator"
 )
 
 // PrintFormat represents the format to print the struct
@@ -47,60 +39,6 @@ const (
 	JSON PrintFormat = "JSON"
 	YAML PrintFormat = "YAML"
 )
-
-func getDefaultApp(cType string) (*apps.App, error) {
-	pc := &protoform.Config{}
-	pc.SelfSetDefaults()
-	pc.DryRun = true
-	err := verifyClusterType(cType)
-	if err != nil {
-		return nil, err
-	}
-	if strings.EqualFold(strings.ToUpper(cType), clusterTypeOpenshift) {
-		pc.IsOpenshift = true
-	}
-	rc := &rest.Config{}
-	return apps.NewApp(pc, rc), nil
-}
-
-// PrintResource prints a Resource as yaml or json. printKubeComponents allows printing the kuberentes
-// resources instead
-func PrintResource(crd interface{}, format string, printKubeComponents bool) error {
-	// print the CRD
-	if !printKubeComponents {
-		return PrintComponents([]interface{}{crd}, format)
-	}
-
-	var cList *api.ComponentList
-	var err error
-
-	switch reflect.TypeOf(crd) {
-	case reflect.TypeOf(soperator.SpecConfig{}):
-		operator := crd.(soperator.SpecConfig)
-		cList, err = operator.GetComponents()
-		if err != nil {
-			return fmt.Errorf("failed to get components: %s", err)
-		}
-	case reflect.TypeOf(opssightapi.OpsSight{}):
-		pc := &protoform.Config{}
-		pc.SelfSetDefaults()
-		pc.DryRun = true
-		opsSight := crd.(opssightapi.OpsSight)
-		sc := opssight.NewSpecConfig(pc, kubeClient, opsSightClient, blackDuckClient, &opsSight, true, pc.DryRun)
-		cList, err = sc.GetComponents()
-		if err != nil {
-			return fmt.Errorf("failed to get components: %s", err)
-		}
-	default:
-		return fmt.Errorf("cannot print a resource with the format: %+v", crd)
-	}
-
-	if cList == nil {
-		return fmt.Errorf("failed to generate a componentLists for %+v", crd)
-	}
-	cList.PersistentVolumeClaims = []*components.PersistentVolumeClaim{} // Don't print resources for PVCs
-	return PrintComponentListKube(cList, format)
-}
 
 // PrintComponentListKube does
 func PrintComponentListKube(cList *api.ComponentList, format string) error {

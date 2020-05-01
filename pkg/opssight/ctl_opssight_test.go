@@ -21,206 +21,40 @@ package opssight
 import (
 	"testing"
 
-	"github.com/blackducksoftware/synopsysctl/pkg/api"
-	blackduckapi "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
-	opssightapi "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
-	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewCRSpecBuilderFromCobraFlags(t *testing.T) {
+func TestNewHelmValuesFromCobraFlags(t *testing.T) {
 	assert := assert.New(t)
-	opsSightCobraHelper := NewCRSpecBuilderFromCobraFlags()
-	assert.Equal(&CRSpecBuilderFromCobraFlags{
-		opsSightSpec: &opssightapi.OpsSightSpec{},
-	}, opsSightCobraHelper)
+	opssightCobraHelper := NewHelmValuesFromCobraFlags()
+	assert.Equal(&HelmValuesFromCobraFlags{
+		args:     map[string]interface{}{},
+		flagTree: FlagTree{},
+	}, opssightCobraHelper)
 }
 
-func TestGetCRSpec(t *testing.T) {
+func TestGetArgs(t *testing.T) {
 	assert := assert.New(t)
-	opsSightCobraHelper := NewCRSpecBuilderFromCobraFlags()
-	assert.Equal(opssightapi.OpsSightSpec{}, opsSightCobraHelper.GetCRSpec())
+	opssightCobraHelper := NewHelmValuesFromCobraFlags()
+	assert.Equal(map[string]interface{}{}, opssightCobraHelper.GetArgs())
 }
 
-func TestSetCRSpec(t *testing.T) {
+func TestGenerateHelmFlagsFromCobraFlags(t *testing.T) {
 	assert := assert.New(t)
-	opsSightCobraHelper := NewCRSpecBuilderFromCobraFlags()
-	specToSet := opssightapi.OpsSightSpec{Namespace: "test"}
-	opsSightCobraHelper.SetCRSpec(specToSet)
-	assert.Equal(specToSet, opsSightCobraHelper.GetCRSpec())
 
-	// check for error
-	assert.Error(opsSightCobraHelper.SetCRSpec(""))
-}
-
-func TestCheckValuesFromFlags(t *testing.T) {
-	assert := assert.New(t)
-	opsSightCobraHelper := NewCRSpecBuilderFromCobraFlags()
-	opsSightCobraHelper.PerceptorExpose = util.NONE
-	opsSightCobraHelper.PrometheusExpose = util.NONE
-	opsSightCobraHelper.PerceiverArtifactoryExpose = util.NONE
+	opssightCobraHelper := NewHelmValuesFromCobraFlags()
 	cmd := &cobra.Command{}
-	specFlags := opsSightCobraHelper.CheckValuesFromFlags(cmd.Flags())
-	assert.Nil(specFlags)
+	opssightCobraHelper.AddCobraFlagsToCommand(cmd, true)
+	flagset := cmd.Flags()
+	// Set flags here...
 
-	var tests = []struct {
-		input          *CRSpecBuilderFromCobraFlags
-		flagNameToTest string
-		flagValue      string
-	}{
-		// invalid opssight core expose case
-		{input: &CRSpecBuilderFromCobraFlags{
-			opsSightSpec:               &opssightapi.OpsSightSpec{},
-			PerceptorExpose:            "",
-			PrometheusExpose:           util.NONE,
-			PerceiverArtifactoryExpose: util.NONE,
-			PerceiverQuayExpose:        util.NONE,
-		},
-			flagNameToTest: "opssight-core-expose",
-			flagValue:      "",
-		},
-		// invalid prometheus metrics expose case
-		{input: &CRSpecBuilderFromCobraFlags{
-			opsSightSpec:               &opssightapi.OpsSightSpec{},
-			PerceptorExpose:            util.NONE,
-			PerceiverArtifactoryExpose: util.NONE,
-			PerceiverQuayExpose:        util.NONE,
-			PrometheusExpose:           "",
-		},
-			flagNameToTest: "expose-metrics",
-			flagValue:      "",
-		},
-		// invalid artifactory metrics expose case
-		{input: &CRSpecBuilderFromCobraFlags{
-			opsSightSpec:               &opssightapi.OpsSightSpec{},
-			PerceptorExpose:            util.NONE,
-			PrometheusExpose:           util.NONE,
-			PerceiverQuayExpose:        util.NONE,
-			PerceiverArtifactoryExpose: "",
-		},
-			flagNameToTest: "expose-artifactory-processor",
-			flagValue:      "",
-		},
-		// invalid quay metrics expose case
-		{input: &CRSpecBuilderFromCobraFlags{
-			opsSightSpec:               &opssightapi.OpsSightSpec{},
-			PerceptorExpose:            util.NONE,
-			PrometheusExpose:           util.NONE,
-			PerceiverQuayExpose:        "",
-			PerceiverArtifactoryExpose: util.NONE,
-		},
-			flagNameToTest: "expose-quay-processor",
-			flagValue:      "",
-		},
-	}
+	opssightCobraHelper.GenerateHelmFlagsFromCobraFlags(flagset)
 
-	for _, test := range tests {
-		cmd := &cobra.Command{}
-		opsSightCobraHelper.AddCRSpecFlagsToCommand(cmd, true)
-		flagset := cmd.Flags()
-		flagset.Set(test.flagNameToTest, test.flagValue)
-		err := test.input.CheckValuesFromFlags(flagset)
-		if err == nil {
-			t.Errorf("Expected an error but got nil, test: %+v", test)
-		}
-	}
-}
+	expectedArgs := map[string]interface{}{}
 
-func TestSetPredefinedCRSpec(t *testing.T) {
-	assert := assert.New(t)
-	opsSightCobraHelper := NewCRSpecBuilderFromCobraFlags()
-	defaultSpec := util.GetOpsSightDefault()
-	defaultSpec.Perceiver.EnablePodPerceiver = true
-	defaultSpec.EnableMetrics = true
-
-	var tests = []struct {
-		input    string
-		expected *opssightapi.OpsSightSpec
-	}{
-		{input: EmptySpec, expected: &opssightapi.OpsSightSpec{}},
-		{input: UpstreamSpec, expected: util.GetOpsSightUpstream()},
-		{input: DefaultSpec, expected: defaultSpec},
-		{input: DisabledBlackDuckSpec, expected: util.GetOpsSightDefaultWithIPV6DisabledBlackDuck()},
-	}
-
-	// test cases: "empty", "default", "disabledBlackduck"
-	for _, test := range tests {
-		assert.Nil(opsSightCobraHelper.SetPredefinedCRSpec(test.input))
-		assert.Equal(*test.expected, opsSightCobraHelper.GetCRSpec())
-	}
-
-	// test cases: default
-	createOpsSightSpecType := ""
-	assert.Error(opsSightCobraHelper.SetPredefinedCRSpec(createOpsSightSpecType))
-
-}
-
-func TestAddCRSpecFlagsToCommand(t *testing.T) {
-	assert := assert.New(t)
-
-	ctl := NewCRSpecBuilderFromCobraFlags()
-	actualCmd := &cobra.Command{}
-	ctl.AddCRSpecFlagsToCommand(actualCmd, true)
-
-	cmd := &cobra.Command{}
-	cmd.Flags().StringVar(&ctl.IsUpstream, "is-upstream", ctl.IsUpstream, "If true, Upstream images and names will be used [true|false]")
-	cmd.Flags().StringVar(&ctl.PerceptorExpose, "opssight-core-expose", ctl.PerceptorExpose, "Type of service for OpsSight's core model [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]")
-	cmd.Flags().IntVar(&ctl.PerceptorCheckForStalledScansPauseHours, "opssight-core-check-scan-hours", ctl.PerceptorCheckForStalledScansPauseHours, "Hours OpsSight's Core waits between checking for scans")
-	cmd.Flags().IntVar(&ctl.PerceptorStalledScanClientTimeoutHours, "opssight-core-scan-client-timeout-hours", ctl.PerceptorStalledScanClientTimeoutHours, "Hours until OpsSight's Core stops checking for scans")
-	cmd.Flags().IntVar(&ctl.PerceptorModelMetricsPauseSeconds, "opssight-core-metrics-pause-seconds", ctl.PerceptorModelMetricsPauseSeconds, "Core metrics pause in seconds")
-	cmd.Flags().IntVar(&ctl.PerceptorUnknownImagePauseMilliseconds, "opssight-core-unknown-image-pause-milliseconds", ctl.PerceptorUnknownImagePauseMilliseconds, "OpsSight Core's unknown image pause in milliseconds")
-	cmd.Flags().IntVar(&ctl.PerceptorClientTimeoutMilliseconds, "opssight-core-client-timeout-milliseconds", ctl.PerceptorClientTimeoutMilliseconds, "Seconds for OpsSight Core's timeout for Black Duck Scan Client")
-	cmd.Flags().IntVar(&ctl.ScannerPodScannerClientTimeoutSeconds, "scanner-client-timeout-seconds", ctl.ScannerPodScannerClientTimeoutSeconds, "Seconds before Scanner times out for Black Duck's Scan Client")
-	cmd.Flags().StringVar(&ctl.ScannerPodImageFacadeInternalRegistriesFilePath, "image-getter-secure-registries-file-path", ctl.ScannerPodImageFacadeInternalRegistriesFilePath, "Absolute path to a file for secure docker registries credentials to pull the images for scan")
-	cmd.Flags().StringVar(&ctl.ScannerPodImageFacadeImagePullerType, "image-getter-image-puller-type", ctl.ScannerPodImageFacadeImagePullerType, "Type of Image Getter's Image Puller [docker|skopeo]")
-	cmd.Flags().IntVar(&ctl.ScannerPodReplicaCount, "scannerpod-replica-count", ctl.ScannerPodReplicaCount, "Number of Containers for scanning")
-	cmd.Flags().StringVar(&ctl.ScannerPodImageDirectory, "scannerpod-image-directory", ctl.ScannerPodImageDirectory, "Directory in Scanner's pod where images are stored for scanning")
-	cmd.Flags().StringVar(&ctl.PerceiverEnableImagePerceiver, "enable-image-processor", ctl.PerceiverEnableImagePerceiver, "If true, Image Processor discovers images for scanning [true|false]")
-	cmd.Flags().StringVar(&ctl.PerceiverEnableArtifactoryPerceiver, "enable-artifactory-processor", ctl.PerceiverEnableArtifactoryPerceiver, "If true, Artifactory Processor discovers artifactory images for scanning [true|false]")
-	cmd.Flags().StringVar(&ctl.PerceiverEnableArtifactoryPerceiverDumper, "enable-artifactory-processor-dumper", ctl.PerceiverEnableArtifactoryPerceiverDumper, "If true, Artifactory Processor dumps all docker images in an artifactory instance for scanning [true|false]")
-	cmd.Flags().StringVar(&ctl.PerceiverEnableQuayPerceiver, "enable-quay-processor", ctl.PerceiverEnableQuayPerceiver, "If true, Quay Processor discovers quay images for scanning [true|false]")
-	cmd.Flags().StringVar(&ctl.PerceiverEnablePodPerceiver, "enable-pod-processor", ctl.PerceiverEnablePodPerceiver, "If true, Pod Processor discovers pods for scanning [true|false]")
-	cmd.Flags().StringVar(&ctl.PerceiverArtifactoryExpose, "expose-artifactory-processor", ctl.PerceiverArtifactoryExpose, "Type of service for Artifactory processor [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]")
-	cmd.Flags().StringVar(&ctl.PerceiverQuayExpose, "expose-quay-processor", ctl.PerceiverQuayExpose, "Type of service for Quay processor [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]")
-	cmd.Flags().StringVar(&ctl.PerceiverTLSCertificatePath, "processor-TLS-certificate-path", ctl.PerceiverTLSCertificatePath, "Accepts certificate file to start webhook receiver with TLS enabled, works in conjunction with Quay and Artifactory processors")
-	cmd.Flags().StringVar(&ctl.PerceiverTLSKeyPath, "processor-TLS-key-path", ctl.PerceiverTLSKeyPath, "Accepts key file to sign the TLS certificate, works in conjunction with Quay and Artifactory processors")
-	cmd.Flags().StringVar(&ctl.PerceiverPodPerceiverNamespaceFilter, "pod-processor-namespace-filter", ctl.PerceiverPodPerceiverNamespaceFilter, "Pod Processor's filter to scan pods by their namespace")
-	cmd.Flags().IntVar(&ctl.PerceiverAnnotationIntervalSeconds, "processor-annotation-interval-seconds", ctl.PerceiverAnnotationIntervalSeconds, "Refresh interval to get latest scan results and apply to Pods and Images")
-	cmd.Flags().IntVar(&ctl.PerceiverDumpIntervalMinutes, "processor-dump-interval-minutes", ctl.PerceiverDumpIntervalMinutes, "Minutes Image Processor and Pod Processor wait between creating dumps of data/metrics")
-	cmd.Flags().StringVar(&ctl.DefaultCPU, "default-cpu", ctl.DefaultCPU, "CPU size of OpsSight")
-	cmd.Flags().StringVar(&ctl.DefaultMem, "default-memory", ctl.DefaultMem, "Memory size of OpsSight")
-	cmd.Flags().StringVar(&ctl.ScannerCPU, "scanner-cpu", ctl.ScannerCPU, "CPU size of OpsSight's Scanner")
-	cmd.Flags().StringVar(&ctl.ScannerMem, "scanner-memory", ctl.ScannerMem, "Memory size of OpsSight's Scanner")
-	cmd.Flags().StringVar(&ctl.LogLevel, "log-level", ctl.LogLevel, "Log level of OpsSight")
-	cmd.Flags().StringVar(&ctl.EnableMetrics, "enable-metrics", ctl.EnableMetrics, "If true, OpsSight records Prometheus Metrics [true|false]")
-	cmd.Flags().StringVar(&ctl.PrometheusExpose, "expose-metrics", ctl.PrometheusExpose, "Type of service of OpsSight's Prometheus Metrics [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]")
-	cmd.Flags().StringVar(&ctl.BlackduckExternalHostsFilePath, "blackduck-external-hosts-file-path", ctl.BlackduckExternalHostsFilePath, "Absolute path to a file containing a list of Black Duck External Hosts")
-	cmd.Flags().StringVar(&ctl.BlackduckTLSVerification, "blackduck-TLS-verification", ctl.BlackduckTLSVerification, "If true, OpsSight performs TLS Verification for Black Duck [true|false]")
-	cmd.Flags().IntVar(&ctl.BlackduckInitialCount, "blackduck-initial-count", ctl.BlackduckInitialCount, "Initial number of Black Duck instances to create")
-	cmd.Flags().IntVar(&ctl.BlackduckMaxCount, "blackduck-max-count", ctl.BlackduckMaxCount, "Maximum number of Black Duck instances that can be created")
-	cmd.Flags().StringVar(&ctl.BlackduckType, "blackduck-type", ctl.BlackduckType, "Type of Black Duck")
-	cmd.Flags().StringVar(&ctl.BlackduckPassword, "blackduck-password", ctl.BlackduckPassword, "Password to use for all internal Blackduck 'sysadmin' account")
-	cmd.Flags().StringVar(&ctl.Registry, "registry", ctl.Registry, "Name of the registry to use for images e.g. docker.io/blackducksoftware")
-	cmd.Flags().StringSliceVar(&ctl.PullSecrets, "pull-secret-name", ctl.PullSecrets, "Only if the registry requires authentication")
-	cmd.Flags().StringSliceVar(&ctl.ImageRegistries, "image-registries", ctl.ImageRegistries, "List of image registries")
-
-	assert.Equal(cmd.Flags(), actualCmd.Flags())
-
-}
-
-func TestGenerateCRSpecFromFlags(t *testing.T) {
-	assert := assert.New(t)
-
-	actualCtl := NewCRSpecBuilderFromCobraFlags()
-	cmd := &cobra.Command{}
-	actualCtl.AddCRSpecFlagsToCommand(cmd, true)
-	actualCtl.GenerateCRSpecFromFlags(cmd.Flags())
-
-	expCtl := NewCRSpecBuilderFromCobraFlags()
-
-	assert.Equal(expCtl.opsSightSpec, actualCtl.opsSightSpec)
+	assert.Equal(expectedArgs, opssightCobraHelper.GetArgs())
 
 }
 
@@ -229,403 +63,568 @@ func TestSetCRSpecFieldByFlag(t *testing.T) {
 
 	var tests = []struct {
 		flagName    string
-		initialCtl  *CRSpecBuilderFromCobraFlags
-		changedCtl  *CRSpecBuilderFromCobraFlags
-		changedSpec *opssightapi.OpsSightSpec
+		initialCtl  *HelmValuesFromCobraFlags
+		changedCtl  *HelmValuesFromCobraFlags
+		changedArgs map[string]interface{}
 	}{
 		// case
 		{
-			flagName:   "opssight-core-expose",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:    &opssightapi.OpsSightSpec{},
-				PerceptorExpose: "changed",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{Perceptor: &opssightapi.Perceptor{Expose: "changed"}},
-		},
-		// case
-		{
-			flagName:   "expose-artifactory-processor",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:               &opssightapi.OpsSightSpec{},
-				PerceiverArtifactoryExpose: "changed",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{Perceiver: &opssightapi.Perceiver{Expose: "changed"}},
-		},
-		// case
-		{
-			flagName:   "expose-quay-processor",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:        &opssightapi.OpsSightSpec{},
-				PerceiverQuayExpose: "changed",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{Perceiver: &opssightapi.Perceiver{Expose: "changed"}},
-		},
-		// case
-		{
-			flagName:   "opssight-core-check-scan-hours",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:                            &opssightapi.OpsSightSpec{},
-				PerceptorCheckForStalledScansPauseHours: 10,
-			},
-			changedSpec: &opssightapi.OpsSightSpec{Perceptor: &opssightapi.Perceptor{CheckForStalledScansPauseHours: 10}},
-		},
-		// case
-		{
-			flagName:   "opssight-core-scan-client-timeout-hours",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:                           &opssightapi.OpsSightSpec{},
-				PerceptorStalledScanClientTimeoutHours: 10,
-			},
-			changedSpec: &opssightapi.OpsSightSpec{Perceptor: &opssightapi.Perceptor{StalledScanClientTimeoutHours: 10}},
-		},
-		// case
-		{
-			flagName:   "opssight-core-metrics-pause-seconds",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:                      &opssightapi.OpsSightSpec{},
-				PerceptorModelMetricsPauseSeconds: 10,
-			},
-			changedSpec: &opssightapi.OpsSightSpec{Perceptor: &opssightapi.Perceptor{ModelMetricsPauseSeconds: 10}},
-		},
-		// case
-		{
-			flagName:   "opssight-core-unknown-image-pause-milliseconds",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:                           &opssightapi.OpsSightSpec{},
-				PerceptorUnknownImagePauseMilliseconds: 10,
-			},
-			changedSpec: &opssightapi.OpsSightSpec{Perceptor: &opssightapi.Perceptor{UnknownImagePauseMilliseconds: 10}},
-		},
-		// case
-		{
-			flagName:   "opssight-core-client-timeout-milliseconds",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:                       &opssightapi.OpsSightSpec{},
-				PerceptorClientTimeoutMilliseconds: 10,
-			},
-			changedSpec: &opssightapi.OpsSightSpec{Perceptor: &opssightapi.Perceptor{ClientTimeoutMilliseconds: 10}},
-		},
-		// case
-		{
-			flagName:   "scanner-client-timeout-seconds",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:                          &opssightapi.OpsSightSpec{},
-				ScannerPodScannerClientTimeoutSeconds: 10,
-			},
-			changedSpec: &opssightapi.OpsSightSpec{ScannerPod: &opssightapi.ScannerPod{Scanner: &opssightapi.Scanner{ClientTimeoutSeconds: 10}}},
-		},
-		// case
-		{
-			flagName:   "image-getter-secure-registries-file-path",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec: &opssightapi.OpsSightSpec{},
-				ScannerPodImageFacadeInternalRegistriesFilePath: "../../examples/synopsysctl/imageGetterSecureRegistries.json",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{ScannerPod: &opssightapi.ScannerPod{ImageFacade: &opssightapi.ImageFacade{InternalRegistries: []*opssightapi.RegistryAuth{
-				{
-					URL:      "url",
-					User:     "user",
-					Password: "password",
+			flagName: "version",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					Version: "v",
 				},
-			}}}},
+			},
+			changedArgs: map[string]interface{}{
+				"imageTag": "v",
+			},
 		},
 		// case
 		{
-			flagName:   "image-getter-image-puller-type",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:                         &opssightapi.OpsSightSpec{},
-				ScannerPodImageFacadeImagePullerType: "changed",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{ScannerPod: &opssightapi.ScannerPod{ImageFacade: &opssightapi.ImageFacade{ImagePullerType: "changed"}}},
-		},
-		// case
-		{
-			flagName:   "scannerpod-replica-count",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:           &opssightapi.OpsSightSpec{},
-				ScannerPodReplicaCount: 10,
-			},
-			changedSpec: &opssightapi.OpsSightSpec{ScannerPod: &opssightapi.ScannerPod{ReplicaCount: 10}},
-		},
-		// case
-		{
-			flagName:   "scannerpod-image-directory",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:             &opssightapi.OpsSightSpec{},
-				ScannerPodImageDirectory: "changed",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{ScannerPod: &opssightapi.ScannerPod{ImageDirectory: "changed"}},
-		},
-		// case
-		{
-			flagName:   "enable-pod-processor",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:                &opssightapi.OpsSightSpec{},
-				PerceiverEnablePodPerceiver: "false",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{Perceiver: &opssightapi.Perceiver{EnablePodPerceiver: false}},
-		},
-		// case
-		{
-			flagName:   "enable-pod-processor",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:                &opssightapi.OpsSightSpec{},
-				PerceiverEnablePodPerceiver: "true",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{Perceiver: &opssightapi.Perceiver{EnablePodPerceiver: true}},
-		},
-		// case
-		{
-			flagName:   "pod-processor-namespace-filter",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:                         &opssightapi.OpsSightSpec{},
-				PerceiverPodPerceiverNamespaceFilter: "changed",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{Perceiver: &opssightapi.Perceiver{PodPerceiver: &opssightapi.PodPerceiver{NamespaceFilter: "changed"}}},
-		},
-		// case
-		{
-			flagName:   "processor-annotation-interval-seconds",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:                       &opssightapi.OpsSightSpec{},
-				PerceiverAnnotationIntervalSeconds: 10,
-			},
-			changedSpec: &opssightapi.OpsSightSpec{Perceiver: &opssightapi.Perceiver{AnnotationIntervalSeconds: 10}},
-		},
-		// case
-		{
-			flagName:   "processor-dump-interval-minutes",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:                 &opssightapi.OpsSightSpec{},
-				PerceiverDumpIntervalMinutes: 10,
-			},
-			changedSpec: &opssightapi.OpsSightSpec{Perceiver: &opssightapi.Perceiver{DumpIntervalMinutes: 10}},
-		},
-		// case
-		{
-			flagName:   "default-cpu",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec: &opssightapi.OpsSightSpec{},
-				DefaultCPU:   "changed",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{DefaultCPU: "changed"},
-		},
-		// case
-		{
-			flagName:   "default-memory",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec: &opssightapi.OpsSightSpec{},
-				DefaultMem:   "changed",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{DefaultMem: "changed"},
-		},
-		// case
-		{
-			flagName:   "scanner-cpu",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec: &opssightapi.OpsSightSpec{},
-				ScannerCPU:   "changed",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{ScannerCPU: "changed"},
-		},
-		// case
-		{
-			flagName:   "scanner-memory",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec: &opssightapi.OpsSightSpec{},
-				ScannerMem:   "changed",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{ScannerMem: "changed"},
-		},
-		// case
-		{
-			flagName:   "log-level",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec: &opssightapi.OpsSightSpec{},
-				LogLevel:     "changed",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{LogLevel: "changed"},
-		},
-		// case
-		{
-			flagName:   "enable-metrics",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:  &opssightapi.OpsSightSpec{},
-				EnableMetrics: "false",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{EnableMetrics: false},
-		},
-		// case
-		{
-			flagName:   "enable-metrics",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:  &opssightapi.OpsSightSpec{},
-				EnableMetrics: "true",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{EnableMetrics: true},
-		},
-		// case
-		{
-			flagName:   "expose-metrics",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:     &opssightapi.OpsSightSpec{},
-				PrometheusExpose: "changed",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{Prometheus: &opssightapi.Prometheus{Expose: "changed"}},
-		},
-		// case
-		{
-			flagName:   "blackduck-external-hosts-file-path",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:                   &opssightapi.OpsSightSpec{},
-				BlackduckExternalHostsFilePath: "../../examples/synopsysctl/blackduckExternalHosts.json",
-			},
-			changedSpec: &opssightapi.OpsSightSpec{Blackduck: &opssightapi.Blackduck{ExternalHosts: []*opssightapi.Host{
-				{
-					Scheme:              "scheme",
-					Domain:              "domain",
-					Port:                99,
-					User:                "user",
-					Password:            "password",
-					ConcurrentScanLimit: 88,
+			flagName: "deployment-resources-file-path",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					DeploymentResourcesFilePath: "../../examples/synopsysctl/deployment-resources-opssight.json",
 				},
-			}}},
+			},
+			changedArgs: map[string]interface{}{
+				"prometheus": map[string]interface{}{
+					"resources": map[string]interface{}{
+						"requests": map[string]interface{}{
+							"cpu":    "123m",
+							"memory": "3072Mi",
+						},
+					},
+				},
+				"core": map[string]interface{}{
+					"resources": map[string]interface{}{
+						"requests": map[string]interface{}{
+							"cpu":    "123m",
+							"memory": "3072Mi",
+						},
+					},
+				},
+				"podProcessor": map[string]interface{}{
+					"resources": map[string]interface{}{
+						"requests": map[string]interface{}{
+							"cpu":    "123m",
+							"memory": "3072Mi",
+						},
+					},
+				},
+				"scanner": map[string]interface{}{
+					"replicas": int32(1),
+					"resources": map[string]interface{}{
+						"requests": map[string]interface{}{
+							"cpu":    "123m",
+							"memory": "3072Mi",
+						},
+					},
+				},
+				"imageGetter": map[string]interface{}{
+					"resources": map[string]interface{}{
+						"requests": map[string]interface{}{
+							"cpu":    "123m",
+							"memory": "3072Mi",
+						},
+					},
+				},
+				"imageProcessor": map[string]interface{}{
+					"resources": map[string]interface{}{
+						"requests": map[string]interface{}{
+							"cpu":    "123m",
+							"memory": "3072Mi",
+						},
+					},
+				},
+				"quayProcessor": map[string]interface{}{
+					"resources": map[string]interface{}{
+						"requests": map[string]interface{}{
+							"cpu":    "123m",
+							"memory": "3072Mi",
+						},
+					},
+				},
+				"artifactoryProcessor": map[string]interface{}{
+					"resources": map[string]interface{}{
+						"requests": map[string]interface{}{
+							"cpu":    "123m",
+							"memory": "3072Mi",
+						},
+					},
+				},
+			},
 		},
 		// case
 		{
-			flagName:   "blackduck-TLS-verification",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:             &opssightapi.OpsSightSpec{},
-				BlackduckTLSVerification: "false",
+			flagName: "registry",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					Registry: "registry",
+				},
 			},
-			changedSpec: &opssightapi.OpsSightSpec{Blackduck: &opssightapi.Blackduck{TLSVerification: false}},
+			changedArgs: map[string]interface{}{
+				"registry": "registry",
+			},
 		},
 		// case
 		{
-			flagName:   "blackduck-TLS-verification",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:             &opssightapi.OpsSightSpec{},
-				BlackduckTLSVerification: "true",
+			flagName: "pull-secret-name",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PullSecrets: []string{"secret"},
+				},
 			},
-			changedSpec: &opssightapi.OpsSightSpec{Blackduck: &opssightapi.Blackduck{TLSVerification: true}},
+			changedArgs: map[string]interface{}{
+				"imagePullSecrets": []string{"secret"},
+			},
 		},
 		// case
 		{
-			flagName:   "blackduck-initial-count",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:          &opssightapi.OpsSightSpec{},
-				BlackduckInitialCount: 10,
+			flagName: "log-level",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					LogLevel: "debug",
+				},
 			},
-			changedSpec: &opssightapi.OpsSightSpec{Blackduck: &opssightapi.Blackduck{InitialCount: 10}},
+			changedArgs: map[string]interface{}{
+				"logLevel": "debug",
+			},
 		},
 		// case
 		{
-			flagName:   "blackduck-max-count",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:      &opssightapi.OpsSightSpec{},
-				BlackduckMaxCount: 10,
+			flagName: "blackduck-external-hosts-file-path",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					BlackduckExternalHostsFilePath: "../../examples/synopsysctl/blackduckExternalHosts.json",
+				},
 			},
-			changedSpec: &opssightapi.OpsSightSpec{Blackduck: &opssightapi.Blackduck{MaxCount: 10}},
+			changedArgs: map[string]interface{}{
+				"externalBlackDuck": []map[string]interface{}{
+					{
+						"concurrentScanLimit": 88,
+						"domain":              "domaina",
+						"password":            "passworda",
+						"port":                99,
+						"scheme":              "schemea",
+						"user":                "usera",
+					},
+					{
+						"concurrentScanLimit": 89,
+						"domain":              "domainb",
+						"password":            "passwordb",
+						"port":                100,
+						"scheme":              "schemeb",
+						"user":                "userb",
+					},
+				},
+			},
 		},
 		// case
 		{
-			flagName:   "blackduck-type",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:  &opssightapi.OpsSightSpec{},
-				BlackduckType: "changed",
+			flagName: "blackduck-secured-registries-file-path",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					BlackduckSecuredRegistriesFilePath: "../../examples/synopsysctl/blackduckSecuredRegistries.json",
+				},
 			},
-			changedSpec: &opssightapi.OpsSightSpec{Blackduck: &opssightapi.Blackduck{BlackduckSpec: &blackduckapi.BlackduckSpec{Type: "changed"}}},
+			changedArgs: map[string]interface{}{
+				"securedRegistries": []map[string]interface{}{
+					{
+						"url":      "urla",
+						"user":     "usera",
+						"password": "passworda",
+						"token":    "tokena",
+					},
+					{
+						"url":      "urlb",
+						"user":     "userb",
+						"password": "passwordb",
+						"token":    "tokenb",
+					},
+				},
+			},
 		},
 		// case
 		{
-			flagName:   "registry",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec: &opssightapi.OpsSightSpec{},
-				Registry:     "changed",
+			flagName: "blackduck-TLS-verification",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					BlackduckTLSVerification: "true",
+				},
 			},
-			changedSpec: &opssightapi.OpsSightSpec{RegistryConfiguration: &api.RegistryConfiguration{Registry: "changed"}},
+			changedArgs: map[string]interface{}{
+				"blackduck": map[string]interface{}{
+					"tlsVerification": true,
+				},
+			},
 		},
 		// case
 		{
-			flagName:   "pull-secret-name",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec: &opssightapi.OpsSightSpec{},
-				PullSecrets:  []string{"changed"},
+			flagName: "enable-metrics",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					EnableMetrics: "true",
+				},
 			},
-			changedSpec: &opssightapi.OpsSightSpec{RegistryConfiguration: &api.RegistryConfiguration{PullSecrets: []string{"changed"}}},
+			changedArgs: map[string]interface{}{
+				"prometheus": map[string]interface{}{
+					"enabled": true,
+				},
+			},
 		},
 		// case
 		{
-			flagName:   "image-registries",
-			initialCtl: NewCRSpecBuilderFromCobraFlags(),
-			changedCtl: &CRSpecBuilderFromCobraFlags{
-				opsSightSpec:    &opssightapi.OpsSightSpec{},
-				ImageRegistries: []string{"changed"},
+			flagName: "expose-metrics",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PrometheusExpose: "OPENSHIFT",
+				},
 			},
-			changedSpec: &opssightapi.OpsSightSpec{ImageRegistries: []string{"changed"}},
+			changedArgs: map[string]interface{}{
+				"prometheus": map[string]interface{}{
+					"expose": "OpenShift",
+				},
+			},
+		},
+		// case
+		{
+			flagName: "opssight-core-expose",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PerceptorExpose: "OPENSHIFT",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"core": map[string]interface{}{
+					"expose": "OpenShift",
+				},
+			},
+		},
+		// case
+		{
+			flagName: "opssight-core-check-scan-hours",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PerceptorCheckForStalledScansPauseHours: 5,
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"core": map[string]interface{}{
+					"checkForStalledScansPauseHours": 5,
+				},
+			},
+		},
+		// case
+		{
+			flagName: "opssight-core-scan-client-timeout-hours",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PerceptorStalledScanClientTimeoutHours: 5,
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"core": map[string]interface{}{
+					"stalledScanClientTimeoutHours": 5,
+				},
+			},
+		},
+		// case
+		{
+			flagName: "opssight-core-metrics-pause-seconds",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PerceptorModelMetricsPauseSeconds: 5,
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"core": map[string]interface{}{
+					"modelMetricsPauseSeconds": 5,
+				},
+			},
+		},
+		// case
+		{
+			flagName: "opssight-core-unknown-image-pause-milliseconds",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PerceptorUnknownImagePauseMilliseconds: 5,
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"core": map[string]interface{}{
+					"unknownImagePauseMilliseconds": 5,
+				},
+			},
+		},
+		// case
+		{
+			flagName: "opssight-core-client-timeout-milliseconds",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PerceptorClientTimeoutMilliseconds: 5,
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"core": map[string]interface{}{
+					"clientTimeoutMilliseconds": 5,
+				},
+			},
+		},
+		// // TODO case
+		// {
+		// 	flagName: "processor-TLS-certificate-path",
+		// 	changedCtl: &HelmValuesFromCobraFlags{
+		// 		flagTree: FlagTree{
+		// 			PerceiverTLSCertificatePath: "../../examples/synopsysctl/certificate.txt",
+		// 		},
+		// 	},
+		// 	changedArgs: map[string]interface{}{
+		// 		"processor": map[string]interface{}{
+		// 			"certificate": "CERTIFICATE",
+		// 		}
+		// 	},
+		// },
+		// // TODO case
+		// {
+		// 	flagName: "processor-TLS-key-path",
+		// 	changedCtl: &HelmValuesFromCobraFlags{
+		// 		flagTree: FlagTree{
+		// 			PerceiverTLSCertificatePath: "../../examples/synopsysctl/certificateKey.txt",
+		// 		},
+		// 	},
+		// 	changedArgs: map[string]interface{}{
+		// 		"processor": map[string]interface{}{
+		// 			"certificateKey": "CERTIFICATE_KEY=CERTIFICATE_KEY_DATA",
+		// 		}
+		// 	},
+		// },
+		// case
+		{
+			flagName: "processor-annotation-interval-seconds",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PerceiverAnnotationIntervalSeconds: 5,
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"processor": map[string]interface{}{
+					"annotationIntervalSeconds": 5,
+				},
+			},
+		},
+		// case
+		{
+			flagName: "processor-dump-interval-minutes",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PerceiverDumpIntervalMinutes: 5,
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"processor": map[string]interface{}{
+					"dumpIntervalMinutes": 5,
+				},
+			},
+		},
+		// case
+		{
+			flagName: "enable-pod-processor",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PerceiverEnablePodPerceiver: "true",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"podProcessor": map[string]interface{}{
+					"enabled": true,
+				},
+			},
+		},
+		// case
+		{
+			flagName: "pod-processor-namespace-filter",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PerceiverPodPerceiverNamespaceFilter: "filter",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"podProcessor": map[string]interface{}{
+					"nameSpaceFilter": "filter",
+				},
+			},
+		},
+		// case
+		{
+			flagName: "scanner-client-timeout-seconds",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					ScannerPodScannerClientTimeoutSeconds: 5,
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"scanner": map[string]interface{}{
+					"blackDuckClientTimeoutSeconds": 5,
+				},
+			},
+		},
+		// case
+		{
+			flagName: "scannerpod-replica-count",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					ScannerPodReplicaCount: 5,
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"scanner": map[string]interface{}{
+					"replicas": 5,
+				},
+			},
+		},
+		// case
+		{
+			flagName: "scannerpod-image-directory",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					ScannerPodImageDirectory: "imageDirectory",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"scanner": map[string]interface{}{
+					"imageDirectory": "imageDirectory",
+				},
+			},
+		},
+		// case
+		{
+			flagName: "image-getter-image-puller-type",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					ScannerPodImageFacadeImagePullerType: "puller-type",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"imageGetter": map[string]interface{}{
+					"imagePullerType": "puller-type",
+				},
+			},
+		},
+		// case
+		{
+			flagName: "enable-image-processor",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PerceiverEnableImagePerceiver: "true",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"imageProcessor": map[string]interface{}{
+					"enabled": true,
+				},
+			},
+		},
+		// case
+		{
+			flagName: "enable-quay-processor",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PerceiverEnableQuayPerceiver: "true",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"quayProcessor": map[string]interface{}{
+					"enabled": true,
+				},
+			},
+		},
+		// case
+		{
+			flagName: "expose-quay-processor",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PerceiverQuayExpose: "OPENSHIFT",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"quayProcessor": map[string]interface{}{
+					"expose": "OpenShift",
+				},
+			},
+		},
+		// case
+		{
+			flagName: "enable-artifactory-processor",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PerceiverEnableArtifactoryPerceiver: "true",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"artifactoryProcessor": map[string]interface{}{
+					"enabled": true,
+				},
+			},
+		},
+		// case
+		{
+			flagName: "enable-artifactory-processor-dumper",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PerceiverEnableArtifactoryPerceiverDumper: "true",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"artifactoryProcessor": map[string]interface{}{
+					"dumper": true,
+				},
+			},
+		},
+		// case
+		{
+			flagName: "expose-artifactory-processor",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PerceiverArtifactoryExpose: "OPENSHIFT",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"artifactoryProcessor": map[string]interface{}{
+					"expose": "OpenShift",
+				},
+			},
 		},
 	}
 
-	// get the CRSpecBuilderFromCobraFlags's flags
+	// get the flagset
 	cmd := &cobra.Command{}
-	actualCtl := NewCRSpecBuilderFromCobraFlags()
-	actualCtl.AddCRSpecFlagsToCommand(cmd, true)
+	opssightCobraHelper := NewHelmValuesFromCobraFlags()
+	opssightCobraHelper.AddCobraFlagsToCommand(cmd, true)
 	flagset := cmd.Flags()
 
 	for _, test := range tests {
-		actualCtl = NewCRSpecBuilderFromCobraFlags()
 		// check the Flag exists
 		foundFlag := flagset.Lookup(test.flagName)
 		if foundFlag == nil {
 			t.Errorf("flag %s is not in the spec", test.flagName)
 		}
-		// check the correct CRSpecBuilderFromCobraFlags is used
-		assert.Equal(test.initialCtl, actualCtl)
-		actualCtl = test.changedCtl
-		// test setting a flag
+		// test setting the flag
 		f := &pflag.Flag{Changed: true, Name: test.flagName}
-		actualCtl.SetCRSpecFieldByFlag(f)
-		assert.Equal(test.changedSpec, actualCtl.opsSightSpec)
+		opssightCobraHelper = test.changedCtl
+		opssightCobraHelper.args = map[string]interface{}{}
+		fs := &pflag.FlagSet{}
+		fs.AddFlag(f)
+		opssightCobraHelper.GenerateHelmFlagsFromCobraFlags(fs)
+		assert.Equal(test.changedArgs, opssightCobraHelper.GetArgs())
 	}
 
 	// case: nothing set if flag doesn't exist
-	actualCtl = NewCRSpecBuilderFromCobraFlags()
+	opssightCobraHelper = NewHelmValuesFromCobraFlags()
 	f := &pflag.Flag{Changed: true, Name: "bad-flag"}
-	actualCtl.SetCRSpecFieldByFlag(f)
-	assert.Equal(&opssightapi.OpsSightSpec{}, actualCtl.opsSightSpec)
+	fs := &pflag.FlagSet{}
+	fs.AddFlag(f)
+	opssightCobraHelper.GenerateHelmFlagsFromCobraFlags(fs)
+	assert.Equal(map[string]interface{}{}, opssightCobraHelper.GetArgs())
 
 }

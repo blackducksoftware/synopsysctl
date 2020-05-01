@@ -409,31 +409,6 @@ func DeleteConfigMap(clientset *kubernetes.Clientset, namespace string, name str
 	return clientset.CoreV1().ConfigMaps(namespace).Delete(name, &metav1.DeleteOptions{})
 }
 
-// // CreateSecret will create the secret
-// func CreateNewSecret(secretConfig *horizonapi.SecretConfig) *components.Secret {
-//
-// 	secret := components.NewSecret(horizonapi.SecretConfig{Namespace: secretConfig.Namespace, Name: secretConfig.Name, Type: secretConfig.Type})
-//
-// 	secret.AddData(secretConfig.Data)
-// 	secret.AddStringData(secretConfig.StringData)
-// 	secret.AddLabels(secretConfig.Labels)
-// 	secret.AddAnnotations(secretConfig.Annotations)
-//
-// 	return secret
-// }
-//
-// // CreateConfigMap will create the configMap
-// func CreateConfigMap(configMapConfig *horizonapi.ConfigMapConfig) *components.ConfigMap {
-//
-// 	configMap := components.NewConfigMap(horizonapi.ConfigMapConfig{Namespace: configMapConfig.Namespace, Name: configMapConfig.Name})
-//
-// 	configMap.AddData(configMapConfig.Data)
-// 	configMap.AddLabels(configMapConfig.Labels)
-// 	configMap.AddAnnotations(configMapConfig.Annotations)
-//
-// 	return configMap
-// }
-
 // CreateNamespace will create the namespace
 func CreateNamespace(clientset *kubernetes.Clientset, namespace string) (*corev1.Namespace, error) {
 	return clientset.CoreV1().Namespaces().Create(&corev1.Namespace{
@@ -584,49 +559,6 @@ func CreatePersistentVolumeClaim(name string, namespace string, pvcClaimSize str
 	postgresPVC.AddAccessMode(accessMode)
 
 	return postgresPVC, nil
-}
-
-// ValidateServiceEndpoint will validate whether the service endpoint is ready to serve
-func ValidateServiceEndpoint(clientset *kubernetes.Clientset, namespace string, name string) (*corev1.Endpoints, error) {
-	var endpoint *corev1.Endpoints
-	var err error
-	for i := 0; i < 20; i++ {
-		endpoint, err = GetServiceEndPoint(clientset, namespace, name)
-		if err != nil {
-			log.Infof("waiting for %s endpoint in %s", name, namespace)
-			time.Sleep(10 * time.Second)
-			continue
-		}
-		break
-	}
-	return endpoint, err
-}
-
-// WaitForServiceEndpointReady will wait for the service endpoint to start the service
-func WaitForServiceEndpointReady(clientset *kubernetes.Clientset, namespace string, name string) error {
-	endpoint, err := ValidateServiceEndpoint(clientset, namespace, name)
-	if err != nil {
-		return fmt.Errorf("unable to get service endpoint %s in %s because %+v", name, namespace, err)
-	}
-	for _, subset := range endpoint.Subsets {
-		if len(subset.NotReadyAddresses) > 0 {
-			for {
-				log.Infof("waiting for %s in %s to be cloned/backed up", name, namespace)
-				svc, err := GetServiceEndPoint(clientset, namespace, name)
-				if err != nil {
-					return fmt.Errorf("unable to get service endpoint %s in %s because %+v", name, namespace, err)
-				}
-
-				for _, subset := range svc.Subsets {
-					if len(subset.Addresses) > 0 {
-						return nil
-					}
-				}
-				time.Sleep(10 * time.Second)
-			}
-		}
-	}
-	return nil
 }
 
 // FilterPodByNamePrefixInNamespace will filter the pod based on pod name prefix from a list a pods in a given namespace
@@ -1454,75 +1386,6 @@ func DeleteCustomResourceDefinition(apiExtensionClient *apiextensionsclient.Clie
 	return apiExtensionClient.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(name, &metav1.DeleteOptions{})
 }
 
-// WaitUntilPodsAreReady will wait for the pods to be ready
-func WaitUntilPodsAreReady(clientset *kubernetes.Clientset, namespace string, labelSelector string, timeoutInSeconds int64) error {
-	// timer starts the timer for timeoutInSeconds. If the task doesn't completed, return error
-	timeout := time.NewTimer(time.Duration(timeoutInSeconds) * time.Second)
-	// ticker starts and execute the task for every n intervals
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
-	defer timeout.Stop()
-
-	for {
-		select {
-		case <-timeout.C:
-			// check right before the timeout; this will handle both when timeout is less than ticker; and also when timeout is not a multiple of 10 seconds
-			podsAreReady, err := ArePodsReady(clientset, namespace, labelSelector)
-			if err != nil {
-				return err
-			}
-			if podsAreReady == false {
-				return nil
-			}
-			return fmt.Errorf("[NS: %s | Label: %s] the pods weren't ready - timing out after %d seconds", namespace, labelSelector, timeoutInSeconds)
-		case <-ticker.C:
-			// log.Debugf("Ticker ticked at: %v", time.Now())
-			podsAreReady, err := ArePodsReady(clientset, namespace, labelSelector)
-			if err != nil {
-				return err
-			}
-			if podsAreReady == true {
-				return nil
-			}
-		}
-	}
-}
-
-// ArePodsReady returns whether the pods are ready or not. Returns an error if pods will never become ready.
-func ArePodsReady(clientset *kubernetes.Clientset, namespace string, labelSelector string) (bool, error) {
-	pods, err := clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{
-		LabelSelector: labelSelector,
-	})
-	if err != nil {
-		return false, err
-	}
-
-	// Check if all the pods are ready
-	arePodsReady := true
-	for _, p := range pods.Items {
-		// Skip if a pod is in a failed or unknown state
-		if p.Status.Phase == corev1.PodFailed || p.Status.Phase == corev1.PodUnknown {
-			continue
-		}
-		// verify the pod is ready, otherwise set arePodsReady to false
-		for _, condition := range p.Status.Conditions {
-			if condition.Type == corev1.PodReady && condition.Status == corev1.ConditionFalse {
-				arePodsReady = false
-			}
-		}
-	}
-	return arePodsReady, nil
-}
-
-// GetClusterScopeByName returns whether the CRD is cluster scope
-func GetClusterScopeByName(apiExtensionClient *apiextensionsclient.Clientset, name string) bool {
-	cr, err := GetCustomResourceDefinition(apiExtensionClient, name)
-	if err == nil && strings.EqualFold("CLUSTER", string(cr.Spec.Scope)) {
-		return true
-	}
-	return false
-}
-
 // GetClusterScope returns whether any of the CRD is cluster scope
 func GetClusterScope(apiExtensionClient *apiextensionsclient.Clientset) bool {
 	crds := []string{AlertCRDName, BlackDuckCRDName, OpsSightCRDName}
@@ -1723,21 +1586,6 @@ func isSynopsysResourceExist(namespace, label string) error {
 	return nil
 }
 
-// IsOwnerLabelExistInNamespace check for owner label exist in the namespace
-func IsOwnerLabelExistInNamespace(kubeClient *kubernetes.Clientset, namespace string) bool {
-	// verify whether the namespace exist
-	ns, err := GetNamespace(kubeClient, namespace)
-	if err != nil {
-		return false
-	}
-
-	// check for owner label
-	if owner, ok := ns.Labels["owner"]; !ok || (ok && owner != OperatorName) {
-		return false
-	}
-	return true
-}
-
 // CheckResourceNamespace checks whether namespace is having any resource types
 func CheckResourceNamespace(kubeClient *kubernetes.Clientset, namespace string, label string, isOperator bool) (bool, error) {
 	// verify whether the namespace exist
@@ -1766,28 +1614,6 @@ func CheckResourceNamespace(kubeClient *kubernetes.Clientset, namespace string, 
 	}
 
 	return true, nil
-}
-
-// DeleteResourceNamespace deletes the namespace if none of the other resource types are running
-func DeleteResourceNamespace(kubeClient *kubernetes.Clientset, resourceName string, namespace string, name string, isOperator bool) error {
-	isExist, err := CheckResourceNamespace(kubeClient, namespace, fmt.Sprintf("synopsys.com/%s.%s", resourceName, name), isOperator)
-	if isExist {
-		// if namespace exist and there is no error,
-		// check for owner label, if exist, then delete the namespace otherwise patch the namespace to remove the app label
-		if err == nil && IsOwnerLabelExistInNamespace(kubeClient, namespace) {
-			log.Infof("deleting %s namespace", namespace)
-			err = DeleteNamespace(kubeClient, namespace)
-			if err != nil {
-				return fmt.Errorf("unable to delete the %s namespace because %+v", namespace, err)
-			}
-		} else {
-			_, checkErr := CheckAndUpdateNamespace(kubeClient, resourceName, namespace, name, "", true)
-			if checkErr != nil {
-				return fmt.Errorf("deleting the Synopsys label for the namespace %s failed due to %+v", namespace, checkErr)
-			}
-		}
-	}
-	return err
 }
 
 // CheckAndUpdateNamespace will check whether the namespace is exist and if exist, update the version label in namespace of the updated/deleted resource

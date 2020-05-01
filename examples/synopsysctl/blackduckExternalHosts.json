@@ -1,10 +1,18 @@
 [
     {
-        "scheme": "scheme",
-        "domain": "domain",
+        "scheme": "schemea",
+        "domain": "domaina",
         "port": 99,
-        "user": "user",
-        "password": "password",
+        "user": "usera",
+        "password": "passworda",
         "concurrentScanLimit": 88
+    },
+    {
+        "scheme": "schemeb",
+        "domain": "domainb",
+        "port": 100,
+        "user": "userb",
+        "password": "passwordb",
+        "concurrentScanLimit": 89
     }
 ]

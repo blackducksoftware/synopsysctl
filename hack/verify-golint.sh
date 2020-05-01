@@ -30,7 +30,7 @@ if ! which golint > /dev/null; then
 fi
 
 packages=(
-  $(go list -e ./... | egrep -v "/(vendor)/" | egrep -v "/(contrib)/" )
+  $(go list -e ./...)
 )
 
 errors=()

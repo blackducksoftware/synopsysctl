@@ -42,7 +42,7 @@ type OpsSight struct {
 
 // RegistryAuth will store the Secured Registries
 type RegistryAuth struct {
-	URL      string `json:"Url"`
+	URL      string `json:"url"`
 	User     string `json:"user"`
 	Password string `json:"password"`
 	Token    string `json:"token"`

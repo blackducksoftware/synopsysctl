@@ -30,6 +30,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	// get auth clients for gcp
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
 // Root Command Options and Defaults

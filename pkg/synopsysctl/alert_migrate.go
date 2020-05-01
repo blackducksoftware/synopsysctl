@@ -34,7 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string, flags *pflag.FlagSet) error {
+func migrateAlert(alert *v1.Alert, helmReleaseName string, operatorNamespace string, crdNamespace string, flags *pflag.FlagSet) error {
 	// TODO ensure operator is installed and running a recent version that doesn't require additional migration
 
 	log.Info("stopping Synopsys Operator")
@@ -43,13 +43,16 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 		return err
 	}
 
-	soOperatorDeploy, err = util.PatchDeploymentForReplicas(kubeClient, soOperatorDeploy, util.IntToInt32(0))
+	soOperatorDeploy.Spec.Replicas = util.IntToInt32(0)
+	soOperatorDeploy.Labels = util.InitLabels(soOperatorDeploy.Labels)
+	soOperatorDeploy.Labels[fmt.Sprintf("synopsys.migrate.com/%s.%s", util.AlertName, alert.Name)] = "true"
+	_, err = util.UpdateDeployment(kubeClient, operatorNamespace, soOperatorDeploy)
 	if err != nil {
 		return err
 	}
 
 	// Generate Helm values for the current CR Instance
-	currHelmValuesMap, err := AlertV1ToHelmValues(alert, operatorNamespace)
+	currHelmValuesMap, err := alertV1ToHelmValues(alert, operatorNamespace)
 	if err != nil {
 		return err
 	}
@@ -79,69 +82,76 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 
 	log.Info("upgrading Alert instance")
 
-	// Delete the Current Instance's Resources (except PVCs)
+	// Delete the Current Instance's Resources (except PVCs and exposed service)
 	log.Info("cleaning Current Alert resources")
 	// TODO wait for resources to be deleted
-	// if len(alert.Namespace) == 0 {
-	// 	alert.Namespace = alert.Name
-	// }
 	if err := deleteComponents(alert.Spec.Namespace, alert.Name, util.AlertName); err != nil {
 		return err
 	}
 
-	// Update the Helm Chart Location
-	chartLocationFlag := flags.Lookup("app-resources-path")
-	if chartLocationFlag.Changed {
-		alertChartRepository = chartLocationFlag.Value.String()
-	} else {
-		versionFlag := flags.Lookup("version")
-		if versionFlag.Changed {
-			alertChartRepository = fmt.Sprintf("%s/charts/synopys-alert-%s.tgz", baseChartRepository, versionFlag.Value.String())
+	// if the services was exposed by the operator, we will not delete the service so that the IP
+	// address remains the same. Thus we need to set this field to false so "Helm Create" does not try
+	// to update the resource
+	updateService := false
+	if alert.Spec.ExposeService != util.NONE {
+		if alert.Spec.ExposeService == strings.ToUpper(helmValuesMap["exposedServiceType"].(string)) {
+			helmValuesMap["exposeui"] = false // synopsysctl will manage the exposed service
+		} else {
+			updateService = true
+			helmValuesMap["exposeui"] = true // helm chart needs to update the exposed service type
 		}
+	}
+
+	// Update exposed Services for Alert
+	err = alertctl.CRUDServiceOrRoute(restconfig, kubeClient, namespace, alert.Name, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], updateService)
+	if err != nil {
+		return fmt.Errorf("failed to update Alert's exposed service %+v", err)
+	}
+
+	// Update the Helm Chart Location
+	helmValuesMapAlertData := helmValuesMap["alert"].(map[string]interface{})
+	alertVersion := helmValuesMapAlertData["imageTag"].(string)
+	err = SetHelmChartLocation(flags, alertChartName, alertVersion, &alertChartRepository)
+	if err != nil {
+		return fmt.Errorf("failed to set the app resources location due to %+v", err)
 	}
 
 	// check whether the update Alert version is greater than or equal to 5.0.0
-	if flags.Lookup("version").Changed {
-		helmValuesMapAlertData := helmValuesMap["alert"].(map[string]interface{})
-		oldAlertVersion := helmValuesMapAlertData["imageTag"].(string)
-		isGreaterThanOrEqualTo, err := util.IsNotDefaultVersionGreaterThanOrEqualTo(oldAlertVersion, 5, 0, 0)
-		if err != nil {
-			return fmt.Errorf("failed to check Alert version: %+v", err)
+	isGreaterThanOrEqualTo, err := util.IsNotDefaultVersionGreaterThanOrEqualTo(alertVersion, 5, 0, 0)
+	if err != nil {
+		return fmt.Errorf("failed to check Alert version: %+v", err)
+	}
+
+	// if greater than or equal to 5.0.0, then copy PUBLIC_HUB_WEBSERVER_HOST to ALERT_HOSTNAME and PUBLIC_HUB_WEBSERVER_PORT to ALERT_SERVER_PORT
+	// and delete PUBLIC_HUB_WEBSERVER_HOST and PUBLIC_HUB_WEBSERVER_PORT from the environs. In future, we need to request the customer to use the new params
+	if isGreaterThanOrEqualTo && helmValuesMap["environs"] != nil {
+		maps := helmValuesMap["environs"].(map[string]interface{})
+		isChanged := false
+		if _, ok := maps["PUBLIC_HUB_WEBSERVER_HOST"]; ok {
+			if _, ok1 := maps["ALERT_HOSTNAME"]; !ok1 {
+				maps["ALERT_HOSTNAME"] = maps["PUBLIC_HUB_WEBSERVER_HOST"]
+				isChanged = true
+			}
+			delete(maps, "PUBLIC_HUB_WEBSERVER_HOST")
 		}
 
-		// if greater than or equal to 5.0.0, then copy PUBLIC_HUB_WEBSERVER_HOST to ALERT_HOSTNAME and PUBLIC_HUB_WEBSERVER_PORT to ALERT_SERVER_PORT
-		// and delete PUBLIC_HUB_WEBSERVER_HOST and PUBLIC_HUB_WEBSERVER_PORT from the environs. In future, we need to request the customer to use the new params
-		if isGreaterThanOrEqualTo && helmValuesMap["environs"] != nil {
-			maps := helmValuesMap["environs"].(map[string]interface{})
-			isChanged := false
-			if _, ok := maps["PUBLIC_HUB_WEBSERVER_HOST"]; ok {
-				if _, ok1 := maps["ALERT_HOSTNAME"]; !ok1 {
-					maps["ALERT_HOSTNAME"] = maps["PUBLIC_HUB_WEBSERVER_HOST"]
-					isChanged = true
-				}
-				delete(maps, "PUBLIC_HUB_WEBSERVER_HOST")
+		if _, ok := maps["PUBLIC_HUB_WEBSERVER_PORT"]; ok {
+			if _, ok1 := maps["ALERT_SERVER_PORT"]; !ok1 {
+				maps["ALERT_SERVER_PORT"] = maps["PUBLIC_HUB_WEBSERVER_PORT"]
+				isChanged = true
 			}
+			delete(maps, "PUBLIC_HUB_WEBSERVER_PORT")
+		}
 
-			if _, ok := maps["PUBLIC_HUB_WEBSERVER_PORT"]; ok {
-				if _, ok1 := maps["ALERT_SERVER_PORT"]; !ok1 {
-					maps["ALERT_SERVER_PORT"] = maps["PUBLIC_HUB_WEBSERVER_PORT"]
-					isChanged = true
-				}
-				delete(maps, "PUBLIC_HUB_WEBSERVER_PORT")
-			}
-
-			if isChanged {
-				util.SetHelmValueInMap(helmValuesMap, []string{"environs"}, maps)
-			}
+		if isChanged {
+			util.SetHelmValueInMap(helmValuesMap, []string{"environs"}, maps)
 		}
 	}
 
-	newReleaseName := fmt.Sprintf("%s%s", alert.Name, AlertPostSuffix)
-
 	// Verify Alert can be created with Dry-Run before creating resources
-	err = util.CreateWithHelm3(newReleaseName, alert.Spec.Namespace, alertChartRepository, helmValuesMap, kubeConfigPath, true)
+	err = util.CreateWithHelm3(helmReleaseName, alert.Spec.Namespace, alertChartRepository, helmValuesMap, kubeConfigPath, true)
 	if err != nil {
-		return fmt.Errorf("failed to update Alert resources: %+v", err)
+		return fmt.Errorf("failed to update Alert resources dry-run: %+v", err)
 	}
 
 	// Update the Secrets
@@ -172,44 +182,38 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 		}
 	}
 
-	// Rename the old exposed service/route to use the new Alert's release name
+	// If it exists, rename the old exposed service/route to use the new Alert's release name
 	isOpenShift := util.IsOpenshift(kubeClient)
-	svc, err := util.GetService(kubeClient, namespace, fmt.Sprintf("%s-exposed", newReleaseName))
+	svc, err := util.GetService(kubeClient, namespace, fmt.Sprintf("%s-exposed", helmReleaseName))
 	if err == nil {
 		svc.Kind = "Service"
 		svc.APIVersion = "v1"
 		svc.Labels = util.InitLabels(svc.Labels)
-		svc.Labels["name"] = newReleaseName
+		svc.Labels["name"] = helmReleaseName
 		svc.Spec.Selector = util.InitLabels(svc.Spec.Selector)
-		svc.Spec.Selector["name"] = newReleaseName
+		svc.Spec.Selector["name"] = helmReleaseName
 		if _, err = kubeClient.CoreV1().Services(namespace).Update(svc); err != nil {
 			return fmt.Errorf("failed to update Alert's exposed service due to %s", err)
 		}
 	} else if isOpenShift {
 		routeClient := util.GetRouteClient(restconfig, kubeClient, namespace)
-		route, err := util.GetRoute(routeClient, namespace, fmt.Sprintf("%s-exposed", newReleaseName))
+		route, err := util.GetRoute(routeClient, namespace, fmt.Sprintf("%s-exposed", helmReleaseName))
 		if err == nil {
 			route.Kind = "Route"
 			route.APIVersion = "v1"
 			route.Labels = util.InitLabels(route.Labels)
-			route.Labels["name"] = newReleaseName
+			route.Labels["name"] = helmReleaseName
 			if _, err = routeClient.Routes(namespace).Update(route); err != nil {
 				return fmt.Errorf("failed to update Alert's route due to %s", err)
 			}
 		}
 	}
 
-	// Update exposed Services for Alert
-	exposeUI := flags.Lookup("expose-ui").Changed && flags.Lookup("expose-ui").Value.String() != util.NONE
-	err = alertctl.CRUDServiceOrRoute(restconfig, kubeClient, namespace, newReleaseName, exposeUI, helmValuesMap["exposedServiceType"], true)
-	if err != nil {
-		return fmt.Errorf("failed to update Alert's exposed service %+v", err)
-	}
-
 	// Deploy new Resources
-	err = util.CreateWithHelm3(newReleaseName, alert.Spec.Namespace, alertChartRepository, helmValuesMap, kubeConfigPath, false)
+	err = util.CreateWithHelm3(helmReleaseName, alert.Spec.Namespace, alertChartRepository, helmValuesMap, kubeConfigPath, false)
 	if err != nil {
-		return fmt.Errorf("failed to update Alert resources: %+v", err)
+		cleanErrorMsg := strings.Replace(err.Error(), helmReleaseName, alert.Name, 0)
+		return fmt.Errorf("failed to update Alert resources: %+v", cleanErrorMsg)
 	}
 
 	log.Info("deleting Alert custom resource")
@@ -219,14 +223,34 @@ func migrateAlert(alert *v1.Alert, operatorNamespace string, crdNamespace string
 
 	_, err = util.CheckAndUpdateNamespace(kubeClient, util.AlertName, alert.Spec.Namespace, alert.Name, "", true)
 	if err != nil {
-		log.Warnf("unable to patch the namespace to remove an app labels due to %+v", err)
+		log.Warnf("unable to patch the namespace to remove app labels due to %+v", err)
 	}
 
-	return destroyOperator(operatorNamespace, crdNamespace)
+	// get the deployment, delete the migrate label and patch the deployment
+	soOperatorDeploy, err = util.GetDeployment(kubeClient, operatorNamespace, "synopsys-operator")
+	if err != nil {
+		return err
+	}
+	soOperatorDeploy.Labels = util.InitLabels(soOperatorDeploy.Labels)
+	delete(soOperatorDeploy.Labels, fmt.Sprintf("synopsys.migrate.com/%s.%s", util.AlertName, alert.Name))
+	soOperatorDeploy, err = util.UpdateDeployment(kubeClient, operatorNamespace, soOperatorDeploy)
+	if err != nil {
+		return err
+	}
+
+	skipDestroyorRestartOperator := false
+	for key := range soOperatorDeploy.Labels {
+		if strings.HasPrefix(key, "synopsys.migrate.com") {
+			skipDestroyorRestartOperator = true
+			break
+		}
+	}
+
+	return destroyOperator(operatorNamespace, crdNamespace, skipDestroyorRestartOperator)
 }
 
-// AlertV1ToHelmValues converts an Alert v1 Spec to a Helm Values Map
-func AlertV1ToHelmValues(alert *v1.Alert, operatorNamespace string) (map[string]interface{}, error) {
+// alertV1ToHelmValues converts an Alert v1 Spec to a Helm Values Map
+func alertV1ToHelmValues(alert *v1.Alert, operatorNamespace string) (map[string]interface{}, error) {
 	helmValuesMap := make(map[string]interface{})
 
 	if len(alert.Spec.Version) > 0 {

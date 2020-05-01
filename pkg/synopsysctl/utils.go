@@ -27,19 +27,23 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 
 	alertclientset "github.com/blackducksoftware/synopsysctl/pkg/alert/client/clientset/versioned"
 	blackduckclientset "github.com/blackducksoftware/synopsysctl/pkg/blackduck/client/clientset/versioned"
 	opssightclientset "github.com/blackducksoftware/synopsysctl/pkg/opssight/client/clientset/versioned"
-	"github.com/blackducksoftware/synopsysctl/pkg/protoform"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 var restconfig *rest.Config
@@ -78,10 +82,41 @@ func setGlobalKubeConfigPath(cmd *cobra.Command) error {
 	return nil
 }
 
+// GetKubeClientFromOutsideCluster returns the rest config of outside cluster
+func GetKubeClientFromOutsideCluster(kubeconfigpath string, insecureSkipTLSVerify bool) (*rest.Config, error) {
+	// Determine Config Paths
+	if home := homeDir(); len(kubeconfigpath) == 0 && home != "" {
+		kubeconfigpath = filepath.Join(home, ".kube", "config")
+	}
+
+	kubeConfig, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{
+			ExplicitPath: kubeconfigpath,
+		},
+		&clientcmd.ConfigOverrides{
+			ClusterInfo: clientcmdapi.Cluster{
+				Server:                "",
+				InsecureSkipTLSVerify: insecureSkipTLSVerify,
+			},
+		}).ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+	return kubeConfig, nil
+}
+
+// homeDir determines the user's home directory path
+func homeDir() string {
+	if h := os.Getenv("HOME"); h != "" {
+		return h
+	}
+	return os.Getenv("USERPROFILE") // windows
+}
+
 // setGlobalRestConfig sets the global variable 'restconfig' for other commands to use
 func setGlobalRestConfig() error {
 	var err error
-	restconfig, err = protoform.GetKubeClientFromOutsideCluster(kubeConfigPath, insecureSkipTLSVerify)
+	restconfig, err = GetKubeClientFromOutsideCluster(kubeConfigPath, insecureSkipTLSVerify)
 	log.Debugf("rest config: %+v", restconfig)
 	if err != nil {
 		return err
@@ -342,4 +377,27 @@ func getInstanceInfo(crdName string, appName string, namespace string, name stri
 	}
 
 	return namespace, crdNamespace, crdScope, nil
+}
+
+// SetHelmChartLocation uses --app-resources-path and --version to set the value at *chartVariable
+func SetHelmChartLocation(flags *pflag.FlagSet, chartName, version string, chartVariable *string) error {
+	chartLocationFlag := flags.Lookup("app-resources-path")
+	if chartLocationFlag == nil {
+		return fmt.Errorf("this command does not have flag --app-resources-path")
+	}
+	if chartLocationFlag.Changed {
+		*chartVariable = chartLocationFlag.Value.String()
+	} else {
+		if len(version) > 0 {
+			*chartVariable = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, chartName, version)
+		}
+	}
+	return nil
+}
+
+func cleanAlertHelmError(errString, releaseName, alertName string) string {
+	helmName := fmt.Sprintf("release '%s'", releaseName)
+	instanceName := fmt.Sprintf("instance '%s'", alertName)
+	cleanErrorMsg := strings.Replace(errString, helmName, instanceName, 1)
+	return cleanErrorMsg
 }

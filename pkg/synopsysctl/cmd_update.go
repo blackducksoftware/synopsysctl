@@ -1337,6 +1337,7 @@ func init() {
 	updateBlackDuckCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
 	cobra.MarkFlagRequired(updateBlackDuckCmd.PersistentFlags(), "namespace")
 	addChartLocationPathFlag(updateBlackDuckCmd)
+	updateBlackDuckCmd.Flags().StringVar(&defaultBusyBoxImage, "busy-box-image", defaultBusyBoxImage, "Busy box image override for an air gapped customer (only use in case of updating security contexts)")
 	updateBlackDuckCobraHelper.AddCRSpecFlagsToCommand(updateBlackDuckCmd, false)
 	updateCmd.AddCommand(updateBlackDuckCmd)
 

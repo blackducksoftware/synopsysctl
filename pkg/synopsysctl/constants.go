@@ -35,7 +35,7 @@ const defaultBaseBlackDuckSpec string = "persistentStorageLatest"
 const defaultBaseOpsSightSpec string = "default"
 
 // busybox image
-const defaultBusyBoxImage string = "docker.io/busybox:1.28"
+var defaultBusyBoxImage = "docker.io/busybox:1.28"
 
 // flag for all namespaces
 const allNamespacesFlag string = "--all-namespaces"

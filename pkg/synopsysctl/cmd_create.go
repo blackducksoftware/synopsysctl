@@ -409,10 +409,8 @@ var createBlackDuckNativeCmd = &cobra.Command{
 			return err
 		}
 
-		// set isKubernetes to false in case of OpenShift
-		if util.IsOpenshift(kubeClient) {
-			util.SetHelmValueInMap(helmValuesMap, []string{"isKubernetes"}, false)
-		}
+		// default is Kubernetes for Native Mode
+		util.SetHelmValueInMap(helmValuesMap, []string{"isKubernetes"}, true)
 
 		// Set Persistent Storage to true by default (TODO: remove after changed in Helm Chart)
 		if !cmd.Flag("persistent-storage").Changed {

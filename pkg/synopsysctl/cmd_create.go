@@ -319,6 +319,11 @@ var createBlackDuckCmd = &cobra.Command{
 			return err
 		}
 
+		// set isKubernetes to false in case of OpenShift
+		if util.IsOpenshift(kubeClient) {
+			util.SetHelmValueInMap(helmValuesMap, []string{"isKubernetes"}, false)
+		}
+
 		// Set Persistent Storage to true by default (TODO: remove after changed in Helm Chart)
 		if !cmd.Flag("persistent-storage").Changed {
 			util.SetHelmValueInMap(helmValuesMap, []string{"enablePersistentStorage"}, true)
@@ -402,6 +407,16 @@ var createBlackDuckNativeCmd = &cobra.Command{
 		helmValuesMap, err := createBlackDuckCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
 		if err != nil {
 			return err
+		}
+
+		// set isKubernetes to false in case of OpenShift
+		if util.IsOpenshift(kubeClient) {
+			util.SetHelmValueInMap(helmValuesMap, []string{"isKubernetes"}, false)
+		}
+
+		// Set Persistent Storage to true by default (TODO: remove after changed in Helm Chart)
+		if !cmd.Flag("persistent-storage").Changed {
+			util.SetHelmValueInMap(helmValuesMap, []string{"enablePersistentStorage"}, true)
 		}
 
 		// Update the Helm Chart Location

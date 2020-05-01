@@ -23,6 +23,7 @@ package synopsysctl
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/blackducksoftware/synopsysctl/pkg/alert"
@@ -410,7 +411,11 @@ var createBlackDuckNativeCmd = &cobra.Command{
 		}
 
 		// Check if the configuration is for Openshift
-		if strings.upper(nativeClusterType) == clusterTypeOpenshift {
+		err = verifyClusterType(nativeClusterType)
+		if err != nil {
+			return fmt.Errorf("invalid cluster type '%s'", nativeClusterType)
+		}
+		if strings.ToUpper(nativeClusterType) == clusterTypeOpenshift {
 			util.SetHelmValueInMap(helmValuesMap, []string{"isKubernetes"}, false)
 		} else {
 			util.SetHelmValueInMap(helmValuesMap, []string{"isKubernetes"}, true)

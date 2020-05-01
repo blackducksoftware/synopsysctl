@@ -23,6 +23,7 @@ package synopsysctl
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/blackducksoftware/synopsysctl/pkg/alert"
@@ -409,9 +410,15 @@ var createBlackDuckNativeCmd = &cobra.Command{
 			return err
 		}
 
-		// set isKubernetes to false in case of OpenShift
-		if util.IsOpenshift(kubeClient) {
+		// Check if the configuration is for Openshift
+		err = verifyClusterType(nativeClusterType)
+		if err != nil {
+			return fmt.Errorf("invalid cluster type '%s'", nativeClusterType)
+		}
+		if strings.ToUpper(nativeClusterType) == clusterTypeOpenshift {
 			util.SetHelmValueInMap(helmValuesMap, []string{"isKubernetes"}, false)
+		} else {
+			util.SetHelmValueInMap(helmValuesMap, []string{"isKubernetes"}, true)
 		}
 
 		// Set Persistent Storage to true by default (TODO: remove after changed in Helm Chart)
@@ -882,6 +889,7 @@ func init() {
 	createCmd.AddCommand(createBlackDuckCmd)
 
 	createBlackDuckCobraHelper.AddCRSpecFlagsToCommand(createBlackDuckNativeCmd, true)
+	addNativeFlags(createBlackDuckNativeCmd)
 	addChartLocationPathFlag(createBlackDuckNativeCmd)
 	createBlackDuckCmd.AddCommand(createBlackDuckNativeCmd)
 

@@ -878,7 +878,6 @@ func init() {
 	createCmd.AddCommand(createAlertCmd)
 
 	createAlertCobraHelper.AddCobraFlagsToCommand(createAlertNativeCmd, true)
-	addNativeFlags(createAlertNativeCmd)
 	addChartLocationPathFlag(createAlertNativeCmd)
 	createAlertCmd.AddCommand(createAlertNativeCmd)
 
@@ -902,7 +901,6 @@ func init() {
 	createCmd.AddCommand(createOpsSightCmd)
 
 	createOpsSightCobraHelper.AddCobraFlagsToCommand(createOpsSightNativeCmd, true)
-	addNativeFlags(createOpsSightNativeCmd)
 	addChartLocationPathFlag(createOpsSightNativeCmd)
 	createOpsSightCmd.AddCommand(createOpsSightNativeCmd)
 
@@ -914,7 +912,6 @@ func init() {
 	createCmd.AddCommand(createPolarisCmd)
 
 	createPolarisCobraHelper.AddCobraFlagsToCommand(createPolarisNativeCmd, true)
-	addNativeFlags(createPolarisNativeCmd)
 	addChartLocationPathFlag(createPolarisNativeCmd)
 	createPolarisCmd.AddCommand(createPolarisNativeCmd)
 
@@ -926,7 +923,6 @@ func init() {
 	createCmd.AddCommand(createPolarisReportingCmd)
 
 	createPolarisReportingCobraHelper.AddCobraFlagsToCommand(createPolarisReportingNativeCmd, true)
-	addNativeFlags(createPolarisReportingNativeCmd)
 	addChartLocationPathFlag(createPolarisReportingNativeCmd)
 	createPolarisReportingCmd.AddCommand(createPolarisReportingNativeCmd)
 
@@ -938,7 +934,6 @@ func init() {
 	createCmd.AddCommand(createBDBACmd)
 
 	createBDBACobraHelper.AddCobraFlagsToCommand(createBDBANativeCmd, true)
-	addNativeFlags(createBDBANativeCmd)
 	addChartLocationPathFlag(createBDBANativeCmd)
 	createBDBACmd.AddCommand(createBDBANativeCmd)
 

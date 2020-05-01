@@ -25,15 +25,11 @@ import (
 	"fmt"
 	"strings"
 
-	polarisreporting "github.com/blackducksoftware/synopsysctl/pkg/polaris-reporting"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-var promptAnswerYes bool
 
 // deleteCmd deletes a resource from the cluster
 var deleteCmd = &cobra.Command{
@@ -59,13 +55,16 @@ var deleteAlertCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		alertName := fmt.Sprintf("%s%s", args[0], AlertPostSuffix)
+		alertName := args[0]
+		helmReleaseName := fmt.Sprintf("%s%s", alertName, AlertPostSuffix)
 
 		// Delete the Secrets
-		helmRelease, err := util.GetWithHelm3(alertName, namespace, kubeConfigPath)
+		helmRelease, err := util.GetWithHelm3(helmReleaseName, namespace, kubeConfigPath)
 		if err != nil {
-			return fmt.Errorf(strings.Replace(fmt.Sprintf("failed to get Alert values: %+v", err), fmt.Sprintf("instance '%s' ", alertName), fmt.Sprintf("instance '%s' ", args[0]), 0))
+			cleanErrorMsg := cleanAlertHelmError(err.Error(), helmReleaseName, alertName)
+			return fmt.Errorf("failed to get Alert values: %+v", cleanErrorMsg)
 		}
+
 		var name interface{}
 		var ok bool
 		if name, ok = helmRelease.Config["webserverCustomCertificatesSecretName"]; ok {
@@ -80,32 +79,27 @@ var deleteAlertCmd = &cobra.Command{
 		}
 
 		// Delete Alert Resources
-		err = util.DeleteWithHelm3(alertName, namespace, kubeConfigPath)
+		err = util.DeleteWithHelm3(helmReleaseName, namespace, kubeConfigPath)
 		if err != nil {
-			return fmt.Errorf("failed to delete Alert resources: %+v", err)
+			cleanErrorMsg := cleanAlertHelmError(err.Error(), helmReleaseName, alertName)
+			return fmt.Errorf("failed to delete Alert resources: %+v", cleanErrorMsg)
 		}
 
 		labelSelector := fmt.Sprintf("app=%s, name=%s", util.AlertName, alertName)
 		svcs, err := util.ListServices(kubeClient, namespace, labelSelector)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to list services: %+v", err)
 		}
 		for _, svc := range svcs.Items {
 			if strings.HasSuffix(svc.Name, "-exposed") {
 				if err := util.DeleteService(kubeClient, namespace, svc.Name); !k8serrors.IsNotFound(err) {
-					return err
+					return fmt.Errorf("failed to delete the Alert exposed service: %+v", err)
 				}
 			}
 		}
 
-		pvcs, err := util.ListPVCs(kubeClient, namespace, labelSelector)
-		if err != nil {
+		if err = deletePVCs(namespace, labelSelector); err != nil {
 			return err
-		}
-		for _, pvc := range pvcs.Items {
-			if err := util.DeletePVC(kubeClient, namespace, pvc.Name); !k8serrors.IsNotFound(err) {
-				return err
-			}
 		}
 
 		log.Infof("Alert has been successfully Deleted!")
@@ -156,14 +150,8 @@ var deleteBlackDuckCmd = &cobra.Command{
 		}
 
 		// delete PVC
-		pvcs, err := util.ListPVCs(kubeClient, namespace, labelSelector)
-		if err != nil {
-			return fmt.Errorf("couldn't list pvc in namespace '%s' due to %+v", namespace, err)
-		}
-		for _, pvc := range pvcs.Items {
-			if err := util.DeletePVC(kubeClient, namespace, pvc.Name); err != nil && !k8serrors.IsNotFound(err) {
-				return fmt.Errorf("couldn't delete pvc '%s' in namespace '%s' due to %+v", pvc.Name, namespace, err)
-			}
+		if err = deletePVCs(namespace, labelSelector); err != nil {
+			return err
 		}
 
 		// delete route
@@ -184,33 +172,31 @@ var deleteBlackDuckCmd = &cobra.Command{
 	},
 }
 
-// deleteOpsSightCmd deletes OpsSight instances from the cluster
+// deleteOpsSightCmd deletes an OpsSight instance from the cluster
 var deleteOpsSightCmd = &cobra.Command{
-	Use:           "opssight NAME...",
-	Example:       "synopsysctl delete opssight <name>\nsynopsysctl delete opssight <name1> <name2> <name3>\nsynopsysctl delete opssight <name> -n <namespace>\nsynopsysctl delete opssight <name1> <name2> <name3> -n <namespace>",
-	Short:         "Delete one or many OpsSight instances",
+	Use:           "opssight NAME -n NAMESPACE",
+	Example:       "synopsysctl delete opssight <name> -n <namespace>",
+	Short:         "Delete an OpsSight instances",
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	Args: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
+		if len(args) != 1 {
 			cmd.Help()
-			return fmt.Errorf("this command takes 1 or more arguments")
+			return fmt.Errorf("this command takes 1 argument but got %+v", len(args))
 		}
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		for _, opsSightName := range args {
-			opsSightNamespace, crdNamespace, _, err := getInstanceInfo(util.OpsSightCRDName, util.OpsSightName, namespace, opsSightName)
-			if err != nil {
-				return err
-			}
-			log.Infof("deleting OpsSight '%s' in namespace '%s'...", opsSightName, opsSightNamespace)
-			err = util.DeleteOpsSight(opsSightClient, opsSightName, crdNamespace, &metav1.DeleteOptions{})
-			if err != nil {
-				return fmt.Errorf("error deleting OpsSight '%s' in namespace '%s' due to '%s'", opsSightName, opsSightNamespace, err)
-			}
-			log.Infof("successfully submitted delete OpsSight '%s' in namespace '%s'", opsSightName, opsSightNamespace)
+		opssightName := args[0]
+		// TODO Delete any initial resources...
+
+		// Delete Opssight Resources
+		err := util.DeleteWithHelm3(opssightName, namespace, kubeConfigPath)
+		if err != nil {
+			return fmt.Errorf("failed to delete OpsSight resources: %+v", err)
 		}
+
+		log.Infof("OpsSight has been successfully Deleted!")
 		return nil
 	},
 }
@@ -237,6 +223,14 @@ var deletePolarisCmd = &cobra.Command{
 			return fmt.Errorf("failed to delete Polaris resources: %+v", err)
 		}
 
+		if err = deletePolarisSecrets(namespace); err != nil {
+			return err
+		}
+
+		if err = deletePVCs(namespace, "app.kubernetes.io/name=eventstore"); err != nil {
+			return err
+		}
+
 		log.Infof("Polaris has been successfully Deleted!")
 		return nil
 	},
@@ -258,27 +252,51 @@ var deletePolarisReportingCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Get Secret For the GCP Key
-		gcpServiceAccountSecrets, err := polarisreporting.GetPolarisReportingSecrets(namespace, "EMPTY_DATA")
-		if err != nil {
-			return fmt.Errorf("failed to generate GCP Service Account Secrets: %+v", err)
-		}
-
-		// Delete the Secret
-		err = KubectlDeleteRuntimeObjects(gcpServiceAccountSecrets)
-		if err != nil {
-			return fmt.Errorf("failed to delete the gcpServiceAccount Secrets: %s", err)
-		}
-
 		// Delete Polaris-Reporting Resources
-		err = util.DeleteWithHelm3(polarisReportingName, namespace, kubeConfigPath)
+		err := util.DeleteWithHelm3(polarisReportingName, namespace, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("failed to delete Polaris-Reporting resources: %+v", err)
+		}
+
+		if err = deletePolarisSecrets(namespace); err != nil {
+			return err
+		}
+
+		if err = deletePVCs(namespace, "app.kubernetes.io/name=eventstore"); err != nil {
+			return err
 		}
 
 		log.Infof("Polaris-Reporting has been successfully Deleted!")
 		return nil
 	},
+}
+
+func deletePolarisSecrets(namespace string) error {
+	// delete secret
+	secretNames := []string{"auth-client-tls-certificate", "auth-server-tls-certificate", "polaris-webhook-client-certs",
+		"swip-eventstore-admin-creds", "swip-eventstore-creds", "swip-eventstore-reader-creds", "swip-eventstore-writer-creds",
+		"swip-tools-minio", "tds-code-analysis-tls-certificate", "vault-ca-cert", "vault-read-only", "vault-read-write-auth",
+		"vault-read-write-configs", "vault-read-write-tds", "vault-tls-certificate-new", "vault-tokens"}
+	for _, secretName := range secretNames {
+		if err := util.DeleteSecret(kubeClient, namespace, secretName); err != nil && !k8serrors.IsNotFound(err) {
+			return fmt.Errorf("couldn't delete secret '%s' in namespace '%s' due to %+v", secretName, namespace, err)
+		}
+	}
+	return nil
+}
+
+func deletePVCs(namespace string, labelSelector string) error {
+	// delete PVC's
+	pvcs, err := util.ListPVCs(kubeClient, namespace, labelSelector)
+	if err != nil {
+		return fmt.Errorf("couldn't list pvc in namespace '%s' due to %+v", namespace, err)
+	}
+	for _, pvc := range pvcs.Items {
+		if err := util.DeletePVC(kubeClient, namespace, pvc.Name); err != nil && !k8serrors.IsNotFound(err) {
+			return fmt.Errorf("couldn't delete pvc '%s' in namespace '%s' due to %+v", pvc.Name, namespace, err)
+		}
+	}
+	return nil
 }
 
 // deleteBDBACmd deletes a BDBA instance
@@ -316,6 +334,7 @@ func init() {
 
 	// Add Delete Alert Command
 	deleteAlertCmd.Flags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
+	cobra.MarkFlagRequired(deleteAlertCmd.Flags(), "namespace")
 	deleteCmd.AddCommand(deleteAlertCmd)
 
 	// Add Delete Black Duck Command
@@ -325,12 +344,12 @@ func init() {
 
 	// Add Delete OpsSight Command
 	deleteOpsSightCmd.Flags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
+	cobra.MarkFlagRequired(deleteOpsSightCmd.Flags(), "namespace")
 	deleteCmd.AddCommand(deleteOpsSightCmd)
 
 	// Add Delete Polaris Command
 	deletePolarisCmd.Flags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
-	deletePolarisCmd.Flags().BoolVarP(&promptAnswerYes, "yes", "y", promptAnswerYes, "Automatic yes to prompts")
-	addbaseURLFlag(deletePolarisCmd)
+	cobra.MarkFlagRequired(deletePolarisCmd.Flags(), "namespace")
 	deleteCmd.AddCommand(deletePolarisCmd)
 
 	// Add Delete Polaris-Reporting Command

@@ -35,17 +35,12 @@ func verifyClusterType(cType string) error {
 	return fmt.Errorf("invalid cluster type '%s'", cType)
 }
 
-func addNativeFormatFlag(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&nativeFormat, "format", "o", nativeFormat, "Output format [json|yaml]")
-	cmd.Flags().StringVar(&nativeClusterType, "target", nativeClusterType, "Type of cluster to generate the resources for [KUBERNETES|OPENSHIFT]")
-}
-
-func addbaseURLFlag(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&baseURL, "yaml-url", "", baseURL, "Polaris base YAML server url")
-	cmd.Flags().MarkHidden("yaml-url")
-}
-
 func addChartLocationPathFlag(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&baseURL, "app-resources-path", "", baseURL, "Absolute path to an application Tarball for air-gapped customer")
+	var tmp string
+	cmd.Flags().StringVarP(&tmp, "app-resources-path", "", "", "Absolute path to an application Tarball for air-gapped customer")
 	// cmd.Flags().MarkHidden("app-resources-path")
+}
+
+func addNativeFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&nativeClusterType, "target", nativeClusterType, "Type of cluster to generate the resources for [KUBERNETES|OPENSHIFT]")
 }

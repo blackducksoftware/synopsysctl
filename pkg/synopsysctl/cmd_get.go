@@ -27,7 +27,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
@@ -89,10 +88,12 @@ var getAlertCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		alertName := fmt.Sprintf("%s%s", args[0], AlertPostSuffix)
-		helmRelease, err := util.GetWithHelm3(alertName, namespace, kubeConfigPath)
+		alertName := args[0]
+		helmReleaseName := fmt.Sprintf("%s%s", alertName, AlertPostSuffix)
+		helmRelease, err := util.GetWithHelm3(helmReleaseName, namespace, kubeConfigPath)
 		if err != nil {
-			return fmt.Errorf(strings.Replace(fmt.Sprintf("failed to get Alert values: %+v", err), fmt.Sprintf("instance '%s' ", alertName), fmt.Sprintf("instance '%s' ", args[0]), 0))
+			cleanErrorMsg := cleanAlertHelmError(err.Error(), helmReleaseName, alertName)
+			return fmt.Errorf("failed to get values for Alert: %+v", cleanErrorMsg)
 		}
 		helmSetValues := helmRelease.Config
 		PrintComponent(helmSetValues, "YAML")
@@ -179,24 +180,29 @@ func getBlackDuckMasterKey(namespace string, name string, filePath string) error
 	return nil
 }
 
-// getOpsSightCmd display one or many OpsSight instances
+// getOpsSightCmd display an OpsSight instance
 var getOpsSightCmd = &cobra.Command{
-	Use:           "opssight [NAME...]",
-	Example:       "synopsysctl get opssights\nsynopsysctl get opssight <name>\nsynopsysctl get opssights <name1> <name2>",
+	Use:           "opssight NAME -n NAMESPACE",
+	Example:       "synopsysctl get opssight -n <namespace>",
 	Aliases:       []string{"opssights"},
-	Short:         "Display one or many OpsSight instances",
+	Short:         "Display an OpsSight instance",
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	Args: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 1 {
+			cmd.Help()
+			return fmt.Errorf("this command takes 1 argument, but got %+v", args)
+		}
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		log.Debugf("getting OpsSight instances...")
-		out, err := RunKubeCmd(restconfig, kubeClient, generateKubectlGetCommand("opssights", args)...)
+		opssightName := args[0]
+		helmRelease, err := util.GetWithHelm3(opssightName, namespace, kubeConfigPath)
 		if err != nil {
-			return fmt.Errorf("error getting OpsSight instances due to %+v - %s", out, err)
+			return fmt.Errorf("failed to get OpsSight values: %+v", err)
 		}
-		fmt.Printf("%+v", out)
+		helmSetValues := helmRelease.Config
+		PrintComponent(helmSetValues, "YAML")
 		return nil
 	},
 }
@@ -291,9 +297,7 @@ func init() {
 
 	// OpsSight
 	getOpsSightCmd.Flags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
-	getOpsSightCmd.Flags().StringVarP(&getOutputFormat, "output", "o", getOutputFormat, "Output format [json,yaml,wide,name,custom-columns=...,custom-columns-file=...,go-template=...,go-template-file=...,jsonpath=...,jsonpath-file=...]")
-	getOpsSightCmd.Flags().StringVarP(&getSelector, "selector", "l", getSelector, "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)")
-	getOpsSightCmd.Flags().BoolVar(&getAllNamespaces, "all-namespaces", getAllNamespaces, "If present, list the requested object(s) across all namespaces")
+	cobra.MarkFlagRequired(getOpsSightCmd.PersistentFlags(), "namespace")
 	getCmd.AddCommand(getOpsSightCmd)
 
 	// Polaris

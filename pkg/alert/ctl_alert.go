@@ -27,10 +27,12 @@ import (
 	"strings"
 
 	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/blackduck"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // HelmValuesFromCobraFlags is a type for converting synopsysctl flags
@@ -58,8 +60,8 @@ type FlagTree struct {
 	PersistentStorage           string
 	PVCStorageClass             string
 	PVCFilePath                 string
-	// SecurityContextFilePath string
-	Port int32
+	SecurityContextFilePath     string
+	Port                        int32
 }
 
 // NewHelmValuesFromCobraFlags returns an initialized HelmValuesFromCobraFlags
@@ -125,8 +127,8 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	}
 	cmd.Flags().StringVar(&ctl.flagTree.PVCFilePath, "pvc-file-path", ctl.flagTree.PVCFilePath, "Absolute path to a file containing a list of PVC json structs")
 
-	// // Security Contexts
-	// cmd.Flags().StringVar(&ctl.flagTree.SecurityContextFilePath, "security-context-file-path", ctl.flagTree.SecurityContextFilePath, "Absolute path to a file containing a map of pod names to security contexts runAsUser, fsGroup, and runAsGroup")
+	// Security Contexts
+	cmd.Flags().StringVar(&ctl.flagTree.SecurityContextFilePath, "security-context-file-path", ctl.flagTree.SecurityContextFilePath, "Absolute path to a file containing a map of pod names to security contexts runAsUser, fsGroup, and runAsGroup")
 
 	cmd.Flags().Int32Var(&ctl.flagTree.Port, "port", ctl.flagTree.Port, "Port of Alert") // only for devs
 	cmd.Flags().MarkHidden("port")
@@ -260,21 +262,21 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 			util.SetHelmValueInMap(ctl.args, []string{"registry"}, ctl.flagTree.Registry)
 		case "pull-secret-name":
 			util.SetHelmValueInMap(ctl.args, []string{"imagePullSecrets"}, ctl.flagTree.PullSecrets)
-		// case "security-context-file-path":
-		// 	data, err := util.ReadFileData(ctl.flagTree.SecurityContextFilePath)
-		// 	if err != nil {
-		// 		log.Errorf("failed to read security context file: %+v", err)
-		// 		return
-		// 	}
-		// 	SecurityContexts := map[string]api.SecurityContext{}
-		// 	err = json.Unmarshal([]byte(data), &SecurityContexts)
-		// 	if err != nil {
-		// 		log.Errorf("failed to unmarshal security contexts: %+v", err)
-		// 		return
-		// 	}
-		// 	for k, v := range SecurityContexts {
-		// 		util.SetHelmValueInMap(ctl.args, []string{k, "securityContext"}, OperatorSecurityContextTok8sAffinity(v))
-		// 	}
+		case "security-context-file-path":
+			data, err := util.ReadFileData(ctl.flagTree.SecurityContextFilePath)
+			if err != nil {
+				log.Errorf("failed to read security context file: %+v", err)
+				return
+			}
+			securityContexts := map[string]corev1.PodSecurityContext{}
+			err = json.Unmarshal([]byte(data), &securityContexts)
+			if err != nil {
+				log.Errorf("failed to unmarshal security contexts: %+v", err)
+				return
+			}
+			for k, v := range securityContexts {
+				util.SetHelmValueInMap(ctl.args, []string{k, "podSecurityContext"}, blackduck.CorePodSecurityContextToHelm(v))
+			}
 		default:
 			log.Debugf("flag '%s': NOT FOUND", f.Name)
 		}

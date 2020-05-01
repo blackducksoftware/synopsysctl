@@ -46,13 +46,17 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 		return err
 	}
 
-	soOperatorDeploy, err = util.PatchDeploymentForReplicas(kubeClient, soOperatorDeploy, util.IntToInt32(0))
+	soOperatorDeploy.Spec.Replicas = util.IntToInt32(0)
+	soOperatorDeploy.Labels = util.InitLabels(soOperatorDeploy.Labels)
+	soOperatorDeploy.Labels[fmt.Sprintf("synopsys.migrate.com/%s.%s", util.BlackDuckName, bd.Name)] = "true"
+
+	_, err = util.UpdateDeployment(kubeClient, operatorNamespace, soOperatorDeploy)
 	if err != nil {
 		return err
 	}
 
 	// Generate Helm configuration
-	helmValuesMap, err := BlackduckV1ToHelm(bd, operatorNamespace)
+	helmValuesMap, err := blackDuckV1ToHelm(bd, operatorNamespace)
 	if err != nil {
 		return err
 	}
@@ -77,16 +81,12 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 	}
 
 	log.Info("upgrading Black Duck using Helm based deployment")
-	// Update the Helm Chart Location
 
-	chartLocationFlag := flags.Lookup("app-resources-path")
-	if chartLocationFlag.Changed {
-		blackduckChartRepository = chartLocationFlag.Value.String()
-	} else {
-		versionFlag := flags.Lookup("version")
-		if versionFlag.Changed {
-			blackduckChartRepository = fmt.Sprintf("%s/charts/blackduck-%s.tgz", baseChartRepository, versionFlag.Value.String())
-		}
+	// Update the Helm Chart Location
+	bdVersion := helmValuesMap["imageTag"].(string)
+	err = SetHelmChartLocation(flags, blackDuckChartName, bdVersion, &blackduckChartRepository)
+	if err != nil {
+		return fmt.Errorf("failed to set the app resources location due to %+v", err)
 	}
 
 	var extraFiles []string
@@ -114,20 +114,42 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 		}
 	}
 
+	// if the services was exposed by the operator, we will not delete the service so that the IP
+	// address remains the same. Thus we need to set this field to false so "Helm Create" does not try
+	// to update the resource
+	updateService := false
+	if bd.Spec.ExposeService != util.NONE {
+		if bd.Spec.ExposeService == strings.ToUpper(helmValuesMap["exposedServiceType"].(string)) {
+			helmValuesMap["exposeui"] = false // synopsysctl will manage the exposed service
+		} else {
+			helmValuesMap["exposeui"] = true // helm chart needs to update the exposed service type
+			updateService = true
+		}
+	}
+
+	err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, bd.Spec.Namespace, bd.Name, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], updateService)
+	if err != nil {
+		return err
+	}
+
 	err = util.CreateWithHelm3(bd.Name, bd.Spec.Namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath, true, extraFiles...)
 	if err != nil {
 		return fmt.Errorf("failed to create Blackduck resources: %+v", err)
 	}
 
+	// Update Security Context Permissions
+	// stop the black duck
+	util.SetHelmValueInMap(helmValuesMap, []string{"status"}, "Stopped")
+	err = runBlackDuckFileOwnershipJobs(bd.Name, bd.Spec.Namespace, bd.Spec.Version, helmValuesMap, flags)
+	if err != nil {
+		return fmt.Errorf("failed to update File Ownerships in PVs: %+v", err)
+	}
+	util.SetHelmValueInMap(helmValuesMap, []string{"status"}, "Running")
+
 	// Deploy Resources
 	err = util.CreateWithHelm3(bd.Name, bd.Spec.Namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath, false, extraFiles...)
 	if err != nil {
 		return fmt.Errorf("failed to create Blackduck resources: %+v", err)
-	}
-
-	err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, bd.Spec.Namespace, bd.Name, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], true)
-	if err != nil {
-		return err
 	}
 
 	log.Info("removing Black Duck custom resource")
@@ -137,10 +159,30 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 
 	_, err = util.CheckAndUpdateNamespace(kubeClient, util.BlackDuckName, bd.Spec.Namespace, bd.Name, "", true)
 	if err != nil {
-		log.Warnf("unable to patch the namespace to remove an app labels due to %+v", err)
+		log.Warnf("unable to patch the namespace to remove app labels due to %+v", err)
 	}
 
-	return destroyOperator(operatorNamespace, crdNamespace)
+	// get the deployment, delete the migrate label and patch the deployment
+	soOperatorDeploy, err = util.GetDeployment(kubeClient, operatorNamespace, "synopsys-operator")
+	if err != nil {
+		return err
+	}
+	soOperatorDeploy.Labels = util.InitLabels(soOperatorDeploy.Labels)
+	delete(soOperatorDeploy.Labels, fmt.Sprintf("synopsys.migrate.com/%s.%s", util.BlackDuckName, bd.Name))
+	soOperatorDeploy, err = util.UpdateDeployment(kubeClient, operatorNamespace, soOperatorDeploy)
+	if err != nil {
+		return err
+	}
+
+	skipDestroyorRestartOperator := false
+	for key := range soOperatorDeploy.Labels {
+		if strings.HasPrefix(key, "synopsys.migrate.com") {
+			skipDestroyorRestartOperator = true
+			break
+		}
+	}
+
+	return destroyOperator(operatorNamespace, crdNamespace, skipDestroyorRestartOperator)
 }
 
 // isFeatureEnabled check whether the feature is enabled by reading through the Black Duck environment variables
@@ -160,8 +202,8 @@ func isFeatureEnabled(environs []string, featureName string, expectedValue strin
 	return false
 }
 
-// BlackduckV1ToHelm converts Black Duck custom resources to helm flags
-func BlackduckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]interface{}, error) {
+// blackDuckV1ToHelm converts Black Duck custom resources to helm flags
+func blackDuckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]interface{}, error) {
 	helmConfig := make(map[string]interface{})
 
 	// Seal key
@@ -314,8 +356,30 @@ func BlackduckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 	}
 
 	//SecurityContexts
+	securityContextIDNameToHelmPath := map[string][]string{
+		"blackduck-postgres":       {"postgres", "podSecurityContext"},
+		"blackduck-init":           {"init", "securityContext"},
+		"blackduck-authentication": {"authentication", "podSecurityContext"},
+		"blackduck-binnaryscanner": {"binaryscanner", "podSecurityContext"},
+		"blackduck-cfssl":          {"cfssl", "podSecurityContext"},
+		"blackduck-documentation":  {"documentation", "podSecurityContext"},
+		"blackduck-jobrunner":      {"jobrunner", "podSecurityContext"},
+		"blackduck-rabbitmq":       {"rabbitmq", "podSecurityContext"},
+		"blackduck-registration":   {"registration", "podSecurityContext"},
+		"blackduck-scan":           {"scan", "podSecurityContext"},
+		"blackduck-uploadcache":    {"uploadcache", "podSecurityContext"},
+		"blackduck-webapp":         {"webapp", "podSecurityContext"},
+		"blackduck-logstash":       {"logstash", "securityContext"},
+		"blackduck-nginx":          {"webserver", "podSecurityContext"},
+		"appcheck-worker":          {"binaryscanner", "podSecurityContext"},
+	}
 	for k, v := range bd.Spec.SecurityContexts {
-		util.SetHelmValueInMap(helmConfig, []string{k, "securityContext"}, blackduck.OperatorSecurityContextTok8sAffinity(v))
+		pathToHelmValue := []string{k, "podSecurityContext"}                  // default path for new pods
+		if newPathToHelmValue, ok := securityContextIDNameToHelmPath[k]; ok { // Override the security if it's present in the list
+			pathToHelmValue = newPathToHelmValue
+		}
+
+		util.SetHelmValueInMap(helmConfig, pathToHelmValue, blackduck.OperatorAPISecurityContextToHelm(v))
 	}
 
 	// Environs

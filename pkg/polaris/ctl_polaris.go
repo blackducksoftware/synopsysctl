@@ -253,7 +253,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 					isErrorExist = true
 				}
 				util.SetHelmValueInMap(ctl.args, []string{"onprem-auth-service", "smtp", "sender_email"}, ctl.flagTree.SMTPSenderEmail)
-				util.SetHelmValueInMap(ctl.args, []string{"swip-onprem", "smtp", "sender_email"}, ctl.flagTree.SMTPSenderEmail)
+				util.SetHelmValueInMap(ctl.args, []string{"notifications-service", "smtp", "sender_email"}, ctl.flagTree.SMTPSenderEmail)
 			case "smtp-tls-mode":
 				var tlsMode SMTPTLSMode
 				switch SMTPTLSMode(ctl.flagTree.SMTPTlsMode) {

@@ -24,27 +24,27 @@ package synopsysctl
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/blackducksoftware/synopsysctl/pkg/alert"
-	opssightv1 "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
+	alertctl "github.com/blackducksoftware/synopsysctl/pkg/alert"
 	"github.com/blackducksoftware/synopsysctl/pkg/bdba"
 	"github.com/blackducksoftware/synopsysctl/pkg/blackduck"
 	"github.com/blackducksoftware/synopsysctl/pkg/opssight"
 	"github.com/blackducksoftware/synopsysctl/pkg/polaris"
 	polarisreporting "github.com/blackducksoftware/synopsysctl/pkg/polaris-reporting"
-	polarisreportingctl "github.com/blackducksoftware/synopsysctl/pkg/polaris-reporting"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Create Command CRSpecBuilderFromCobraFlagsInterface
 var createAlertCobraHelper alert.HelmValuesFromCobraFlags
 var createBlackDuckCobraHelper blackduck.HelmValuesFromCobraFlags
-var createOpsSightCobraHelper CRSpecBuilderFromCobraFlagsInterface
+var createOpsSightCobraHelper opssight.HelmValuesFromCobraFlags
 var createPolarisCobraHelper polaris.HelmValuesFromCobraFlags
 var createPolarisReportingCobraHelper polarisreporting.HelmValuesFromCobraFlags
 var createBDBACobraHelper bdba.HelmValuesFromCobraFlags
@@ -87,7 +87,16 @@ var createAlertCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		alertName := fmt.Sprintf("%s%s", args[0], AlertPostSuffix)
+		alertName := args[0]
+		helmReleaseName := fmt.Sprintf("%s%s", alertName, AlertPostSuffix)
+
+		ok, err := util.IsNotDefaultVersionGreaterThanOrEqualTo(cmd.Flag("version").Value.String(), 5, 3, 1)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("creation of Alert instance is only suported for version 5.3.1 and above")
+		}
 
 		// Get the flags to set Helm values
 		helmValuesMap, err := createAlertCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
@@ -96,20 +105,19 @@ var createAlertCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			alertChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				alertChartRepository = fmt.Sprintf("%s/charts/alert-helmchart-%s.tgz", baseChartRepository, versionFlag.Value.String())
-			}
+		if cmd.Flags().Lookup("version").Changed {
+			alertVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), alertChartName, alertVersion, &alertChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		// Check Dry Run before deploying any resources
-		err = util.CreateWithHelm3(alertName, namespace, alertChartRepository, helmValuesMap, kubeConfigPath, true)
+		err = util.CreateWithHelm3(helmReleaseName, namespace, alertChartRepository, helmValuesMap, kubeConfigPath, true)
 		if err != nil {
-			return fmt.Errorf(strings.Replace(fmt.Sprintf("failed to create Alert resources: %+v", err), fmt.Sprintf("release '%s' ", alertName), fmt.Sprintf("release '%s' ", args[0]), 0))
+			cleanErrorMsg := cleanAlertHelmError(err.Error(), helmReleaseName, alertName)
+			return fmt.Errorf("failed to create Alert resources: %+v", cleanErrorMsg)
 		}
 
 		// Create secrets for Alert
@@ -148,16 +156,16 @@ var createAlertCmd = &cobra.Command{
 		}
 
 		// Expose Services for Alert
-		exposeUI := cmd.Flags().Lookup("expose-ui").Changed && cmd.Flags().Lookup("expose-ui").Value.String() != util.NONE
-		err = alert.CRUDServiceOrRoute(restconfig, kubeClient, namespace, alertName, exposeUI, helmValuesMap["exposedServiceType"], false)
+		err = alert.CRUDServiceOrRoute(restconfig, kubeClient, namespace, alertName, helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], cmd.Flags().Lookup("expose-ui").Changed)
 		if err != nil {
 			return err
 		}
 
 		// Deploy Alert Resources
-		err = util.CreateWithHelm3(alertName, namespace, alertChartRepository, helmValuesMap, kubeConfigPath, false)
+		err = util.CreateWithHelm3(helmReleaseName, namespace, alertChartRepository, helmValuesMap, kubeConfigPath, false)
 		if err != nil {
-			return fmt.Errorf(strings.Replace(fmt.Sprintf("failed to create Alert resources: %+v", err), fmt.Sprintf("release '%s' ", alertName), fmt.Sprintf("release '%s' ", args[0]), 0))
+			cleanErrorMsg := cleanAlertHelmError(err.Error(), helmReleaseName, alertName)
+			return fmt.Errorf("failed to create Alert resources: %+v", cleanErrorMsg)
 		}
 
 		log.Infof("Alert has been successfully Created!")
@@ -181,7 +189,16 @@ var createAlertNativeCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		alertName := fmt.Sprintf("%s%s", args[0], AlertPostSuffix)
+		alertName := args[0]
+		helmReleaseName := fmt.Sprintf("%s%s", alertName, AlertPostSuffix)
+
+		ok, err := util.IsNotDefaultVersionGreaterThanOrEqualTo(cmd.Flag("version").Value.String(), 5, 3, 1)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("creation of Alert instance is only suported for version 5.3.1 and above")
+		}
 
 		// Get the flags to set Helm values
 		helmValuesMap, err := createAlertCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
@@ -190,14 +207,12 @@ var createAlertNativeCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			alertChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				alertChartRepository = fmt.Sprintf("%s/charts/synopsys-alert-%s.tgz", baseChartRepository, versionFlag.Value.String())
-			}
+		if cmd.Flags().Lookup("version").Changed {
+			alertVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), alertChartName, alertVersion, &alertChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		// Get secrets for Alert
@@ -236,9 +251,10 @@ var createAlertNativeCmd = &cobra.Command{
 		}
 
 		// Deploy Alert Resources
-		err = util.TemplateWithHelm3(alertName, namespace, alertChartRepository, helmValuesMap)
+		err = util.TemplateWithHelm3(helmReleaseName, namespace, alertChartRepository, helmValuesMap)
 		if err != nil {
-			return fmt.Errorf("failed to create Alert resources: %+v", err)
+			cleanErrorMsg := cleanAlertHelmError(err.Error(), helmReleaseName, alertName)
+			return fmt.Errorf("failed to create Alert resources: %+v", cleanErrorMsg)
 		}
 
 		return nil
@@ -291,20 +307,36 @@ var createBlackDuckCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ok, err := util.IsVersionGreaterThanOrEqualTo(cmd.Flag("version").Value.String(), 2020, time.April, 0)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("creation of Black Duck instance is only suported for version 2020.4.0 and above")
+		}
+
 		helmValuesMap, err := createBlackDuckCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
 		if err != nil {
 			return err
 		}
 
+		// set isKubernetes to false in case of OpenShift
+		if util.IsOpenshift(kubeClient) {
+			util.SetHelmValueInMap(helmValuesMap, []string{"isKubernetes"}, false)
+		}
+
+		// Set Persistent Storage to true by default (TODO: remove after changed in Helm Chart)
+		if !cmd.Flag("persistent-storage").Changed {
+			util.SetHelmValueInMap(helmValuesMap, []string{"enablePersistentStorage"}, true)
+		}
+
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			blackduckChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				blackduckChartRepository = fmt.Sprintf("%s/charts/blackduck-%s.tgz", baseChartRepository, versionFlag.Value.String())
-			}
+		if cmd.Flags().Lookup("version").Changed {
+			blackDuckVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), blackDuckChartName, blackDuckVersion, &blackduckChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		secrets, err := blackduck.GetCertsFromFlagsAndSetHelmValue(args[0], namespace, cmd.Flags(), helmValuesMap)
@@ -335,7 +367,7 @@ var createBlackDuckCmd = &cobra.Command{
 			return fmt.Errorf("failed to create Blackduck resources: %+v", err)
 		}
 
-		err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, namespace, args[0], helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], false)
+		err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, namespace, args[0], helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], cmd.Flags().Lookup("expose-ui").Changed)
 		if err != nil {
 			return err
 		}
@@ -365,21 +397,42 @@ var createBlackDuckNativeCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ok, err := util.IsVersionGreaterThanOrEqualTo(cmd.Flag("version").Value.String(), 2020, time.April, 0)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("creation of Black Duck instance is only suported for version 2020.4.0 and above")
+		}
 
 		helmValuesMap, err := createBlackDuckCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
 		if err != nil {
 			return err
 		}
 
-		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			blackduckChartRepository = chartLocationFlag.Value.String()
+		// Check if the configuration is for Openshift
+		err = verifyClusterType(nativeClusterType)
+		if err != nil {
+			return fmt.Errorf("invalid cluster type '%s'", nativeClusterType)
+		}
+		if strings.ToUpper(nativeClusterType) == clusterTypeOpenshift {
+			util.SetHelmValueInMap(helmValuesMap, []string{"isKubernetes"}, false)
 		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				blackduckChartRepository = fmt.Sprintf("%s/charts/blackduck-%s.tgz", baseChartRepository, versionFlag.Value.String())
-			}
+			util.SetHelmValueInMap(helmValuesMap, []string{"isKubernetes"}, true)
+		}
+
+		// Set Persistent Storage to true by default (TODO: remove after changed in Helm Chart)
+		if !cmd.Flag("persistent-storage").Changed {
+			util.SetHelmValueInMap(helmValuesMap, []string{"enablePersistentStorage"}, true)
+		}
+
+		// Update the Helm Chart Location
+		if cmd.Flags().Lookup("version").Changed {
+			blackDuckVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), blackDuckChartName, blackDuckVersion, &blackduckChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
 		secrets, err := blackduck.GetCertsFromFlagsAndSetHelmValue(args[0], namespace, cmd.Flags(), helmValuesMap)
@@ -404,49 +457,10 @@ var createBlackDuckNativeCmd = &cobra.Command{
 Create OpsSight Commands
 */
 
-var createOpsSightPreRun = func(cmd *cobra.Command, args []string) error {
-	// Set the base spec
-	if !cmd.Flags().Lookup("template").Changed {
-		baseOpsSightSpec = defaultBaseOpsSightSpec
-	}
-	log.Debugf("setting OpsSight's base spec to '%s'", baseOpsSightSpec)
-	err := createOpsSightCobraHelper.SetPredefinedCRSpec(baseOpsSightSpec)
-	if err != nil {
-		cmd.Help()
-		return err
-	}
-	return nil
-}
-
-func updateOpsSightSpecWithFlags(cmd *cobra.Command, opsSightName string, opsSightNamespace string) (*opssightv1.OpsSight, error) {
-	// Update Spec with user's flags
-	log.Debugf("updating spec with user's flags")
-	opsSightInterface, err := createOpsSightCobraHelper.GenerateCRSpecFromFlags(cmd.Flags())
-	if err != nil {
-		return nil, err
-	}
-
-	// Set Namespace in Spec
-	opsSightSpec, _ := opsSightInterface.(opssightv1.OpsSightSpec)
-	opsSightSpec.Namespace = opsSightNamespace
-
-	// Create and Deploy OpsSight CRD
-	opsSight := &opssightv1.OpsSight{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      opsSightName,
-			Namespace: opsSightNamespace,
-		},
-		Spec: opsSightSpec,
-	}
-	opsSight.Kind = "OpsSight"
-	opsSight.APIVersion = "synopsys.com/v1"
-	return opsSight, nil
-}
-
 // createOpsSightCmd creates an OpsSight instance
 var createOpsSightCmd = &cobra.Command{
-	Use:           "opssight NAME",
-	Example:       "synopsysctl create opssight <name>\nsynopsysctl create opssight <name> -n <namespace>",
+	Use:           "opssight NAME -n NAMESPACE",
+	Example:       "synopsysctl create opssight <name> -n <namespace>",
 	Short:         "Create an OpsSight instance",
 	SilenceUsage:  true,
 	SilenceErrors: true,
@@ -458,34 +472,47 @@ var createOpsSightCmd = &cobra.Command{
 		}
 		return nil
 	},
-	PreRunE: createOpsSightPreRun,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		opsSightName := args[0]
-		opsSightNamespace, crdNamespace, _, err := getInstanceInfo(util.OpsSightCRDName, "", namespace, opsSightName)
-		if err != nil {
-			return err
-		}
-		opsSight, err := updateOpsSightSpecWithFlags(cmd, opsSightName, opsSightNamespace)
+		opssightName := args[0]
+
+		// Get the flags to set Helm values
+		helmValuesMap, err := createOpsSightCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
 		if err != nil {
 			return err
 		}
 
-		log.Infof("creating OpsSight '%s' in namespace '%s'...", opsSightName, opsSightNamespace)
-
-		// Deploy the OpsSight instance
-		_, err = util.CreateOpsSight(opsSightClient, crdNamespace, opsSight)
-		if err != nil {
-			return fmt.Errorf("error creating the OpsSight '%s' in namespace '%s' due to %+v", opsSightName, opsSightNamespace, err)
+		// Update the Helm Chart Location
+		if cmd.Flags().Lookup("version").Changed {
+			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		log.Infof("successfully submitted OpsSight '%s' into namespace '%s'", opsSightName, opsSightNamespace)
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion, &opssightChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
+
+		// Check Dry Run before deploying any resources
+		err = util.CreateWithHelm3(opssightName, namespace, opssightChartRepository, helmValuesMap, kubeConfigPath, true)
+		if err != nil {
+			return fmt.Errorf("failed to create OpsSight resources: %+v", err)
+		}
+
+		// TODO Create any initial opssight resources ...
+
+		// Deploy OpsSight Resources
+		err = util.CreateWithHelm3(opssightName, namespace, opssightChartRepository, helmValuesMap, kubeConfigPath, false)
+		if err != nil {
+			return fmt.Errorf("failed to create OpsSight resources: %+v", err)
+		}
+
+		log.Infof("OpsSight has been successfully Created!")
 		return nil
 	},
 }
 
 // createOpsSightNativeCmd prints the Kubernetes resources for creating an OpsSight instance
 var createOpsSightNativeCmd = &cobra.Command{
-	Use:           "native NAME",
-	Example:       "synopsysctl create opssight native <name>\nsynopsysctl create opssight native <name> -n <namespace>\nsynopsysctl create opssight native <name> -o yaml",
+	Use:           "native NAME -n NAMESPACE",
+	Example:       "synopsysctl create opssight native <name> -n <namespace>",
 	Short:         "Print the Kubernetes resources for creating an OpsSight instance",
 	SilenceUsage:  true,
 	SilenceErrors: true,
@@ -497,20 +524,31 @@ var createOpsSightNativeCmd = &cobra.Command{
 		}
 		return nil
 	},
-	PreRunE: createOpsSightPreRun,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		opsSightName := args[0]
-		opsSightNamespace, _, _, err := getInstanceInfo(util.OpsSightCRDName, "", namespace, opsSightName)
-		if err != nil {
-			return err
-		}
-		opsSight, err := updateOpsSightSpecWithFlags(cmd, opsSightName, opsSightNamespace)
+		opssightName := args[0]
+
+		// Get the flags to set Helm values
+		helmValuesMap, err := createOpsSightCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
 		if err != nil {
 			return err
 		}
 
-		log.Debugf("generating Kubernetes resources for OpsSight '%s' in namespace '%s'...", opsSightName, opsSightNamespace)
-		return PrintResource(*opsSight, nativeFormat, true)
+		// Update the Helm Chart Location
+		if cmd.Flags().Lookup("version").Changed {
+			opssightVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion, &opssightChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
+
+		// Print OpsSight Resources
+		err = util.TemplateWithHelm3(opssightName, namespace, opssightChartRepository, helmValuesMap)
+		if err != nil {
+			return fmt.Errorf("failed to generate OpsSight resources: %+v", err)
+		}
+
+		return nil
 	},
 }
 
@@ -537,16 +575,16 @@ var createPolarisCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		// TODO: allow user to specify --version and --chart-location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			polarisChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				polarisChartRepository = fmt.Sprintf("%s/charts/polaris-helmchart-%s.tgz", baseChartRepository, versionFlag.Value.String())
-			}
+		if cmd.Flags().Lookup("version").Changed {
+			polarisVersion = cmd.Flags().Lookup("version").Value.String()
 		}
+		err = SetHelmChartLocation(cmd.Flags(), polarisChartName, polarisVersion, &polarisChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
+
+		// Set the version in the Values
+		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, polarisVersion)
 
 		// Check Dry Run before deploying any resources
 		err = util.CreateWithHelm3(polarisName, namespace, polarisChartRepository, helmValuesMap, kubeConfigPath, true)
@@ -588,15 +626,16 @@ var createPolarisNativeCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			polarisChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				polarisChartRepository = fmt.Sprintf("%s/charts/polaris-helmchart-%s.tgz", baseChartRepository, versionFlag.Value.String())
-			}
+		if cmd.Flags().Lookup("version").Changed {
+			polarisVersion = cmd.Flags().Lookup("version").Value.String()
 		}
+		err = SetHelmChartLocation(cmd.Flags(), polarisChartName, polarisVersion, &polarisChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
+
+		// Set the version in the Values
+		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, polarisVersion)
 
 		// Print Polaris Resources
 		err = util.TemplateWithHelm3(polarisName, namespace, polarisChartRepository, helmValuesMap)
@@ -653,38 +692,21 @@ var createPolarisReportingCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		// TODO: allow user to specify --version and --chart-location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			polarisReportingChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				polarisReportingChartRepository = fmt.Sprintf("%s/charts/polaris-helmchart-reporting-%s.tgz", baseChartRepository, versionFlag.Value.String())
-			}
+		if cmd.Flags().Lookup("version").Changed {
+			polarisReportingVersion = cmd.Flags().Lookup("version").Value.String()
 		}
+		err = SetHelmChartLocation(cmd.Flags(), polarisReportingChartName, polarisReportingVersion, &polarisReportingChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
+
+		// Set the version in the Values
+		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, polarisReportingVersion)
 
 		// Check Dry Run before deploying any resources
 		err = util.CreateWithHelm3(polarisReportingName, namespace, polarisReportingChartRepository, helmValuesMap, kubeConfigPath, true)
 		if err != nil {
 			return fmt.Errorf("failed to create Polaris-Reporting resources: %+v", err)
-		}
-
-		// Get Secret For the GCP Key
-		gcpServiceAccountPath := cmd.Flag("gcp-service-account-path").Value.String()
-		gcpServiceAccountData, err := util.ReadFileData(gcpServiceAccountPath)
-		if err != nil {
-			return fmt.Errorf("failed to read gcp service account file at location: '%s', error: %+v", gcpServiceAccountPath, err)
-		}
-		gcpServiceAccountSecrets, err := polarisreportingctl.GetPolarisReportingSecrets(namespace, gcpServiceAccountData)
-		if err != nil {
-			return fmt.Errorf("failed to create GCP Service Account Secrets: %+v", err)
-		}
-
-		// Deploy the Secret
-		err = KubectlApplyRuntimeObjects(gcpServiceAccountSecrets)
-		if err != nil {
-			return fmt.Errorf("failed to deploy the gcpServiceAccount Secrets: %s", err)
 		}
 
 		// Deploy Polaris-Reporting Resources
@@ -721,31 +743,16 @@ var createPolarisReportingNativeCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			polarisReportingChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				polarisReportingChartRepository = fmt.Sprintf("%s/charts/polaris-helmchart-reporting-%s.tgz", baseChartRepository, versionFlag.Value.String())
-			}
+		if cmd.Flags().Lookup("version").Changed {
+			polarisReportingVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err = SetHelmChartLocation(cmd.Flags(), polarisReportingChartName, polarisReportingVersion, &polarisReportingChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
-		// Get Secret For the GCP Key
-		gcpServiceAccountPath := cmd.Flag("gcp-service-account-path").Value.String()
-		gcpServiceAccountData, err := util.ReadFileData(gcpServiceAccountPath)
-		if err != nil {
-			return fmt.Errorf("failed to read gcp service account file at location: '%s', error: %+v", gcpServiceAccountPath, err)
-		}
-		gcpServiceAccountSecrets, err := polarisreportingctl.GetPolarisReportingSecrets(namespace, gcpServiceAccountData)
-		if err != nil {
-			return fmt.Errorf("failed to create GCP Service Account Secrets: %+v", err)
-		}
-
-		// Print the Secret
-		for _, obj := range gcpServiceAccountSecrets {
-			PrintComponent(obj, "YAML") // helm only supports yaml
-		}
+		// Set the version in the Values
+		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, polarisReportingVersion)
 
 		// Print Polaris-Reporting Resources
 		err = util.TemplateWithHelm3(polarisReportingName, namespace, polarisReportingChartRepository, helmValuesMap)
@@ -780,16 +787,16 @@ var createBDBACmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		// TODO: allow user to specify --version and --chart-location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			bdbaChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				bdbaChartRepository = fmt.Sprintf("%s/charts/bdba-%s.tgz", baseChartRepository, versionFlag.Value.String())
-			}
+		if cmd.Flags().Lookup("version").Changed {
+			bdbaVersion = cmd.Flags().Lookup("version").Value.String()
 		}
+		err = SetHelmChartLocation(cmd.Flags(), bdbaChartName, bdbaVersion, &bdbaChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
+
+		// Set the version in the Values
+		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, bdbaVersion)
 
 		// Check Dry Run before deploying any resources
 		err = util.CreateWithHelm3(bdbaName, namespace, bdbaChartRepository, helmValuesMap, kubeConfigPath, true)
@@ -831,15 +838,16 @@ var createBDBANativeCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		chartLocationFlag := cmd.Flag("app-resources-path")
-		if chartLocationFlag.Changed {
-			bdbaChartRepository = chartLocationFlag.Value.String()
-		} else {
-			versionFlag := cmd.Flag("version")
-			if versionFlag.Changed {
-				bdbaChartRepository = fmt.Sprintf("%s/charts/bdba-%s.tgz", baseChartRepository, versionFlag.Value.String())
-			}
+		if cmd.Flags().Lookup("version").Changed {
+			bdbaVersion = cmd.Flags().Lookup("version").Value.String()
 		}
+		err = SetHelmChartLocation(cmd.Flags(), bdbaChartName, bdbaVersion, &bdbaChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
+
+		// Set the version in the Values
+		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, bdbaVersion)
 
 		// Print Resources
 		err = util.TemplateWithHelm3(bdbaName, namespace, bdbaChartRepository, helmValuesMap)
@@ -854,8 +862,8 @@ var createBDBANativeCmd = &cobra.Command{
 func init() {
 	// initialize global resource ctl structs for commands to use
 	createBlackDuckCobraHelper = *blackduck.NewHelmValuesFromCobraFlags()
-	createAlertCobraHelper = *alert.NewHelmValuesFromCobraFlags()
-	createOpsSightCobraHelper = opssight.NewCRSpecBuilderFromCobraFlags()
+	createAlertCobraHelper = *alertctl.NewHelmValuesFromCobraFlags()
+	createOpsSightCobraHelper = *opssight.NewHelmValuesFromCobraFlags()
 	createPolarisCobraHelper = *polaris.NewHelmValuesFromCobraFlags()
 	createPolarisReportingCobraHelper = *polarisreporting.NewHelmValuesFromCobraFlags()
 	createBDBACobraHelper = *bdba.NewHelmValuesFromCobraFlags()
@@ -881,17 +889,19 @@ func init() {
 	createCmd.AddCommand(createBlackDuckCmd)
 
 	createBlackDuckCobraHelper.AddCRSpecFlagsToCommand(createBlackDuckNativeCmd, true)
+	addNativeFlags(createBlackDuckNativeCmd)
 	addChartLocationPathFlag(createBlackDuckNativeCmd)
 	createBlackDuckCmd.AddCommand(createBlackDuckNativeCmd)
 
 	// Add OpsSight Command
-	createOpsSightCmd.PersistentFlags().StringVar(&baseOpsSightSpec, "template", baseOpsSightSpec, "Base resource configuration to modify with flags [empty|upstream|default|disabledBlackDuck]")
 	createOpsSightCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
-	createOpsSightCobraHelper.AddCRSpecFlagsToCommand(createOpsSightCmd, true)
+	cobra.MarkFlagRequired(createOpsSightCmd.PersistentFlags(), "namespace")
+	addChartLocationPathFlag(createOpsSightCmd)
+	createOpsSightCobraHelper.AddCobraFlagsToCommand(createOpsSightCmd, true)
 	createCmd.AddCommand(createOpsSightCmd)
 
-	createOpsSightCobraHelper.AddCRSpecFlagsToCommand(createOpsSightNativeCmd, true)
-	addNativeFormatFlag(createOpsSightNativeCmd)
+	createOpsSightCobraHelper.AddCobraFlagsToCommand(createOpsSightNativeCmd, true)
+	addChartLocationPathFlag(createOpsSightNativeCmd)
 	createOpsSightCmd.AddCommand(createOpsSightNativeCmd)
 
 	// Add Polaris commands

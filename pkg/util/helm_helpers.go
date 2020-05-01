@@ -55,22 +55,22 @@ func CreateWithHelm3(releaseName, namespace, chartURL string, vals map[string]in
 	// Check if resouce already exists
 	existingRelease, _ := GetWithHelm3(releaseName, namespace, kubeConfig)
 	if existingRelease != nil {
-		return fmt.Errorf("release '%+v' already exists in namespace '%+v'", existingRelease.Name, existingRelease.Namespace)
+		return fmt.Errorf("release '%s' already exists in namespace '%s'", existingRelease.Name, existingRelease.Namespace)
 	}
 
 	// Create the new Release
 	actionConfig, err := CreateHelmActionConfiguration(kubeConfig, "", namespace)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create the release config due to %s", err)
 	}
 
 	chart, err := LoadChart(chartURL, actionConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load application resources at '%s' due to %s", chartURL, err)
 	}
 	validInstallableChart, err := isChartInstallable(chart)
 	if !validInstallableChart {
-		return fmt.Errorf("release at '%s' is not installable: %+v", chartURL, err)
+		return fmt.Errorf("release at '%s' is not installable: %s", chartURL, err)
 	}
 	if chart.Metadata.Deprecated {
 		log.Warnf("the release at '%s' is deprecated", chartURL)
@@ -109,12 +109,12 @@ func CreateWithHelm3(releaseName, namespace, chartURL string, vals map[string]in
 	client.DryRun = dryRun
 
 	if err := mergeExtraFilesToConfig(chart, vals, extraFiles); err != nil {
-		return err
+		return fmt.Errorf("failed to merge extra configuration files during create due to %s", err)
 	}
 
 	_, err = client.Run(chart, vals) // deploy the chart into the namespace from the actionConfig
 	if err != nil {
-		return fmt.Errorf("failed to run install: %+v", err)
+		return fmt.Errorf("failed to run install due to %s", err)
 	}
 	return nil
 }
@@ -135,7 +135,7 @@ func UpdateWithHelm3(releaseName, namespace, chartURL string, vals map[string]in
 	}
 	validInstallableChart, err := isChartInstallable(chart)
 	if !validInstallableChart {
-		return fmt.Errorf("release at '%s' is not installable: %+v", chartURL, err)
+		return fmt.Errorf("release at '%s' is not installable: %s", chartURL, err)
 	}
 
 	client := action.NewUpgrade(actionConfig)
@@ -151,7 +151,7 @@ func UpdateWithHelm3(releaseName, namespace, chartURL string, vals map[string]in
 	client.ResetValues = true                     // rememeber the values that have been set previously
 	_, err = client.Run(releaseName, chart, vals) // updates the release in the namespace from the actionConfig
 	if err != nil {
-		return fmt.Errorf("failed to run upgrade: %+v", err)
+		return fmt.Errorf("failed to run upgrade: %s", err)
 	}
 	return nil
 }
@@ -172,7 +172,7 @@ func TemplateWithHelm3(releaseName, namespace, chartURL string, vals map[string]
 	}
 	templateOutput, err := RenderManifests(releaseName, namespace, chart, vals, actionConfig)
 	if err != nil {
-		return fmt.Errorf("failed to render kube manifest files: %s", err)
+		return fmt.Errorf("failed to render kube manifest files due to %s", err)
 	}
 	fmt.Printf("%+v\n", templateOutput)
 	return nil
@@ -243,7 +243,7 @@ func RenderManifests(releaseName, namespace string, chart *chart.Chart, vals map
 				}
 			}
 			if missing {
-				return "", fmt.Errorf("could not find template %s in chart", f)
+				return "", fmt.Errorf("could not find template '%s' in release resources", f)
 			}
 			for _, m := range manifestsToRender {
 				response[f] = m
@@ -268,7 +268,7 @@ func DeleteWithHelm3(releaseName, namespace, kubeConfig string) error {
 	client := action.NewUninstall(actionConfig)
 	_, err = client.Run(releaseName) // deletes the releaseName from the namespace in the actionConfig
 	if err != nil {
-		return fmt.Errorf("failed to run uninstall: %+v", err)
+		return fmt.Errorf("failed to run uninstall due to %s", err)
 	}
 	return nil
 }
@@ -284,14 +284,14 @@ func GetWithHelm3(releaseName, namespace, kubeConfig string) (*release.Release, 
 	aList := action.NewList(actionConfig) // NewGet provides bad error message if release doesn't exist
 	charts, err := aList.Run()
 	if err != nil {
-		return nil, fmt.Errorf("failed to run get: %+v", "err")
+		return nil, fmt.Errorf("failed to run get due to %s", err)
 	}
 	for _, release := range charts {
 		if release.Name == releaseName && release.Namespace == namespace {
 			return release, nil
 		}
 	}
-	return nil, fmt.Errorf("unable to find instance '%+v' in namespace %+v", releaseName, namespace)
+	return nil, fmt.Errorf("unable to find release '%s' in namespace '%s'", releaseName, namespace)
 }
 
 // CreateHelmActionConfiguration creates an action.Configuration that points to the specified cluster and namespace
@@ -342,12 +342,12 @@ func LoadChart(chartURL string, actionConfig *action.Configuration) (*chart.Char
 	// Get full path - checks local machine and chart repository
 	chartFullPath, err := client.ChartPathOptions.LocateChart(chartURL, settings)
 	if err != nil {
-		return nil, fmt.Errorf("failed to locate chart '%s' due to %+v", chartURL, err)
+		return nil, fmt.Errorf("failed to locate resources at '%s' due to %s", chartURL, err)
 	}
 
 	chart, err := loader.Load(chartFullPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load chart from %s due to %+v", chartFullPath, err)
+		return nil, fmt.Errorf("failed to load resources from '%s' due to %s", chartFullPath, err)
 	}
 	return chart, nil
 }
@@ -360,7 +360,7 @@ func isChartInstallable(ch *chart.Chart) (bool, error) {
 	case "", "application":
 		return true, nil
 	}
-	return false, fmt.Errorf("%s charts are not installable", ch.Metadata.Type)
+	return false, fmt.Errorf("resources at '%s' are not installable", ch.Metadata.Type)
 }
 
 // ReleaseExists verifies that a resources is deployed in the cluster
@@ -394,7 +394,7 @@ func mergeExtraFilesToConfig(ch *chart.Chart, vals map[string]interface{}, extra
 			}
 		}
 		if !found {
-			return fmt.Errorf("couldn't find file %s in chart", fileName)
+			return fmt.Errorf("couldn't find file '%s' in release resources", fileName)
 		}
 	}
 	return nil
@@ -441,23 +441,54 @@ func GetHelmValueFromMap(valueMapPointer map[string]interface{}, keyList []strin
 	return nil
 }
 
+// GetValueFromRelease merges the default Chart Values with the user's set values
+// to find the value that is current set in the Release
+func GetValueFromRelease(release *release.Release, keyList []string) interface{} {
+	chartValues := release.Chart.Values
+	userConfig := release.Config
+	releaseValues := MergeMaps(chartValues, userConfig)
+	return GetHelmValueFromMap(releaseValues, keyList)
+}
+
+// MergeMaps Copied from https://github.com/helm/helm/blob/9b42702a4bced339ff424a78ad68dd6be6e1a80a/pkg/cli/values/options.go#L88
+func MergeMaps(a, b map[string]interface{}) map[string]interface{} {
+	out := make(map[string]interface{}, len(a))
+	for k, v := range a {
+		out[k] = v
+	}
+	for k, v := range b {
+		if v, ok := v.(map[string]interface{}); ok {
+			if bv, ok := out[k]; ok {
+				if bv, ok := bv.(map[string]interface{}); ok {
+					out[k] = MergeMaps(bv, v)
+					continue
+				}
+			}
+		}
+		out[k] = v
+	}
+	return out
+}
+
 // GetDeploymentResources reads the deployment resource file path and sets the Helm resource maps
 func GetDeploymentResources(deploymentResourceFilePath string, valueMapPointer map[string]interface{}, heapMaxMemoryName string) {
 	data, err := ReadFileData(deploymentResourceFilePath)
 	if err != nil {
-		log.Fatalf("failed to read deployment resources file: %+v", err)
+		log.Fatalf("failed to read deployment resources file: %s", err)
 	}
 	deploymentResources := make(map[string]api.DeploymentResource, 0)
 	err = json.Unmarshal([]byte(data), &deploymentResources)
 	if err != nil {
-		log.Fatalf("failed to unmarshal deployment resources structs: %+v", err)
+		log.Fatalf("failed to unmarshal deployment resources structs: %s", err)
 	}
 
 	for key, value := range deploymentResources {
 		if value.Replicas != nil {
 			SetHelmValueInMap(valueMapPointer, []string{key, "replicas"}, *value.Replicas)
 		}
-		setStringPtrInHelmValueInMap(valueMapPointer, []string{key, heapMaxMemoryName}, value.HeapMaxMemory)
+		if value.HeapMaxMemory != nil {
+			setStringPtrInHelmValueInMap(valueMapPointer, []string{key, heapMaxMemoryName}, value.HeapMaxMemory)
+		}
 		setStringPtrInHelmValueInMap(valueMapPointer, []string{key, "resources", "limits", "cpu"}, value.Resources.Limits.CPU)
 		setStringPtrInHelmValueInMap(valueMapPointer, []string{key, "resources", "limits", "memory"}, value.Resources.Limits.Memory)
 		setStringPtrInHelmValueInMap(valueMapPointer, []string{key, "resources", "requests", "cpu"}, value.Resources.Requests.CPU)

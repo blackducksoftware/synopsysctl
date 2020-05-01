@@ -34,7 +34,8 @@ import (
 
 // OperatorAffinityTok8sAffinity converts synopsysctl affinity format to kube affinity format
 func OperatorAffinityTok8sAffinity(opAffinity []v1.NodeAffinity) corev1.Affinity {
-	var hardTerms, softTerms []corev1.NodeSelectorTerm
+	hardTerms := make([]corev1.NodeSelectorTerm, 0)
+	softTerms := make([]corev1.NodeSelectorTerm, 0)
 	for _, aValue := range opAffinity {
 		if strings.EqualFold(aValue.AffinityType, "hard") {
 			hardTerms = append(hardTerms, corev1.NodeSelectorTerm{
@@ -78,13 +79,106 @@ func OperatorAffinityTok8sAffinity(opAffinity []v1.NodeAffinity) corev1.Affinity
 	return af
 }
 
-// OperatorSecurityContextTok8sAffinity converts synopsysctl security context format to kube affinity format
-func OperatorSecurityContextTok8sAffinity(opSecurityContext api.SecurityContext) corev1.PodSecurityContext {
-	return corev1.PodSecurityContext{
-		FSGroup:    opSecurityContext.FsGroup,
-		RunAsUser:  opSecurityContext.RunAsUser,
-		RunAsGroup: opSecurityContext.RunAsGroup,
+// // OperatorAffinityToHelm ...
+// func OperatorAffinityToHelm(opAffinity []v1.NodeAffinity) map[string]interface{} {
+// 	hardTerms := make([]map[string]interface{}, 0)
+// 	softTerms := make([]map[string]interface{}, 0)
+// 	for _, aValue := range opAffinity {
+// 		// Create Helm Values for each nodeSelectorTerm
+// 		nodeSelectorRequirements := []map[string]interface{}{
+// 			map[string]interface{}{
+// 				"key":      aValue.Key,
+// 				"operator": corev1.NodeSelectorOperator(aValue.Op),
+// 				"values":   aValue.Values,
+// 			},
+// 		}
+// 		nodeSelectorTerm := map[string]interface{}{
+// 			"matchExpressions": nodeSelectorRequirements,
+// 		}
+
+// 		// Divide each nodeSelectorTerm into hard and soft lists
+// 		if strings.EqualFold(aValue.AffinityType, "hard") {
+// 			hardTerms = append(hardTerms, nodeSelectorTerm)
+// 		} else if strings.EqualFold(aValue.AffinityType, "soft") {
+// 			softTerms = append(hardTerms, nodeSelectorTerm)
+// 		}
+// 	}
+
+// 	affinity := make(map[string]interface{}, 0)
+// 	if len(hardTerms) > 0 || len(softTerms) > 0 {
+// 		if len(hardTerms) > 0 {
+// 			nodeSelector := map[string]interface{}{
+// 				"nodeSelectorTerms": hardTerms,
+// 			}
+// 			util.SetHelmValueInMap(affinity, []string{"nodeAffinity", "requiredDuringSchedulingIgnoredDuringExecution"}, nodeSelector)
+// 		}
+// 		if len(softTerms) > 0 {
+// 			for _, s := range softTerms {
+// 				preferredSchedulingTerm := map[string]interface{}{
+// 					"weight":     100,
+// 					"preference": s,
+// 				}
+// 				currPrefferedNodeAffinities := util.GetHelmValueFromMap(affinity, []string{"nodeAffinity", "preferredDuringSchedulingIgnoredDuringExecution"})
+// 				if currPrefferedNodeAffinities != nil {
+// 					listPrefferredNodeAffinities := currPrefferedNodeAffinities.([]map[string]interface{})
+// 					updatedPrefferedNodeAfinities := append(listPrefferredNodeAffinities, preferredSchedulingTerm)
+// 					util.SetHelmValueInMap(affinity, []string{"nodeAffinity", "preferredDuringSchedulingIgnoredDuringExecution"}, updatedPrefferedNodeAfinities)
+// 				} else {
+// 					util.SetHelmValueInMap(affinity, []string{"nodeAffinity", "preferredDuringSchedulingIgnoredDuringExecution"}, []map[string]interface{}{preferredSchedulingTerm})
+// 				}
+
+// 			}
+// 		}
+// 	}
+
+// 	return affinity
+// }
+
+// CorePodSecurityContextToHelm converts pod security context format for Helm Values
+// NOTE: SecurityContext doens't have fsGroup (PodSecurityContext has fsGroup)
+func CorePodSecurityContextToHelm(psc corev1.PodSecurityContext) map[string]interface{} {
+	helmSecurityContexts := make(map[string]interface{}, 0)
+	if psc.SELinuxOptions != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"seLinuxOptions"}, *psc.SELinuxOptions)
 	}
+	if psc.WindowsOptions != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"windowsOptions"}, *psc.WindowsOptions)
+	}
+	if psc.RunAsUser != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"runAsUser"}, *psc.RunAsUser)
+	}
+	if psc.RunAsGroup != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"runAsGroup"}, *psc.RunAsGroup)
+	}
+	if psc.RunAsNonRoot != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"runAsNonRoot"}, *psc.RunAsNonRoot)
+	}
+	if psc.SupplementalGroups != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"supplementalGroups"}, psc.SupplementalGroups)
+	}
+	if psc.FSGroup != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"fsGroup"}, *psc.FSGroup)
+	}
+	if psc.Sysctls != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"sysctls"}, psc.Sysctls)
+	}
+	return helmSecurityContexts
+}
+
+// OperatorAPISecurityContextToHelm converts security context format for Helm Values
+// NOTE: SecurityContext doens't have fsGroup (PodSecurityContext has fsGroup)
+func OperatorAPISecurityContextToHelm(opSecurityContext api.SecurityContext) map[string]interface{} {
+	helmSecurityContexts := make(map[string]interface{}, 0)
+	if opSecurityContext.FsGroup != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"fsGroup"}, *opSecurityContext.FsGroup)
+	}
+	if opSecurityContext.RunAsUser != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"runAsUser"}, *opSecurityContext.RunAsUser)
+	}
+	if opSecurityContext.RunAsGroup != nil {
+		util.SetHelmValueInMap(helmSecurityContexts, []string{"runAsGroup"}, *opSecurityContext.RunAsGroup)
+	}
+	return helmSecurityContexts
 }
 
 // GetCertsFromFlagsAndSetHelmValue converts synopsysctl certificate files to kube secrets

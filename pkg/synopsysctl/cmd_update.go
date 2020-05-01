@@ -100,16 +100,6 @@ var updateAlertCmd = &cobra.Command{
 			isOperatorBased = true
 		}
 
-		// Update the Helm Chart Location
-		alertVersion = util.GetValueFromRelease(instance, []string{"alert", "imageTag"}).(string)
-		if cmd.Flags().Lookup("version").Changed {
-			alertVersion = cmd.Flags().Lookup("version").Value.String()
-		}
-		err = SetHelmChartLocation(cmd.Flags(), alertChartName, alertVersion, &alertChartRepository)
-		if err != nil {
-			return fmt.Errorf("failed to set the app resources location due to %+v", err)
-		}
-
 		if cmd.Flag("version").Changed {
 			ok, err := util.IsNotDefaultVersionGreaterThanOrEqualTo(cmd.Flag("version").Value.String(), 5, 3, 1)
 			if err != nil {
@@ -121,6 +111,15 @@ var updateAlertCmd = &cobra.Command{
 		}
 
 		if !isOperatorBased && instance != nil {
+			// Update the Helm Chart Location
+			alertVersion = util.GetValueFromRelease(instance, []string{"alert", "imageTag"}).(string)
+			if cmd.Flags().Lookup("version").Changed {
+				alertVersion = cmd.Flags().Lookup("version").Value.String()
+			}
+			err = SetHelmChartLocation(cmd.Flags(), alertChartName, alertVersion, &alertChartRepository)
+			if err != nil {
+				return fmt.Errorf("failed to set the app resources location due to %+v", err)
+			}
 			err = updateAlertHelmBased(cmd, helmReleaseName, alertName)
 		} else if isOperatorBased {
 			versionFlag := cmd.Flag("version")

@@ -450,6 +450,14 @@ func GetValueFromRelease(release *release.Release, keyList []string) interface{}
 	return GetHelmValueFromMap(releaseValues, keyList)
 }
 
+// GetReleaseValues merges the default Chart Values with the user's set values
+// and retuns that set of values
+func GetReleaseValues(release *release.Release) map[string]interface{} {
+	chartValues := release.Chart.Values
+	userConfig := release.Config
+	return MergeMaps(chartValues, userConfig)
+}
+
 // MergeMaps Copied from https://github.com/helm/helm/blob/9b42702a4bced339ff424a78ad68dd6be6e1a80a/pkg/cli/values/options.go#L88
 func MergeMaps(a, b map[string]interface{}) map[string]interface{} {
 	out := make(map[string]interface{}, len(a))

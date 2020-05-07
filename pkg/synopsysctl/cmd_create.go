@@ -443,8 +443,14 @@ var createBlackDuckNativeCmd = &cobra.Command{
 			PrintComponent(v, "YAML") // helm only supports yaml
 		}
 
+		var extraFiles []string
+		size, found := helmValuesMap["size"]
+		if found {
+			extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", size.(string)))
+		}
+
 		// Check Dry Run before deploying any resources
-		err = util.TemplateWithHelm3(args[0], namespace, blackduckChartRepository, helmValuesMap)
+		err = util.TemplateWithHelm3(args[0], namespace, blackduckChartRepository, helmValuesMap, extraFiles...)
 		if err != nil {
 			return fmt.Errorf("failed to create Blackduck resources: %+v", err)
 		}

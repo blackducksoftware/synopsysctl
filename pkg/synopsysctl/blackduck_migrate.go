@@ -185,21 +185,22 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 	return destroyOperator(operatorNamespace, crdNamespace, skipDestroyorRestartOperator)
 }
 
-// isFeatureEnabled check whether the feature is enabled by reading through the Black Duck environment variables
-func isFeatureEnabled(environs []string, featureName string, expectedValue string) bool {
-	for _, value := range environs {
+// isFeatureEnabled check whether the feature is enabled by reading through the Black Duck environment variables and also it removes its corresponding entry in environs
+func isFeatureEnabled(environs []string, featureName string, expectedValue string) (bool, []string) {
+	for i, value := range environs {
 		if strings.Contains(value, featureName) {
+			environs = append(environs[:i], environs[i+1:]...)
 			values := strings.SplitN(value, ":", 2)
 			if len(values) == 2 {
 				mapValue := strings.ToLower(strings.TrimSpace(values[1]))
 				if strings.EqualFold(mapValue, expectedValue) {
-					return true
+					return true, environs
 				}
 			}
-			return false
+			return false, environs
 		}
 	}
-	return false
+	return false, environs
 }
 
 // blackDuckV1ToHelm converts Black Duck custom resources to helm flags
@@ -342,11 +343,13 @@ func blackDuckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 		util.SetHelmValueInMap(helmConfig, []string{"imagePullSecrets"}, bd.Spec.RegistryConfiguration.PullSecrets)
 	}
 
-	if isFeatureEnabled(bd.Spec.Environs, "ENABLE_SOURCE_UPLOADS", "true") {
+	var isSourceCodeUploadEnabled bool
+	if isSourceCodeUploadEnabled, bd.Spec.Environs = isFeatureEnabled(bd.Spec.Environs, "ENABLE_SOURCE_UPLOADS", "true"); isSourceCodeUploadEnabled {
 		util.SetHelmValueInMap(helmConfig, []string{"enableSourceCodeUpload"}, true)
 	}
 
-	if isFeatureEnabled(bd.Spec.Environs, "USE_BINARY_UPLOADS", "1") {
+	var isBDBAEnabled bool
+	if isBDBAEnabled, bd.Spec.Environs = isFeatureEnabled(bd.Spec.Environs, "USE_BINARY_UPLOADS", "1"); isBDBAEnabled {
 		util.SetHelmValueInMap(helmConfig, []string{"enableBinaryScanner"}, true)
 	}
 

@@ -145,7 +145,7 @@ func UpdateWithHelm3(releaseName, namespace, chartURL string, vals map[string]in
 	client.Namespace = namespace
 
 	if err := mergeExtraFilesToConfig(chart, vals, extraFiles); err != nil {
-		return err
+		return fmt.Errorf("failed to merge extra configuration files during update due to %s", err)
 	}
 
 	client.ResetValues = true                     // rememeber the values that have been set previously
@@ -157,7 +157,7 @@ func UpdateWithHelm3(releaseName, namespace, chartURL string, vals map[string]in
 }
 
 // TemplateWithHelm3 prints the kube manifest files for a resource
-func TemplateWithHelm3(releaseName, namespace, chartURL string, vals map[string]interface{}) error {
+func TemplateWithHelm3(releaseName, namespace, chartURL string, vals map[string]interface{}, extraFiles ...string) error {
 	actionConfig, err := CreateHelmActionConfiguration("", "", namespace)
 	if err != nil {
 		return err
@@ -170,6 +170,11 @@ func TemplateWithHelm3(releaseName, namespace, chartURL string, vals map[string]
 	if !validInstallableChart {
 		return err
 	}
+
+	if err := mergeExtraFilesToConfig(chart, vals, extraFiles); err != nil {
+		return fmt.Errorf("failed to merge extra configuration files during template due to %s", err)
+	}
+
 	templateOutput, err := RenderManifests(releaseName, namespace, chart, vals, actionConfig)
 	if err != nil {
 		return fmt.Errorf("failed to render kube manifest files due to %s", err)

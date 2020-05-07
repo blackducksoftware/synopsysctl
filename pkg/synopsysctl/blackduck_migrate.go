@@ -185,8 +185,8 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 	return destroyOperator(operatorNamespace, crdNamespace, skipDestroyorRestartOperator)
 }
 
-// isFeatureEnabled check whether the feature is enabled by reading through the Black Duck environment variables and also it removes its corresponding entry in environs
-func isFeatureEnabled(environs []string, featureName string, expectedValue string) (bool, []string) {
+// popEnvironAndCompareValue check whether for the particular feature name in Black Duck environment variables, it is matching an expected value and also it removes its corresponding entry in environs
+func popEnvironAndCompareValue(environs []string, featureName string, expectedValue string) (bool, []string) {
 	for i, value := range environs {
 		if strings.Contains(value, featureName) {
 			environs = append(environs[:i], environs[i+1:]...)
@@ -344,12 +344,12 @@ func blackDuckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 	}
 
 	var isSourceCodeUploadEnabled bool
-	if isSourceCodeUploadEnabled, bd.Spec.Environs = isFeatureEnabled(bd.Spec.Environs, "ENABLE_SOURCE_UPLOADS", "true"); isSourceCodeUploadEnabled {
+	if isSourceCodeUploadEnabled, bd.Spec.Environs = popEnvironAndCompareValue(bd.Spec.Environs, "ENABLE_SOURCE_UPLOADS", "true"); isSourceCodeUploadEnabled {
 		util.SetHelmValueInMap(helmConfig, []string{"enableSourceCodeUpload"}, true)
 	}
 
 	var isBDBAEnabled bool
-	if isBDBAEnabled, bd.Spec.Environs = isFeatureEnabled(bd.Spec.Environs, "USE_BINARY_UPLOADS", "1"); isBDBAEnabled {
+	if isBDBAEnabled, bd.Spec.Environs = popEnvironAndCompareValue(bd.Spec.Environs, "USE_BINARY_UPLOADS", "1"); isBDBAEnabled {
 		util.SetHelmValueInMap(helmConfig, []string{"enableBinaryScanner"}, true)
 	}
 

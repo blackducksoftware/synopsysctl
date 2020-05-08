@@ -1193,11 +1193,19 @@ var updatePolarisCmd = &cobra.Command{
 			return err
 		}
 
-		// Update the Helm Chart Location
-		polarisVersion = util.GetValueFromRelease(helmRelease, []string{"version"}).(string)
+		// Set the Version from the Release
 		if cmd.Flags().Lookup("version").Changed {
 			polarisVersion = cmd.Flags().Lookup("version").Value.String()
+			util.SetHelmValueInMap(helmValuesMap, []string{"version"}, polarisVersion)
+		} else {
+			if versionFromRelease := util.GetValueFromRelease(helmRelease, []string{"version"}); versionFromRelease != nil {
+				polarisVersion = versionFromRelease.(string)
+			} else {
+				return fmt.Errorf("please set --version for this update")
+			}
 		}
+
+		// Update the Helm Chart Location
 		err = SetHelmChartLocation(cmd.Flags(), polarisChartName, polarisVersion, &polarisChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
@@ -1242,11 +1250,19 @@ var updatePolarisReportingCmd = &cobra.Command{
 			return err
 		}
 
-		// Update the Helm Chart Location
-		polarisReportingVersion = util.GetValueFromRelease(helmRelease, []string{"version"}).(string)
+		// Set the Version from the Release
 		if cmd.Flags().Lookup("version").Changed {
 			polarisReportingVersion = cmd.Flags().Lookup("version").Value.String()
+			util.SetHelmValueInMap(helmValuesMap, []string{"version"}, polarisReportingVersion)
+		} else {
+			if versionFromRelease := util.GetValueFromRelease(helmRelease, []string{"version"}); versionFromRelease != nil {
+				polarisReportingVersion = versionFromRelease.(string)
+			} else {
+				return fmt.Errorf("please set --version for this update")
+			}
 		}
+
+		// Update the Helm Chart Location
 		err = SetHelmChartLocation(cmd.Flags(), polarisReportingChartName, polarisReportingVersion, &polarisReportingChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
@@ -1291,11 +1307,19 @@ var updateBDBACmd = &cobra.Command{
 			return err
 		}
 
-		// Update the Helm Chart Location
-		bdbaVersion = util.GetValueFromRelease(helmRelease, []string{"version"}).(string)
+		// Set the Version from the Release
 		if cmd.Flags().Lookup("version").Changed {
 			bdbaVersion = cmd.Flags().Lookup("version").Value.String()
+			util.SetHelmValueInMap(helmValuesMap, []string{"version"}, bdbaVersion)
+		} else {
+			if versionFromRelease := util.GetValueFromRelease(helmRelease, []string{"version"}); versionFromRelease != nil {
+				bdbaVersion = versionFromRelease.(string)
+			} else {
+				return fmt.Errorf("please set --version for this update")
+			}
 		}
+
+		// Update the Helm Chart Location
 		err = SetHelmChartLocation(cmd.Flags(), bdbaChartName, bdbaVersion, &bdbaChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)

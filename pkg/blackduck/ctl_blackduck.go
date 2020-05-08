@@ -262,7 +262,7 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 		case "external-postgres-ssl":
 			util.SetHelmValueInMap(ctl.args, []string{"postgres", "ssl"}, strings.ToUpper(ctl.flagTree.ExternalPostgresSsl) == "TRUE")
 		case "external-postgres-admin-password":
-			util.SetHelmValueInMap(ctl.args, []string{"postgres", "adminPassword"}, ctl.flagTree.ExternalPostgresUser)
+			util.SetHelmValueInMap(ctl.args, []string{"postgres", "adminPassword"}, ctl.flagTree.ExternalPostgresAdminPassword)
 		case "external-postgres-user-password":
 			util.SetHelmValueInMap(ctl.args, []string{"postgres", "userPassword"}, ctl.flagTree.ExternalPostgresUserPassword)
 		case "pvc-storage-class":

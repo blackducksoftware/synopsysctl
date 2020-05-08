@@ -151,9 +151,6 @@ func (ctl *HelmValuesFromCobraFlags) AddCRSpecFlagsToCommand(cmd *cobra.Command,
 	cmd.Flags().StringVar(&ctl.flagTree.ProxyCertificateFilePath, "proxy-certificate-file-path", ctl.flagTree.ProxyCertificateFilePath, "Absolute path to a file for the Black Duck proxy server’s Certificate Authority (CA)")
 	cmd.Flags().StringVar(&ctl.flagTree.AuthCustomCAFilePath, "auth-custom-ca-file-path", ctl.flagTree.AuthCustomCAFilePath, "Absolute path to a file for the Custom Auth CA for Black Duck")
 
-	if !strings.Contains(cmd.CommandPath(), "native") {
-		cmd.Flags().BoolVar(&ctl.flagTree.MigrationMode, "migration-mode", ctl.flagTree.MigrationMode, "Create Black Duck in the database-migration state")
-	}
 	cmd.Flags().StringSliceVar(&ctl.flagTree.Environs, "environs", ctl.flagTree.Environs, "List of environment variables")
 
 	cmd.Flags().StringVar(&ctl.flagTree.AdminPassword, "admin-password", ctl.flagTree.AdminPassword, "'admin' password of Postgres database")
@@ -201,11 +198,6 @@ func (ctl *HelmValuesFromCobraFlags) CheckValuesFromFlags(flagset *pflag.FlagSet
 			if !strings.Contains(environ, ":") {
 				return fmt.Errorf("invalid environ format - NAME:VALUE")
 			}
-		}
-	}
-	if FlagWasSet(flagset, "migration-mode") {
-		if val, _ := flagset.GetBool("migration-mode"); !val {
-			return fmt.Errorf("--migration-mode cannot be set to false")
 		}
 	}
 	if FlagWasSet(flagset, "seal-key") {

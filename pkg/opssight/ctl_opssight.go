@@ -118,7 +118,7 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, master bool) {
 	// [DEV NOTE:] please organize flags in order of importance
 
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", ctl.flagTree.Version, "Version of the OpsSight instance")
+	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "2.2.5", "Version of the OpsSight instance")
 	if master {
 		cobra.MarkFlagRequired(cmd.Flags(), "version")
 	}

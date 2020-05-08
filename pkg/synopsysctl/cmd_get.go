@@ -28,6 +28,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -59,7 +60,7 @@ func generateKubectlGetCommand(resourceName string, args []string) []string {
 		kubectlCmd = append(kubectlCmd, getSelector)
 	}
 	if getAllNamespaces {
-		kubectlCmd = append(kubectlCmd, allNamespacesFlag)
+		kubectlCmd = append(kubectlCmd, globals.AllNamespacesFlag)
 	}
 	return kubectlCmd
 }
@@ -89,7 +90,7 @@ var getAlertCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		alertName := args[0]
-		helmReleaseName := fmt.Sprintf("%s%s", alertName, AlertPostSuffix)
+		helmReleaseName := fmt.Sprintf("%s%s", alertName, globals.AlertPostSuffix)
 		helmRelease, err := util.GetWithHelm3(helmReleaseName, namespace, kubeConfigPath)
 		if err != nil {
 			cleanErrorMsg := cleanAlertHelmError(err.Error(), helmReleaseName, alertName)
@@ -221,7 +222,7 @@ var getPolarisCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		helmRelease, err := util.GetWithHelm3(polarisName, namespace, kubeConfigPath)
+		helmRelease, err := util.GetWithHelm3(globals.PolarisName, namespace, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("failed to get Polaris values: %+v", err)
 		}
@@ -245,7 +246,7 @@ var getPolarisReportingCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		helmRelease, err := util.GetWithHelm3(polarisReportingName, namespace, kubeConfigPath)
+		helmRelease, err := util.GetWithHelm3(globals.PolarisReportingName, namespace, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("failed to get Polaris-Reporting values: %+v", err)
 		}
@@ -269,7 +270,7 @@ var getBDBACmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		helmRelease, err := util.GetWithHelm3(bdbaName, namespace, kubeConfigPath)
+		helmRelease, err := util.GetWithHelm3(globals.BDBAName, namespace, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("failed to get BDBA values: %+v", err)
 		}

@@ -29,6 +29,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	opssightapi "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	"github.com/spf13/cobra"
@@ -86,10 +87,48 @@ type FlagTree struct {
 	PerceiverEnableArtifactoryPerceiver       string
 	PerceiverEnableArtifactoryPerceiverDumper string
 	PerceiverArtifactoryExpose                string
-	DefaultCPU                                string
-	DefaultMem                                string
-	ScannerCPU                                string
-	ScannerMem                                string
+}
+
+// DefaultFlagTree ...
+// [Dev Note]: These should match the Helm Chart's Values.yaml
+var DefaultFlagTree = FlagTree{
+	// Version
+	Version: globals.OpsSightVersion,
+	// Registry Configuration
+	// Log Level
+	LogLevel: "debug",
+	// Black Duck Configuration
+	BlackduckTLSVerification: "false",
+	// Metrics
+	EnableMetrics:    "true",
+	PrometheusExpose: util.NONE,
+	// Core
+	PerceptorExpose:                         util.NONE,
+	PerceptorCheckForStalledScansPauseHours: 999999,
+	PerceptorStalledScanClientTimeoutHours:  999999,
+	PerceptorModelMetricsPauseSeconds:       15,
+	PerceptorUnknownImagePauseMilliseconds:  15000,
+	PerceptorClientTimeoutMilliseconds:      100000,
+	// Processor
+	PerceiverAnnotationIntervalSeconds: 30,
+	PerceiverDumpIntervalMinutes:       30,
+	// Pod Processor
+	PerceiverEnablePodPerceiver: "true",
+	// Scanner
+	ScannerPodScannerClientTimeoutSeconds: 600,
+	ScannerPodReplicaCount:                1,
+	ScannerPodImageDirectory:              "/var/images",
+	// Image Getter
+	ScannerPodImageFacadeImagePullerType: "skopeo",
+	// Image Processor
+	PerceiverEnableImagePerceiver: "false",
+	// Quay Processor
+	PerceiverEnableQuayPerceiver: "false",
+	PerceiverQuayExpose:          util.NONE,
+	// Artifactory Processor
+	PerceiverEnableArtifactoryPerceiver:       "false",
+	PerceiverEnableArtifactoryPerceiverDumper: "false",
+	PerceiverArtifactoryExpose:                util.NONE,
 }
 
 // NewHelmValuesFromCobraFlags returns an initialized HelmValuesFromCobraFlags
@@ -120,14 +159,10 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().SortFlags = false
 
 	// Version
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "2.2.5", "Version of the OpsSight instance\n")
+	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of the OpsSight instance\n")
 
 	// Memory
-	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", ctl.flagTree.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs")
-	cmd.Flags().StringVar(&ctl.flagTree.DefaultCPU, "default-cpu", ctl.flagTree.DefaultCPU, "CPU size of Opssight")
-	cmd.Flags().StringVar(&ctl.flagTree.DefaultMem, "default-memory", ctl.flagTree.DefaultMem, "Memory size of Opssight")
-	cmd.Flags().StringVar(&ctl.flagTree.ScannerCPU, "scanner-cpu", ctl.flagTree.ScannerCPU, "CPU size of Opssight's Scanner")
-	cmd.Flags().StringVar(&ctl.flagTree.ScannerMem, "scanner-memory", ctl.flagTree.ScannerMem, "Memory size of Opssight's Scanner\n")
+	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", ctl.flagTree.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs\n")
 
 	// Registry Configuration
 	// cmd.Flags().StringVar(&ctl.flagTree.IsUpstream, "is-upstream", ctl.flagTree.IsUpstream, "If true, Upstream images and names will be used [true|false]")
@@ -135,7 +170,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringSliceVar(&ctl.flagTree.PullSecrets, "pull-secret-name", ctl.flagTree.PullSecrets, "Only if the registry requires authentication\n")
 	// cmd.Flags().StringSliceVar(&ctl.flagTree.ImageRegistries, "image-registries", ctl.flagTree.ImageRegistries, "List of image registries")
 
-	cmd.Flags().StringVar(&ctl.flagTree.LogLevel, "log-level", ctl.flagTree.LogLevel, "Log level of Opssight\n")
+	cmd.Flags().StringVar(&ctl.flagTree.LogLevel, "log-level", DefaultFlagTree.LogLevel, "Log level of Opssight\n")
 
 	// Black Duck Configuration
 	if master {
@@ -143,58 +178,58 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 		cmd.Flags().StringVar(&ctl.flagTree.BlackduckExternalHostsFilePath, "blackduck-external-hosts-file-path", ctl.flagTree.BlackduckExternalHostsFilePath, "Absolute path to a file containing a list of Black Duck External Hosts")
 		cmd.Flags().StringVar(&ctl.flagTree.BlackduckSecuredRegistriesFilePath, "blackduck-secured-registries-file-path", ctl.flagTree.BlackduckSecuredRegistriesFilePath, "Absolute path to a file containing a list of Black Duck Secured Registries")
 	}
-	cmd.Flags().StringVar(&ctl.flagTree.BlackduckTLSVerification, "blackduck-TLS-verification", ctl.flagTree.BlackduckTLSVerification, "If true, Opssight performs TLS Verification for Black Duck [true|false]\n")
+	cmd.Flags().StringVar(&ctl.flagTree.BlackduckTLSVerification, "blackduck-TLS-verification", DefaultFlagTree.BlackduckTLSVerification, "If true, Opssight performs TLS Verification for Black Duck [true|false]\n")
 	// cmd.Flags().IntVar(&ctl.flagTree.BlackduckInitialCount, "blackduck-initial-count", ctl.flagTree.BlackduckInitialCount, "Initial number of Black Duck instances to create")
 	// cmd.Flags().IntVar(&ctl.flagTree.BlackduckMaxCount, "blackduck-max-count", ctl.flagTree.BlackduckMaxCount, "Maximum number of Black Duck instances that can be created")
 	// cmd.Flags().StringVar(&ctl.flagTree.BlackduckType, "blackduck-type", ctl.flagTree.BlackduckType, "Type of Black Duck")
 	// cmd.Flags().StringVar(&ctl.flagTree.BlackduckPassword, "blackduck-password", ctl.flagTree.BlackduckPassword, "Password to use for all internal Blackduck 'sysadmin' account")
 
 	// Metrics
-	cmd.Flags().StringVar(&ctl.flagTree.EnableMetrics, "enable-metrics", ctl.flagTree.EnableMetrics, "If true, Opssight records Prometheus Metrics [true|false]")
+	cmd.Flags().StringVar(&ctl.flagTree.EnableMetrics, "enable-metrics", DefaultFlagTree.EnableMetrics, "If true, Opssight records Prometheus Metrics [true|false]")
 	if master {
-		cmd.Flags().StringVar(&ctl.flagTree.PrometheusExpose, "expose-metrics", util.NONE, "Type of service of Opssight's Prometheus Metrics [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
+		cmd.Flags().StringVar(&ctl.flagTree.PrometheusExpose, "expose-metrics", DefaultFlagTree.PrometheusExpose, "Type of service of Opssight's Prometheus Metrics [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
 	} else {
 		cmd.Flags().StringVar(&ctl.flagTree.PrometheusExpose, "expose-metrics", ctl.flagTree.PrometheusExpose, "Type of service of Opssight's Prometheus Metrics [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
 	}
 
 	// Core
-	cmd.Flags().StringVar(&ctl.flagTree.PerceptorExpose, "opssight-core-expose", ctl.flagTree.PerceptorExpose, "Type of service for Opssight's core model [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]")
-	cmd.Flags().IntVar(&ctl.flagTree.PerceptorCheckForStalledScansPauseHours, "opssight-core-check-scan-hours", ctl.flagTree.PerceptorCheckForStalledScansPauseHours, "Hours Opssight's Core waits between checking for scans")
-	cmd.Flags().IntVar(&ctl.flagTree.PerceptorStalledScanClientTimeoutHours, "opssight-core-scan-client-timeout-hours", ctl.flagTree.PerceptorStalledScanClientTimeoutHours, "Hours until Opssight's Core stops checking for scans")
-	cmd.Flags().IntVar(&ctl.flagTree.PerceptorModelMetricsPauseSeconds, "opssight-core-metrics-pause-seconds", ctl.flagTree.PerceptorModelMetricsPauseSeconds, "Core metrics pause in seconds")
-	cmd.Flags().IntVar(&ctl.flagTree.PerceptorUnknownImagePauseMilliseconds, "opssight-core-unknown-image-pause-milliseconds", ctl.flagTree.PerceptorUnknownImagePauseMilliseconds, "Opssight Core's unknown image pause in milliseconds")
-	cmd.Flags().IntVar(&ctl.flagTree.PerceptorClientTimeoutMilliseconds, "opssight-core-client-timeout-milliseconds", ctl.flagTree.PerceptorClientTimeoutMilliseconds, "Seconds for Opssight Core's timeout for Black Duck Scan Client\n")
+	cmd.Flags().StringVar(&ctl.flagTree.PerceptorExpose, "opssight-core-expose", DefaultFlagTree.PerceptorExpose, "Type of service for Opssight's core model [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]")
+	cmd.Flags().IntVar(&ctl.flagTree.PerceptorCheckForStalledScansPauseHours, "opssight-core-check-scan-hours", DefaultFlagTree.PerceptorCheckForStalledScansPauseHours, "Hours Opssight's Core waits between checking for scans")
+	cmd.Flags().IntVar(&ctl.flagTree.PerceptorStalledScanClientTimeoutHours, "opssight-core-scan-client-timeout-hours", DefaultFlagTree.PerceptorStalledScanClientTimeoutHours, "Hours until Opssight's Core stops checking for scans")
+	cmd.Flags().IntVar(&ctl.flagTree.PerceptorModelMetricsPauseSeconds, "opssight-core-metrics-pause-seconds", DefaultFlagTree.PerceptorModelMetricsPauseSeconds, "Core metrics pause in seconds")
+	cmd.Flags().IntVar(&ctl.flagTree.PerceptorUnknownImagePauseMilliseconds, "opssight-core-unknown-image-pause-milliseconds", DefaultFlagTree.PerceptorUnknownImagePauseMilliseconds, "Opssight Core's unknown image pause in milliseconds")
+	cmd.Flags().IntVar(&ctl.flagTree.PerceptorClientTimeoutMilliseconds, "opssight-core-client-timeout-milliseconds", DefaultFlagTree.PerceptorClientTimeoutMilliseconds, "Seconds for Opssight Core's timeout for Black Duck Scan Client\n")
 
 	// Processor
 	cmd.Flags().StringVar(&ctl.flagTree.PerceiverTLSCertificatePath, "processor-TLS-certificate-path", ctl.flagTree.PerceiverTLSCertificatePath, "Accepts certificate file to start webhook receiver with TLS enabled, works in conjunction with Quay and Artifactory processors")
 	cmd.Flags().StringVar(&ctl.flagTree.PerceiverTLSKeyPath, "processor-TLS-key-path", ctl.flagTree.PerceiverTLSKeyPath, "Accepts key file to sign the TLS certificate, works in conjunction with Quay and Artifactory processors")
-	cmd.Flags().IntVar(&ctl.flagTree.PerceiverAnnotationIntervalSeconds, "processor-annotation-interval-seconds", ctl.flagTree.PerceiverAnnotationIntervalSeconds, "Refresh interval to get latest scan results and apply to Pods and Images")
-	cmd.Flags().IntVar(&ctl.flagTree.PerceiverDumpIntervalMinutes, "processor-dump-interval-minutes", ctl.flagTree.PerceiverDumpIntervalMinutes, "Minutes Image Processor and Pod Processor wait between creating dumps of data/metrics\n")
+	cmd.Flags().IntVar(&ctl.flagTree.PerceiverAnnotationIntervalSeconds, "processor-annotation-interval-seconds", DefaultFlagTree.PerceiverAnnotationIntervalSeconds, "Refresh interval to get latest scan results and apply to Pods and Images")
+	cmd.Flags().IntVar(&ctl.flagTree.PerceiverDumpIntervalMinutes, "processor-dump-interval-minutes", DefaultFlagTree.PerceiverDumpIntervalMinutes, "Minutes Image Processor and Pod Processor wait between creating dumps of data/metrics\n")
 
 	// Pod Processor
-	cmd.Flags().StringVar(&ctl.flagTree.PerceiverEnablePodPerceiver, "enable-pod-processor", ctl.flagTree.PerceiverEnablePodPerceiver, "If true, Pod Processor discovers pods for scanning [true|false]")
+	cmd.Flags().StringVar(&ctl.flagTree.PerceiverEnablePodPerceiver, "enable-pod-processor", DefaultFlagTree.PerceiverEnablePodPerceiver, "If true, Pod Processor discovers pods for scanning [true|false]")
 	cmd.Flags().StringVar(&ctl.flagTree.PerceiverPodPerceiverNamespaceFilter, "pod-processor-namespace-filter", ctl.flagTree.PerceiverPodPerceiverNamespaceFilter, "Pod Processor's filter to scan pods by their namespace\n")
 
 	// Scanner
-	cmd.Flags().IntVar(&ctl.flagTree.ScannerPodScannerClientTimeoutSeconds, "scanner-client-timeout-seconds", ctl.flagTree.ScannerPodScannerClientTimeoutSeconds, "Seconds before Scanner times out for Black Duck's Scan Client")
-	cmd.Flags().IntVar(&ctl.flagTree.ScannerPodReplicaCount, "scannerpod-replica-count", ctl.flagTree.ScannerPodReplicaCount, "Number of Containers for scanning")
-	cmd.Flags().StringVar(&ctl.flagTree.ScannerPodImageDirectory, "scannerpod-image-directory", ctl.flagTree.ScannerPodImageDirectory, "Directory in Scanner's pod where images are stored for scanning\n")
+	cmd.Flags().IntVar(&ctl.flagTree.ScannerPodScannerClientTimeoutSeconds, "scanner-client-timeout-seconds", DefaultFlagTree.ScannerPodScannerClientTimeoutSeconds, "Seconds before Scanner times out for Black Duck's Scan Client")
+	cmd.Flags().IntVar(&ctl.flagTree.ScannerPodReplicaCount, "scannerpod-replica-count", DefaultFlagTree.ScannerPodReplicaCount, "Number of Containers for scanning")
+	cmd.Flags().StringVar(&ctl.flagTree.ScannerPodImageDirectory, "scannerpod-image-directory", DefaultFlagTree.ScannerPodImageDirectory, "Directory in Scanner's pod where images are stored for scanning\n")
 
 	// Image Getter
 	// cmd.Flags().StringVar(&ctl.flagTree.ScannerPodImageFacadeInternalRegistriesFilePath, "image-getter-secure-registries-file-path", ctl.flagTree.ScannerPodImageFacadeInternalRegistriesFilePath, "Absolute path to a file for secure docker registries credentials to pull the images for scan")
-	cmd.Flags().StringVar(&ctl.flagTree.ScannerPodImageFacadeImagePullerType, "image-getter-image-puller-type", ctl.flagTree.ScannerPodImageFacadeImagePullerType, "Type of Image Getter's Image Puller [docker|skopeo]\n")
+	cmd.Flags().StringVar(&ctl.flagTree.ScannerPodImageFacadeImagePullerType, "image-getter-image-puller-type", DefaultFlagTree.ScannerPodImageFacadeImagePullerType, "Type of Image Getter's Image Puller [docker|skopeo]\n")
 
 	// Image Processor
-	cmd.Flags().StringVar(&ctl.flagTree.PerceiverEnableImagePerceiver, "enable-image-processor", ctl.flagTree.PerceiverEnableImagePerceiver, "If true, Image Processor discovers images for scanning [true|false]\n")
+	cmd.Flags().StringVar(&ctl.flagTree.PerceiverEnableImagePerceiver, "enable-image-processor", DefaultFlagTree.PerceiverEnableImagePerceiver, "If true, Image Processor discovers images for scanning [true|false]\n")
 
 	// Quay Processor
-	cmd.Flags().StringVar(&ctl.flagTree.PerceiverEnableQuayPerceiver, "enable-quay-processor", ctl.flagTree.PerceiverEnableQuayPerceiver, "If true, Quay Processor discovers quay images for scanning [true|false]")
-	cmd.Flags().StringVar(&ctl.flagTree.PerceiverQuayExpose, "expose-quay-processor", ctl.flagTree.PerceiverQuayExpose, "Type of service for Quay processor [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
+	cmd.Flags().StringVar(&ctl.flagTree.PerceiverEnableQuayPerceiver, "enable-quay-processor", DefaultFlagTree.PerceiverEnableQuayPerceiver, "If true, Quay Processor discovers quay images for scanning [true|false]")
+	cmd.Flags().StringVar(&ctl.flagTree.PerceiverQuayExpose, "expose-quay-processor", DefaultFlagTree.PerceiverQuayExpose, "Type of service for Quay processor [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
 
 	// Artifactory Processor
-	cmd.Flags().StringVar(&ctl.flagTree.PerceiverEnableArtifactoryPerceiver, "enable-artifactory-processor", ctl.flagTree.PerceiverEnableArtifactoryPerceiver, "If true, Artifactory Processor discovers artifactory images for scanning [true|false]")
-	cmd.Flags().StringVar(&ctl.flagTree.PerceiverEnableArtifactoryPerceiverDumper, "enable-artifactory-processor-dumper", ctl.flagTree.PerceiverEnableArtifactoryPerceiverDumper, "If true, Artifactory Processor dumps all docker images in an artifactory instance for scanning [true|false]")
-	cmd.Flags().StringVar(&ctl.flagTree.PerceiverArtifactoryExpose, "expose-artifactory-processor", ctl.flagTree.PerceiverArtifactoryExpose, "Type of service for Artifactory processor [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]")
+	cmd.Flags().StringVar(&ctl.flagTree.PerceiverEnableArtifactoryPerceiver, "enable-artifactory-processor", DefaultFlagTree.PerceiverEnableArtifactoryPerceiver, "If true, Artifactory Processor discovers artifactory images for scanning [true|false]")
+	cmd.Flags().StringVar(&ctl.flagTree.PerceiverEnableArtifactoryPerceiverDumper, "enable-artifactory-processor-dumper", DefaultFlagTree.PerceiverEnableArtifactoryPerceiverDumper, "If true, Artifactory Processor dumps all docker images in an artifactory instance for scanning [true|false]")
+	cmd.Flags().StringVar(&ctl.flagTree.PerceiverArtifactoryExpose, "expose-artifactory-processor", DefaultFlagTree.PerceiverArtifactoryExpose, "Type of service for Artifactory processor [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]")
 }
 
 // CheckValuesFromFlags returns an error if a value stored in the struct will not be able to be

@@ -53,7 +53,7 @@ var baseChartRepository = "https://sig-repo.synopsys.com/sig-cloudnative"
 const AlertPostSuffix = "-alert"
 
 // Alert Helm Chart Constants
-var alertVersion = "5.3.1"
+var alertVersion = "5.3.2"
 var alertChartName = "synopsys-alert"
 var alertChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, alertChartName, alertVersion)
 
@@ -75,7 +75,7 @@ var polarisChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, po
 
 // Polaris Reporting Helm Chart Constants
 var polarisReportingName = "polaris-reporting"
-var polarisReportingVersion = "2020.03"
+var polarisReportingVersion = "2020.04"
 var polarisReportingChartName = "polaris-helmchart-reporting"
 var polarisReportingChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, polarisReportingChartName, polarisReportingVersion)
 

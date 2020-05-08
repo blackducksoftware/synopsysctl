@@ -122,6 +122,7 @@ const (
 // The flags map to fields in the CRSpecBuilderFromCobraFlags struct.
 // master - if false, doesn't add flags that all Users shouldn't use
 func (ctl *HelmValuesFromCobraFlags) AddCRSpecFlagsToCommand(cmd *cobra.Command, master bool) {
+	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "2020.4.0", "Version of Black Duck")
 	if master {
 		cmd.Flags().StringVar(&ctl.flagTree.PvcStorageClass, "pvc-storage-class", ctl.flagTree.PvcStorageClass, "Name of Storage Class for the PVC")
 		cmd.Flags().StringVar(&ctl.flagTree.PersistentStorage, "persistent-storage", "true", "If true, Black Duck has persistent storage [true|false]")
@@ -129,7 +130,6 @@ func (ctl *HelmValuesFromCobraFlags) AddCRSpecFlagsToCommand(cmd *cobra.Command,
 	}
 	cmd.Flags().StringVar(&ctl.flagTree.Size, "size", ctl.flagTree.Size, "Size of Black Duck [small|medium|large|x-large]")
 	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", ctl.flagTree.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs")
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "2020.4.0", "Version of Black Duck")
 	if master {
 		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", util.NONE, "Service type of Black Duck webserver's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]")
 	} else {

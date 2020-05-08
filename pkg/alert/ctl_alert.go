@@ -89,7 +89,7 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 // master=false is used to add a subset of flags for updating an instance
 func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, master bool) {
 	// Application Version and Image Tag
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "5.3.0", "Version of Alert")
+	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "5.3.2", "Version of Alert")
 	if master {
 		cobra.MarkFlagRequired(cmd.Flags(), "version")
 	}

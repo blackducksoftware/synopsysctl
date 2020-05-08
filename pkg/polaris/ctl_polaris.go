@@ -103,7 +103,7 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, master bool) {
 
 	// [DEV NOTE:] please organize flags in order of importance
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", ctl.flagTree.Version, "Version of Polaris you want to install [Example: \"2019.11\"]\n")
+	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "2020.03", "Version of Polaris you want to install [Example: \"2019.11\"]\n")
 
 	// domain-name specific flags
 	cmd.Flags().StringVar(&ctl.flagTree.IngressClass, "ingress-class", "nginx", "Name of ingress class")

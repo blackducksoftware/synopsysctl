@@ -90,7 +90,7 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 // master=false is used to add a subset of flags for updating an instance
 func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, master bool) {
 	// [DEV NOTE:] please organize flags in order of importance and group related flags
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "0.0.69", "Version of Polaris-Reporting you want to install [Example: \"1.0.0\"]\n") // TODO: Put a real version here
+	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "2020.04", "Version of Polaris-Reporting you want to install\n")
 
 	// domain specific flags
 	cmd.Flags().StringVar(&ctl.flagTree.FQDN, "fqdn", "nginx", "Fully qualified domain name [Example: \"example.polaris.synopsys.com\"]")

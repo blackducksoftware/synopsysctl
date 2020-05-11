@@ -63,7 +63,7 @@ var opssightChartName = "opssight"
 var opssightChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, opssightChartName, opssightVersion)
 
 // Black Duck Helm Chart Constants
-var blackDuckVersion = "2020.4.0"
+var blackDuckVersion = "2020.4.1"
 var blackDuckChartName = "blackduck"
 var blackduckChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, blackDuckChartName, blackDuckVersion)
 

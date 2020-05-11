@@ -455,6 +455,19 @@ func GetValueFromRelease(release *release.Release, keyList []string) interface{}
 	return GetHelmValueFromMap(releaseValues, keyList)
 }
 
+// DeepCopyHelmValuesMap copies the src map to the dest map. Values in new map have different pointers/references
+func DeepCopyHelmValuesMap(src map[string]interface{}, dest map[string]interface{}) error {
+	jsonStr, err := json.Marshal(src)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(jsonStr, &dest)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // GetReleaseValues merges the default Chart Values with the user's set values
 // and retuns that set of values
 func GetReleaseValues(release *release.Release) map[string]interface{} {

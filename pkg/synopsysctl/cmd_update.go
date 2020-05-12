@@ -628,11 +628,18 @@ func setBlackDuckFileOwnershipJob(namespace string, name string, pvcName string,
 			}
 			if job.Status.Succeeded > 0 {
 				log.Infof("successfully set the group ownership of files for PV '%s' in namespace '%s'", pvcName, namespace)
-				kubeClient.BatchV1().Jobs(job.Namespace).Delete(job.Name, &metav1.DeleteOptions{})
+
+				// Delete the Job
+				deletePodsPolicy := metav1.DeletePropagationBackground
+				err = kubeClient.BatchV1().Jobs(job.Namespace).Delete(job.Name, &metav1.DeleteOptions{PropagationPolicy: &deletePodsPolicy})
+				if err != nil {
+					log.Warnf("failed to delete Security Context Jobs '%s' due to %s", job.Name, err)
+				}
 				return nil
 			}
 		}
 	}
+	return nil
 }
 
 // updateBlackDuckMasterKeyCmd create new Black Duck master key for source code upload in the cluster

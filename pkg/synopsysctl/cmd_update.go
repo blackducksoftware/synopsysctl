@@ -463,6 +463,10 @@ func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion
 		if strings.ToUpper(currState) != "STOPPED" {
 			log.Infof("stopping Black Duck to apply Security Context changes")
 			tmpValuesMap := make(map[string]interface{})
+			err = util.DeepCopyHelmValuesMap(helmReleaseValues, tmpValuesMap) // don't update actual values so the Update Command will restart the instance
+			if err != nil {
+				return fmt.Errorf("failed to deep copy values for stopping Black Duck: %+v", err)
+			}
 			util.SetHelmValueInMap(tmpValuesMap, []string{"status"}, "Stopped")
 			err = util.UpdateWithHelm3(blackDuckName, namespace, blackduckChartRepository, tmpValuesMap, kubeConfigPath)
 			if err != nil {

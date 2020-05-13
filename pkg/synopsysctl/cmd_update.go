@@ -335,6 +335,23 @@ var updateBlackDuckCmd = &cobra.Command{
 				}
 			}
 
+			var sizeYAMLFileNameInChart string
+			if cmd.Flag("size").Changed {
+				sizeYAMLFileNameInChart = fmt.Sprintf("%s.yaml", cmd.Flag("size").Value.String())
+			} else {
+				if size, found := instance.Config["size"]; found && len(size.(string)) > 0 {
+					sizeYAMLFileNameInChart = fmt.Sprintf("%s.yaml", size.(string))
+				}
+			}
+
+			if len(sizeYAMLFileNameInChart) > 0 {
+				sizeValuesFromChart, err := util.ConvertFilesFromChartToMap(namespace, kubeConfigPath, blackduckChartRepository, sizeYAMLFileNameInChart)
+				if err != nil {
+					return err
+				}
+				instance.Config = util.MergeMaps(instance.Config, sizeValuesFromChart)
+			}
+
 			updateBlackDuckCobraHelper.SetArgs(instance.Config)
 			helmValuesMap, err := updateBlackDuckCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
 			if err != nil {
@@ -359,12 +376,6 @@ var updateBlackDuckCmd = &cobra.Command{
 				}
 			}
 
-			var extraFiles []string
-			size, found := instance.Config["size"]
-			if found {
-				extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", size.(string)))
-			}
-
 			// Update Security Context Permissions
 			newVals := util.MergeMaps(instance.Chart.Values, helmValuesMap)
 			err = runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion, newVals, cmd.Flags())
@@ -373,7 +384,7 @@ var updateBlackDuckCmd = &cobra.Command{
 			}
 
 			// Deploy resources
-			if err := util.UpdateWithHelm3(blackDuckName, blackDuckNamespace, blackduckChartRepository, helmValuesMap, kubeConfigPath, extraFiles...); err != nil {
+			if err := util.UpdateWithHelm3(blackDuckName, blackDuckNamespace, blackduckChartRepository, helmValuesMap, kubeConfigPath); err != nil {
 				return fmt.Errorf("failed to update Black Duck due to %+v", err)
 			}
 
@@ -639,7 +650,6 @@ func setBlackDuckFileOwnershipJob(namespace string, name string, pvcName string,
 			}
 		}
 	}
-	return nil
 }
 
 // updateBlackDuckMasterKeyCmd create new Black Duck master key for source code upload in the cluster

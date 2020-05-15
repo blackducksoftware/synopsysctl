@@ -344,6 +344,8 @@ var updateBlackDuckCmd = &cobra.Command{
 				}
 			}
 
+			sizeYAMLFileNameInChart = strings.ToLower(sizeYAMLFileNameInChart)
+
 			if len(sizeYAMLFileNameInChart) > 0 {
 				sizeValuesFromChart, err := util.ConvertFilesFromChartToMap(namespace, kubeConfigPath, blackduckChartRepository, sizeYAMLFileNameInChart)
 				if err != nil {

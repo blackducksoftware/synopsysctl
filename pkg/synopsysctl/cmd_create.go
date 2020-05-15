@@ -352,7 +352,7 @@ var createBlackDuckCmd = &cobra.Command{
 		var extraFiles []string
 		size, found := helmValuesMap["size"]
 		if found {
-			extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", size.(string)))
+			extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", strings.ToLower(size.(string))))
 		}
 
 		// Check Dry Run before deploying any resources
@@ -446,7 +446,7 @@ var createBlackDuckNativeCmd = &cobra.Command{
 		var extraFiles []string
 		size, found := helmValuesMap["size"]
 		if found {
-			extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", size.(string)))
+			extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", strings.ToLower(size.(string))))
 		}
 
 		// Check Dry Run before deploying any resources

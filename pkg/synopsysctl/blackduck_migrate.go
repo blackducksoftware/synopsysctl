@@ -92,7 +92,7 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 	var extraFiles []string
 	size, found := helmValuesMap["size"]
 	if found {
-		extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", size.(string)))
+		extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", strings.ToLower(size.(string))))
 	}
 
 	secrets, err := blackduck.GetCertsFromFlagsAndSetHelmValue(bd.Name, namespace, flags, helmValuesMap)
@@ -404,7 +404,7 @@ func blackDuckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 		util.SetHelmValueInMap(helmConfig, []string{"webapp", "persistentVolumeClaimName"}, fmt.Sprintf("%s-blackduck-webapp", bd.Name))
 	}
 
-	util.SetHelmValueInMap(helmConfig, []string{"size"}, bd.Spec.Size)
+	util.SetHelmValueInMap(helmConfig, []string{"size"}, strings.ToLower(bd.Spec.Size))
 
 	// expose service
 	util.SetHelmValueInMap(helmConfig, []string{"exposeui"}, false)

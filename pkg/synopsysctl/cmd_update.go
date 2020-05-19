@@ -868,7 +868,8 @@ var updateOpsSightCmd = &cobra.Command{
 		updateOpsSightCobraHelper.SetArgs(helmRelease.Config)
 
 		// Update the Helm Chart Location
-		opssightVersion = util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
+		opssightImageTag := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
+		opssightVersion := opssightVersionToChartVersion[opssightImageTag]
 		if cmd.Flags().Lookup("version").Changed {
 			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
@@ -938,7 +939,8 @@ var updateOpsSightExternalHostCmd = &cobra.Command{
 		helmValuesMap := helmRelease.Config
 
 		// Update the Helm Chart Location
-		opssightVersion = util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
+		opssightImageTag := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
+		opssightVersion := opssightVersionToChartVersion[opssightImageTag]
 		if cmd.Flags().Lookup("version").Changed {
 			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
@@ -1023,7 +1025,8 @@ var updateOpsSightExternalHostNativeCmd = &cobra.Command{
 		helmValuesMap := helmRelease.Config
 
 		// Update the Helm Chart Location
-		opssightVersion = util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
+		opssightImageTag := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
+		opssightVersion := opssightVersionToChartVersion[opssightImageTag]
 		if cmd.Flags().Lookup("version").Changed {
 			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
@@ -1095,7 +1098,8 @@ var updateOpsSightAddRegistryCmd = &cobra.Command{
 		helmValuesMap := helmRelease.Config
 
 		// Update the Helm Chart Location
-		opssightVersion = util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
+		opssightImageTag := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
+		opssightVersion := opssightVersionToChartVersion[opssightImageTag]
 		if cmd.Flags().Lookup("version").Changed {
 			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
@@ -1156,7 +1160,8 @@ var updateOpsSightAddRegistryNativeCmd = &cobra.Command{
 		helmValuesMap := helmRelease.Config
 
 		// Update the Helm Chart Location
-		opssightVersion = util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
+		opssightImageTag := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
+		opssightVersion := opssightVersionToChartVersion[opssightImageTag]
 		if cmd.Flags().Lookup("version").Changed {
 			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}

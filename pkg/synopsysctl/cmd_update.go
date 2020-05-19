@@ -869,7 +869,7 @@ var updateOpsSightCmd = &cobra.Command{
 
 		// Update the Helm Chart Location
 		opssightImageTag := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
-		opssightVersion := opssightVersionToChartVersion[opssightImageTag]
+		opssightVersion = opssightVersionToChartVersion[opssightImageTag]
 		if cmd.Flags().Lookup("version").Changed {
 			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
@@ -940,7 +940,7 @@ var updateOpsSightExternalHostCmd = &cobra.Command{
 
 		// Update the Helm Chart Location
 		opssightImageTag := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
-		opssightVersion := opssightVersionToChartVersion[opssightImageTag]
+		opssightVersion = opssightVersionToChartVersion[opssightImageTag]
 		if cmd.Flags().Lookup("version").Changed {
 			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
@@ -1026,7 +1026,7 @@ var updateOpsSightExternalHostNativeCmd = &cobra.Command{
 
 		// Update the Helm Chart Location
 		opssightImageTag := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
-		opssightVersion := opssightVersionToChartVersion[opssightImageTag]
+		opssightVersion = opssightVersionToChartVersion[opssightImageTag]
 		if cmd.Flags().Lookup("version").Changed {
 			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
@@ -1099,7 +1099,7 @@ var updateOpsSightAddRegistryCmd = &cobra.Command{
 
 		// Update the Helm Chart Location
 		opssightImageTag := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
-		opssightVersion := opssightVersionToChartVersion[opssightImageTag]
+		opssightVersion = opssightVersionToChartVersion[opssightImageTag]
 		if cmd.Flags().Lookup("version").Changed {
 			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
@@ -1161,7 +1161,7 @@ var updateOpsSightAddRegistryNativeCmd = &cobra.Command{
 
 		// Update the Helm Chart Location
 		opssightImageTag := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
-		opssightVersion := opssightVersionToChartVersion[opssightImageTag]
+		opssightVersion = opssightVersionToChartVersion[opssightImageTag]
 		if cmd.Flags().Lookup("version").Changed {
 			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}

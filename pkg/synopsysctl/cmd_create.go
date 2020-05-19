@@ -496,6 +496,9 @@ var createOpsSightCmd = &cobra.Command{
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
+		// Set the version in the Values
+		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, opssightVersion)
+
 		// Check Dry Run before deploying any resources
 		err = util.CreateWithHelm3(opssightName, namespace, opssightChartRepository, helmValuesMap, kubeConfigPath, true)
 		if err != nil {
@@ -547,6 +550,9 @@ var createOpsSightNativeCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
+
+		// Set the version in the Values
+		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, opssightVersion)
 
 		// Print OpsSight Resources
 		err = util.TemplateWithHelm3(opssightName, namespace, opssightChartRepository, helmValuesMap)

@@ -146,9 +146,9 @@ var stopOpsSightCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		opssightImageTag := util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
-		opssightVersion := opssightVersionToChartVersion[opssightImageTag]
-		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion, &opssightChartRepository)
+		opssightVersion = util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
+		chartVersion := opssightVersionToChartVersion[opssightVersion]
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, chartVersion, &opssightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}

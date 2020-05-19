@@ -868,12 +868,12 @@ var updateOpsSightCmd = &cobra.Command{
 		updateOpsSightCobraHelper.SetArgs(helmRelease.Config)
 
 		// Update the Helm Chart Location
-		opssightImageTag := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
-		opssightVersion = opssightVersionToChartVersion[opssightImageTag]
+		opssightVersion = util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
 		if cmd.Flags().Lookup("version").Changed {
 			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion, &opssightChartRepository)
+		chartVersion := opssightVersionToChartVersion[opssightVersion]
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, chartVersion, &opssightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -939,12 +939,12 @@ var updateOpsSightExternalHostCmd = &cobra.Command{
 		helmValuesMap := helmRelease.Config
 
 		// Update the Helm Chart Location
-		opssightImageTag := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
-		opssightVersion = opssightVersionToChartVersion[opssightImageTag]
+		opssightVersion = util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
 		if cmd.Flags().Lookup("version").Changed {
 			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion, &opssightChartRepository)
+		chartVersion := opssightVersionToChartVersion[opssightVersion]
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, chartVersion, &opssightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -1025,12 +1025,12 @@ var updateOpsSightExternalHostNativeCmd = &cobra.Command{
 		helmValuesMap := helmRelease.Config
 
 		// Update the Helm Chart Location
-		opssightImageTag := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
-		opssightVersion = opssightVersionToChartVersion[opssightImageTag]
+		opssightVersion = util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
 		if cmd.Flags().Lookup("version").Changed {
 			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion, &opssightChartRepository)
+		chartVersion := opssightVersionToChartVersion[opssightVersion]
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, chartVersion, &opssightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -1098,12 +1098,12 @@ var updateOpsSightAddRegistryCmd = &cobra.Command{
 		helmValuesMap := helmRelease.Config
 
 		// Update the Helm Chart Location
-		opssightImageTag := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
-		opssightVersion = opssightVersionToChartVersion[opssightImageTag]
+		opssightVersion = util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
 		if cmd.Flags().Lookup("version").Changed {
 			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion, &opssightChartRepository)
+		chartVersion := opssightVersionToChartVersion[opssightVersion]
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, chartVersion, &opssightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -1160,12 +1160,12 @@ var updateOpsSightAddRegistryNativeCmd = &cobra.Command{
 		helmValuesMap := helmRelease.Config
 
 		// Update the Helm Chart Location
-		opssightImageTag := util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
-		opssightVersion = opssightVersionToChartVersion[opssightImageTag]
+		opssightVersion = util.GetValueFromRelease(helmRelease, []string{"imageTag"}).(string)
 		if cmd.Flags().Lookup("version").Changed {
 			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion, &opssightChartRepository)
+		chartVersion := opssightVersionToChartVersion[opssightVersion]
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, chartVersion, &opssightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}

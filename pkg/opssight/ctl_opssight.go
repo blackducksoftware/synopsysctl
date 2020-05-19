@@ -249,8 +249,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 			log.Debugf("flag '%s': CHANGED", f.Name)
 			switch f.Name {
 			case "version":
-				splitVersion := strings.Split(ctl.flagTree.Version, "-")
-				util.SetHelmValueInMap(ctl.args, []string{"imageTag"}, splitVersion[0])
+				util.SetHelmValueInMap(ctl.args, []string{"imageTag"}, ctl.flagTree.Version)
 			case "deployment-resources-file-path":
 				util.GetDeploymentResources(ctl.flagTree.DeploymentResourcesFilePath, ctl.args, "heapMaxMemory") // OpsSight doens't currently use heapMaxMemory
 			// case "is-upstream":

@@ -58,8 +58,8 @@ var alertChartName = "synopsys-alert"
 var alertChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, alertChartName, alertVersion)
 
 // Opssight Helm Chart Constants
-var opssightVersion = "2.2.5"
-var opssightChartName = "opssight"
+var opssightVersion = "2.2.5-1"
+var opssightChartName = "blackduck-connector"
 var opssightChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, opssightChartName, opssightVersion)
 
 // Black Duck Helm Chart Constants

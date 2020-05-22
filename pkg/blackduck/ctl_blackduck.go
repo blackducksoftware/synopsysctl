@@ -178,7 +178,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCRSpecFlagsToCommand(cmd *cobra.Command,
 	// Enable Features
 	cmd.Flags().StringVar(&ctl.flagTree.LivenessProbes, "liveness-probes", ctl.flagTree.LivenessProbes, "If true, Black Duck uses liveness probes [true|false]")
 	cmd.Flags().BoolVar(&ctl.flagTree.EnableBinaryAnalysis, "enable-binary-analysis", false, "If true, enable binary analysis by setting the environment variable (this takes priority over environs flag values)")
-	cmd.Flags().BoolVar(&ctl.flagTree.EnableSourceCodeUpload, "enable-source-code-upload", false, "If true, enable source code upload by setting the environment variable (this takes priority over environs flag values)\n")
+	cmd.Flags().BoolVar(&ctl.flagTree.EnableSourceCodeUpload, "enable-source-code-upload", true, "If true, enable source code upload by setting the environment variable (this takes priority over environs flag values)\n")
 
 	// Extra Config Settings
 	cmd.Flags().StringVar(&ctl.flagTree.NodeAffinityFilePath, "node-affinity-file-path", ctl.flagTree.NodeAffinityFilePath, "Absolute path to a file containing a list of node affinities")

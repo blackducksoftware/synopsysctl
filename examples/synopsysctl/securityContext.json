@@ -4,6 +4,15 @@
         "runAsUser": 1000,
         "runAsGroup": 1000
     },
+    "blackduck-postgres": {
+        "fsGroup": 26,
+        "runAsUser": 26,
+        "runAsGroup": 26
+    },
+    "blackduck-init": {
+        "runAsUser": 1000,
+        "runAsGroup": 1000
+    },
     "blackduck-binaryscanner": {
         "fsGroup": 1000,
         "runAsUser": 1000,

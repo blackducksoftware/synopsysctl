@@ -352,7 +352,7 @@ var createBlackDuckCmd = &cobra.Command{
 		var extraFiles []string
 		size, found := helmValuesMap["size"]
 		if found {
-			extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", size.(string)))
+			extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", strings.ToLower(size.(string))))
 		}
 
 		// Check Dry Run before deploying any resources
@@ -443,8 +443,14 @@ var createBlackDuckNativeCmd = &cobra.Command{
 			PrintComponent(v, "YAML") // helm only supports yaml
 		}
 
+		var extraFiles []string
+		size, found := helmValuesMap["size"]
+		if found {
+			extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", strings.ToLower(size.(string))))
+		}
+
 		// Check Dry Run before deploying any resources
-		err = util.TemplateWithHelm3(args[0], namespace, blackduckChartRepository, helmValuesMap)
+		err = util.TemplateWithHelm3(args[0], namespace, blackduckChartRepository, helmValuesMap, extraFiles...)
 		if err != nil {
 			return fmt.Errorf("failed to create Blackduck resources: %+v", err)
 		}
@@ -485,10 +491,14 @@ var createOpsSightCmd = &cobra.Command{
 		if cmd.Flags().Lookup("version").Changed {
 			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion, &opssightChartRepository)
+		chartVersion := opssightVersionToChartVersion[opssightVersion]
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, chartVersion, &opssightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
+
+		// Set the version in the Values
+		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, opssightVersion)
 
 		// Check Dry Run before deploying any resources
 		err = util.CreateWithHelm3(opssightName, namespace, opssightChartRepository, helmValuesMap, kubeConfigPath, true)
@@ -537,10 +547,14 @@ var createOpsSightNativeCmd = &cobra.Command{
 		if cmd.Flags().Lookup("version").Changed {
 			opssightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion, &opssightChartRepository)
+		chartVersion := opssightVersionToChartVersion[opssightVersion]
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, chartVersion, &opssightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
+
+		// Set the version in the Values
+		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, opssightVersion)
 
 		// Print OpsSight Resources
 		err = util.TemplateWithHelm3(opssightName, namespace, opssightChartRepository, helmValuesMap)
@@ -582,6 +596,13 @@ var createPolarisCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
+		err = SetHelmChartLocation(cmd.Flags(), polarisChartName, polarisVersion, &polarisChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
+
+		// Set the version in the Values
+		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, polarisVersion)
 
 		// Set the version in the Values
 		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, polarisVersion)
@@ -633,6 +654,13 @@ var createPolarisNativeCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
+		err = SetHelmChartLocation(cmd.Flags(), polarisChartName, polarisVersion, &polarisChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
+
+		// Set the version in the Values
+		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, polarisVersion)
 
 		// Set the version in the Values
 		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, polarisVersion)
@@ -794,6 +822,9 @@ var createBDBACmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
+
+		// Set the version in the Values
+		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, bdbaVersion)
 
 		// Set the version in the Values
 		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, bdbaVersion)

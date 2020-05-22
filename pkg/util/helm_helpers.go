@@ -26,8 +26,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/blackducksoftware/synopsysctl/pkg/api"
@@ -40,7 +38,6 @@ import (
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/kube"
 	"helm.sh/helm/v3/pkg/release"
-	"helm.sh/helm/v3/pkg/releaseutil"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
@@ -108,9 +105,11 @@ func CreateWithHelm3(releaseName, namespace, chartURL string, vals map[string]in
 	client.Namespace = namespace
 	client.DryRun = dryRun
 
-	if err := mergeExtraFilesToConfig(chart, vals, extraFiles); err != nil {
+	fileValues := map[string]interface{}{}
+	if err := mergeValuesWithExtraFilesFromChart(chart, fileValues, extraFiles); err != nil {
 		return fmt.Errorf("failed to merge extra configuration files during create due to %s", err)
 	}
+	vals = MergeMaps(fileValues, vals)
 
 	_, err = client.Run(chart, vals) // deploy the chart into the namespace from the actionConfig
 	if err != nil {
@@ -144,8 +143,8 @@ func UpdateWithHelm3(releaseName, namespace, chartURL string, vals map[string]in
 	}
 	client.Namespace = namespace
 
-	if err := mergeExtraFilesToConfig(chart, vals, extraFiles); err != nil {
-		return err
+	if err := mergeValuesWithExtraFilesFromChart(chart, vals, extraFiles); err != nil {
+		return fmt.Errorf("failed to merge extra configuration files during update due to %s", err)
 	}
 
 	client.ResetValues = true                     // rememeber the values that have been set previously
@@ -157,7 +156,7 @@ func UpdateWithHelm3(releaseName, namespace, chartURL string, vals map[string]in
 }
 
 // TemplateWithHelm3 prints the kube manifest files for a resource
-func TemplateWithHelm3(releaseName, namespace, chartURL string, vals map[string]interface{}) error {
+func TemplateWithHelm3(releaseName, namespace, chartURL string, vals map[string]interface{}, extraFiles ...string) error {
 	actionConfig, err := CreateHelmActionConfiguration("", "", namespace)
 	if err != nil {
 		return err
@@ -170,6 +169,13 @@ func TemplateWithHelm3(releaseName, namespace, chartURL string, vals map[string]
 	if !validInstallableChart {
 		return err
 	}
+
+	fileValues := map[string]interface{}{}
+	if err := mergeValuesWithExtraFilesFromChart(chart, fileValues, extraFiles); err != nil {
+		return fmt.Errorf("failed to merge extra configuration files during template due to %s", err)
+	}
+	vals = MergeMaps(fileValues, vals)
+
 	templateOutput, err := RenderManifests(releaseName, namespace, chart, vals, actionConfig)
 	if err != nil {
 		return fmt.Errorf("failed to render kube manifest files due to %s", err)
@@ -181,18 +187,20 @@ func TemplateWithHelm3(releaseName, namespace, chartURL string, vals map[string]
 // RenderManifests converts a helm chart to a string of the kube manifest files
 // Modified from https://github.com/openshift/console/blob/cdf6b189b71e488033ecaba7d90258d9f9453478/pkg/helm/actions/template_test.go
 func RenderManifests(releaseName, namespace string, chart *chart.Chart, vals map[string]interface{}, actionConfig *action.Configuration) (string, error) {
-	var showFiles []string
-	response := make(map[string]string)
 	validate := false
 	includeCrds := true
 	emptyResponse := ""
 
 	client := action.NewInstall(actionConfig)
-	client.DryRun = true
+	if client.Version == "" && client.Devel {
+		client.Version = ">0.0.0-0"
+	}
 	client.ReleaseName = releaseName
 	client.Namespace = namespace
+	client.DryRun = true
 	client.Replace = true // Skip the releaseName check
 	client.ClientOnly = !validate
+	client.IncludeCRDs = includeCrds
 
 	rel, err := client.Run(chart, vals)
 	if err != nil {
@@ -202,12 +210,6 @@ func RenderManifests(releaseName, namespace string, chart *chart.Chart, vals map
 	var manifests bytes.Buffer
 	var output bytes.Buffer
 
-	if includeCrds {
-		for _, f := range rel.Chart.CRDs() {
-			fmt.Fprintf(&manifests, "---\n# Source: %s\n%s\n", f.Name, f.Data)
-		}
-	}
-
 	fmt.Fprintln(&manifests, strings.TrimSpace(rel.Manifest))
 
 	if !client.DisableHooks {
@@ -215,44 +217,7 @@ func RenderManifests(releaseName, namespace string, chart *chart.Chart, vals map
 			fmt.Fprintf(&manifests, "---\n# Source: %s\n%s\n", m.Path, m.Manifest)
 		}
 	}
-
-	// if we have a list of files to render, then check that each of the
-	// provided files exists in the chart.
-	if len(showFiles) > 0 {
-		splitManifests := releaseutil.SplitManifests(manifests.String())
-		manifestNameRegex := regexp.MustCompile("# Source: [^/]+/(.+)")
-		var manifestsToRender []string
-		for _, f := range showFiles {
-			missing := true
-			for _, manifest := range splitManifests {
-				submatch := manifestNameRegex.FindStringSubmatch(manifest)
-				if len(submatch) == 0 {
-					continue
-				}
-				manifestName := submatch[1]
-				// manifest.Name is rendered using linux-style filepath separators on Windows as
-				// well as macOS/linux.
-				manifestPathSplit := strings.Split(manifestName, "/")
-				manifestPath := filepath.Join(manifestPathSplit...)
-
-				// if the filepath provided matches a manifest path in the
-				// chart, render that manifest
-				if f == manifestPath {
-					manifestsToRender = append(manifestsToRender, manifest)
-					missing = false
-				}
-			}
-			if missing {
-				return "", fmt.Errorf("could not find template '%s' in release resources", f)
-			}
-			for _, m := range manifestsToRender {
-				response[f] = m
-				fmt.Fprintf(&output, "---\n%s\n", m)
-			}
-		}
-	} else {
-		fmt.Fprintf(&output, "%s", manifests.String())
-	}
+	fmt.Fprintf(&output, "%s", manifests.String())
 	return output.String(), nil
 }
 
@@ -292,6 +257,30 @@ func GetWithHelm3(releaseName, namespace, kubeConfig string) (*release.Release, 
 		}
 	}
 	return nil, fmt.Errorf("unable to find release '%s' in namespace '%s'", releaseName, namespace)
+}
+
+// ConvertFilesFromChartToMap checks whether an file exist in the chart. If exist, it will convert the file to map and return the map
+func ConvertFilesFromChartToMap(namespace, kubeConfig, chartURL, fileName string) (map[string]interface{}, error) {
+	actionConfig, err := CreateHelmActionConfiguration(kubeConfig, "", namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	chart, err := LoadChart(chartURL, actionConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load release at '%s' for getting size: %s", chartURL, err)
+	}
+	validInstallableChart, err := isChartInstallable(chart)
+	if !validInstallableChart {
+		return nil, err
+	}
+
+	fileValues := map[string]interface{}{}
+	if err := mergeValuesWithExtraFilesFromChart(chart, fileValues, []string{fileName}); err != nil {
+		return nil, fmt.Errorf("failed to get '%s' file from an app resources due to %s", fileName, err)
+	}
+
+	return fileValues, nil
 }
 
 // CreateHelmActionConfiguration creates an action.Configuration that points to the specified cluster and namespace
@@ -377,7 +366,8 @@ func ReleaseExists(releaseName, namespace, kubeConfig string) bool {
 	return true
 }
 
-func mergeExtraFilesToConfig(ch *chart.Chart, vals map[string]interface{}, extraFiles []string) error {
+// mergeValuesWithExtraFilesFromChart merges all extra files from chart with the values map
+func mergeValuesWithExtraFilesFromChart(ch *chart.Chart, vals map[string]interface{}, extraFiles []string) error {
 	for _, fileName := range extraFiles {
 		found := false
 		for _, chartFile := range ch.Files {
@@ -448,6 +438,27 @@ func GetValueFromRelease(release *release.Release, keyList []string) interface{}
 	userConfig := release.Config
 	releaseValues := MergeMaps(chartValues, userConfig)
 	return GetHelmValueFromMap(releaseValues, keyList)
+}
+
+// DeepCopyHelmValuesMap copies the src map to the dest map. Values in new map have different pointers/references
+func DeepCopyHelmValuesMap(src map[string]interface{}, dest map[string]interface{}) error {
+	jsonStr, err := json.Marshal(src)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(jsonStr, &dest)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetReleaseValues merges the default Chart Values with the user's set values
+// and retuns that set of values
+func GetReleaseValues(release *release.Release) map[string]interface{} {
+	chartValues := release.Chart.Values
+	userConfig := release.Config
+	return MergeMaps(chartValues, userConfig)
 }
 
 // MergeMaps Copied from https://github.com/helm/helm/blob/9b42702a4bced339ff424a78ad68dd6be6e1a80a/pkg/cli/values/options.go#L88

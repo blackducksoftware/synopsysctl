@@ -23,7 +23,6 @@ package synopsysctl
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -266,7 +265,7 @@ var createAlertNativeCmd = &cobra.Command{
 Create Black Duck Commands
 */
 
-func verifyCorrectPostgresPasswordsWereSet(flagset *pflag.FlagSet) {
+func verifyPostgresFlagsWereSetForInternalOrExternal(flagset *pflag.FlagSet) {
 	if flagset.Lookup("admin-password").Changed ||
 		flagset.Lookup("user-password").Changed {
 		// user is explicitly required to set the postgres passwords for: 'admin', 'postgres', and 'user'
@@ -288,17 +287,17 @@ func verifyUserProvidedSealKey(flagset *pflag.FlagSet) {
 	cobra.MarkFlagRequired(flagset, "seal-key")
 }
 
-func checkIfVersionRequiresCertificateSecrets(flagset *pflag.FlagSet) {
+func checkIfVersionRequiresCertificateSecrets(flagset *pflag.FlagSet) error {
 	// certificate-file-path and certificate-key-file-path are required for versions before 2020.6.0
 	ok, err := util.IsVersionGreaterThanOrEqualTo(flagset.Lookup("version").Value.String(), 2020, time.June, 0)
 	if err != nil {
-		fmt.Errorf("failed to check Black Duck version due to %s", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to check Black Duck version due to %s", err)
 	}
 	if !ok {
 		cobra.MarkFlagRequired(flagset, "certificate-file-path")
 		cobra.MarkFlagRequired(flagset, "certificate-key-file-path")
 	}
+	return nil
 }
 
 // createBlackDuckCmd creates a Black Duck instance
@@ -314,9 +313,12 @@ var createBlackDuckCmd = &cobra.Command{
 			cmd.Help()
 			return fmt.Errorf("this command takes 1 argument, but got %+v", args)
 		}
-		verifyCorrectPostgresPasswordsWereSet(cmd.Flags())
+		verifyPostgresFlagsWereSetForInternalOrExternal(cmd.Flags())
 		verifyUserProvidedSealKey(cmd.Flags())
-		checkIfVersionRequiresCertificateSecrets(cmd.Flags())
+		err := checkIfVersionRequiresCertificateSecrets(cmd.Flags())
+		if err != nil {
+			return err
+		}
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -403,9 +405,12 @@ var createBlackDuckNativeCmd = &cobra.Command{
 			cmd.Help()
 			return fmt.Errorf("this command takes 1 argument, but got %+v", args)
 		}
-		verifyCorrectPostgresPasswordsWereSet(cmd.Flags())
+		verifyPostgresFlagsWereSetForInternalOrExternal(cmd.Flags())
 		verifyUserProvidedSealKey(cmd.Flags())
-		checkIfVersionRequiresCertificateSecrets(cmd.Flags())
+		err := checkIfVersionRequiresCertificateSecrets(cmd.Flags())
+		if err != nil {
+			return err
+		}
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {

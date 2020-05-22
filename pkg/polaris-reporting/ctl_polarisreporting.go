@@ -89,13 +89,15 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 // master=true is used to add all flags for creating an instance
 // master=false is used to add a subset of flags for updating an instance
 func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, master bool) {
-	// [DEV NOTE:] please organize flags in order of importance and group related flags
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "0.0.69", "Version of Polaris-Reporting you want to install [Example: \"1.0.0\"]\n") // TODO: Put a real version here
+	// [DEV NOTE:] please organize flags in order of importance
+	cmd.Flags().SortFlags = false
+
+	// Version
+	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "2020.04", "Version of Polaris-Reporting you want to install [Example: \"1.0.0\"]\n") // TODO: Put a real version here
 
 	// domain specific flags
 	cmd.Flags().StringVar(&ctl.flagTree.FQDN, "fqdn", "nginx", "Fully qualified domain name [Example: \"example.polaris.synopsys.com\"]")
 	cmd.Flags().StringVar(&ctl.flagTree.IngressClass, "ingress-class", "", "Name of ingress class\n")
-
 	if master {
 		cobra.MarkFlagRequired(cmd.Flags(), "fqdn")
 	}
@@ -139,14 +141,14 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().IntVar(&ctl.flagTree.PostgresPort, "postgres-port", 5432, "Postgres port")
 	cmd.Flags().StringVar(&ctl.flagTree.PostgresUsername, "postgres-username", ctl.flagTree.PostgresUsername, "Postgres username. If --enable-postgres-container=true, the default is \"postgres\"")
 	cmd.Flags().StringVar(&ctl.flagTree.PostgresPassword, "postgres-password", ctl.flagTree.PostgresPassword, "Postgres password")
-	cmd.Flags().StringVar(&ctl.flagTree.PostgresSize, "postgres-size", "50Gi", "Persistent volume claim size to use for postgres. Only applicable if --enable-postgres-container is set to true\n")
 	cmd.Flags().StringVar(&ctl.flagTree.PostgresSSLMode, "postgres-ssl-mode", "require", "Postgres ssl mode [disable|require]")
+	if master {
+		cmd.Flags().StringVar(&ctl.flagTree.PostgresSize, "postgres-size", "50Gi", "Persistent volume claim size to use for postgres. Only applicable if --enable-postgres-container is set to true\n")
+	}
 
 	if master {
 		cobra.MarkFlagRequired(cmd.Flags(), "postgres-password")
 	}
-
-	cmd.Flags().SortFlags = false
 }
 
 // CheckValuesFromFlags returns an error if a value set by a flag is invalid
@@ -197,7 +199,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 			case "smtp-password":
 				util.SetHelmValueInMap(ctl.args, []string{"onprem-auth-service", "smtp", "password"}, ctl.flagTree.SMTPPassword)
 			case "smtp-sender-email":
-				util.SetHelmValueInMap(ctl.args, []string{"onprem-auth-service", "smtp", "sender_email"}, ctl.flagTree.SMTPPassword)
+				util.SetHelmValueInMap(ctl.args, []string{"onprem-auth-service", "smtp", "sender_email"}, ctl.flagTree.SMTPSenderEmail)
 			case "smtp-tls-mode":
 				var tlsMode SMTPTLSMode
 				switch SMTPTLSMode(ctl.flagTree.SMTPTlsMode) {

@@ -53,17 +53,20 @@ var baseChartRepository = "https://sig-repo.synopsys.com/sig-cloudnative"
 const AlertPostSuffix = "-alert"
 
 // Alert Helm Chart Constants
-var alertVersion = "5.3.1"
+var alertVersion = "5.3.2"
 var alertChartName = "synopsys-alert"
 var alertChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, alertChartName, alertVersion)
 
 // Opssight Helm Chart Constants
+var opssightVersionToChartVersion = map[string]string{
+	"2.2.5": "2.2.5-1",
+}
 var opssightVersion = "2.2.5"
-var opssightChartName = "opssight"
+var opssightChartName = "blackduck-connector"
 var opssightChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, opssightChartName, opssightVersion)
 
 // Black Duck Helm Chart Constants
-var blackDuckVersion = "2020.4.0"
+var blackDuckVersion = "2020.4.1"
 var blackDuckChartName = "blackduck"
 var blackduckChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, blackDuckChartName, blackDuckVersion)
 
@@ -75,7 +78,7 @@ var polarisChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, po
 
 // Polaris Reporting Helm Chart Constants
 var polarisReportingName = "polaris-reporting"
-var polarisReportingVersion = "2020.03"
+var polarisReportingVersion = "2020.04"
 var polarisReportingChartName = "polaris-helmchart-reporting"
 var polarisReportingChartRepository = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, polarisReportingChartName, polarisReportingVersion)
 

@@ -71,7 +71,8 @@ var stopAlertCmd = &cobra.Command{
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
-		helmValuesMap := map[string]interface{}{"status": "Stopped"}
+		helmValuesMap := instance.Config
+		util.SetHelmValueInMap(helmValuesMap, []string{"status"}, "Stopped")
 
 		err = util.UpdateWithHelm3(helmReleaseName, namespace, alertChartRepository, helmValuesMap, kubeConfigPath)
 		if err != nil {
@@ -112,7 +113,7 @@ var stopBlackDuckCmd = &cobra.Command{
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
-		helmValuesMap := make(map[string]interface{})
+		helmValuesMap := instance.Config
 		util.SetHelmValueInMap(helmValuesMap, []string{"status"}, "Stopped")
 
 		err = util.UpdateWithHelm3(args[0], namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath)
@@ -145,13 +146,14 @@ var stopOpsSightCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		opssightVersion := util.GetValueFromRelease(instance, []string{"imageTag"})
-		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, opssightVersion.(string), &opssightChartRepository)
+		opssightVersion = util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
+		chartVersion := opssightVersionToChartVersion[opssightVersion]
+		err = SetHelmChartLocation(cmd.Flags(), opssightChartName, chartVersion, &opssightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 
-		helmValuesMap := make(map[string]interface{})
+		helmValuesMap := instance.Config
 		util.SetHelmValueInMap(helmValuesMap, []string{"status"}, "Stopped")
 
 		err = util.UpdateWithHelm3(opssightName, namespace, opssightChartRepository, helmValuesMap, kubeConfigPath)

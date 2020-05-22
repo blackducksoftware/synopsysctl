@@ -101,9 +101,11 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 // The flags map to fields in the CRSpecBuilderFromCobraFlags struct.
 // master - Set to true for create and false for update
 func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, master bool) {
-
 	// [DEV NOTE:] please organize flags in order of importance
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", ctl.flagTree.Version, "Version of Polaris you want to install [Example: \"2019.11\"]\n")
+	cmd.Flags().SortFlags = false
+
+	// Version
+	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "2020.03", "Version of Polaris you want to install [Example: \"2019.11\"]\n")
 
 	// domain-name specific flags
 	cmd.Flags().StringVar(&ctl.flagTree.IngressClass, "ingress-class", "nginx", "Name of ingress class")
@@ -158,8 +160,6 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	// reporting related flags
 	cmd.Flags().BoolVar(&ctl.flagTree.EnableReporting, "enable-reporting", false, "Enable Reporting Platform")
 	cmd.Flags().StringVar(&ctl.flagTree.ReportStorageSize, "reportstorage-size", REPORT_STORAGE_PV_SIZE, "Persistent volume claim size for reportstorage. Only applicable if --enable-reporting is set to true")
-
-	cmd.Flags().SortFlags = false
 }
 
 // CheckValuesFromFlags returns an error if a value set by a flag is invalid

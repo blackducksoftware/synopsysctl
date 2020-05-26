@@ -355,7 +355,7 @@ func blackDuckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 
 	// NodeAffinities
 	for k, v := range bd.Spec.NodeAffinities {
-		util.SetHelmValueInMap(helmConfig, []string{k, "affinity"}, blackduck.OperatorAffinityTok8sAffinity(v))
+		util.SetHelmValueInMap(helmConfig, []string{k, "affinity"}, blackduck.OperatorAffinityToHelm(v))
 	}
 
 	//SecurityContexts

@@ -339,7 +339,7 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 			}
 
 			for k, v := range nodeAffinities {
-				kubeAff := OperatorAffinityTok8sAffinity(v)
+				kubeAff := OperatorAffinityToHelm(v)
 				util.SetHelmValueInMap(ctl.args, []string{k, "affinity"}, kubeAff)
 			}
 		case "security-context-file-path":

@@ -32,107 +32,60 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// OperatorAffinityTok8sAffinity converts synopsysctl affinity format to kube affinity format
-func OperatorAffinityTok8sAffinity(opAffinity []v1.NodeAffinity) corev1.Affinity {
-	hardTerms := make([]corev1.NodeSelectorTerm, 0)
-	softTerms := make([]corev1.NodeSelectorTerm, 0)
+// OperatorAffinityToHelm ...
+func OperatorAffinityToHelm(opAffinity []v1.NodeAffinity) map[string]interface{} {
+	hardTerms := make([]map[string]interface{}, 0)
+	softTerms := make([]map[string]interface{}, 0)
 	for _, aValue := range opAffinity {
+		// Create Helm Values for each nodeSelectorTerm
+		nodeSelectorRequirements := []map[string]interface{}{
+			map[string]interface{}{
+				"key":      aValue.Key,
+				"operator": corev1.NodeSelectorOperator(aValue.Op),
+				"values":   aValue.Values,
+			},
+		}
+		nodeSelectorTerm := map[string]interface{}{
+			"matchExpressions": nodeSelectorRequirements,
+		}
+
+		// Divide each nodeSelectorTerm into hard and soft lists
 		if strings.EqualFold(aValue.AffinityType, "hard") {
-			hardTerms = append(hardTerms, corev1.NodeSelectorTerm{
-				MatchExpressions: []corev1.NodeSelectorRequirement{
-					{
-						Key:      aValue.Key,
-						Values:   aValue.Values,
-						Operator: corev1.NodeSelectorOperator(aValue.Op),
-					},
-				},
-			})
+			hardTerms = append(hardTerms, nodeSelectorTerm)
 		} else if strings.EqualFold(aValue.AffinityType, "soft") {
-			softTerms = append(softTerms, corev1.NodeSelectorTerm{
-				MatchExpressions: []corev1.NodeSelectorRequirement{
-					{
-						Key:      aValue.Key,
-						Values:   aValue.Values,
-						Operator: corev1.NodeSelectorOperator(aValue.Op),
-					},
-				},
-			})
+			softTerms = append(softTerms, nodeSelectorTerm)
 		}
 	}
 
-	var af corev1.Affinity
+	affinity := make(map[string]interface{}, 0)
 	if len(hardTerms) > 0 || len(softTerms) > 0 {
-		af = corev1.Affinity{NodeAffinity: &corev1.NodeAffinity{}}
 		if len(hardTerms) > 0 {
-			af.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = &corev1.NodeSelector{NodeSelectorTerms: hardTerms}
+			nodeSelector := map[string]interface{}{
+				"nodeSelectorTerms": hardTerms,
+			}
+			util.SetHelmValueInMap(affinity, []string{"nodeAffinity", "requiredDuringSchedulingIgnoredDuringExecution"}, nodeSelector)
 		}
 		if len(softTerms) > 0 {
 			for _, s := range softTerms {
-				af.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(af.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution, corev1.PreferredSchedulingTerm{
-					Weight:     100,
-					Preference: s,
-				})
+				preferredSchedulingTerm := map[string]interface{}{
+					"weight":     100,
+					"preference": s,
+				}
+				currPrefferedNodeAffinities := util.GetHelmValueFromMap(affinity, []string{"nodeAffinity", "preferredDuringSchedulingIgnoredDuringExecution"})
+				if currPrefferedNodeAffinities != nil {
+					listPrefferredNodeAffinities := currPrefferedNodeAffinities.([]map[string]interface{})
+					updatedPrefferedNodeAfinities := append(listPrefferredNodeAffinities, preferredSchedulingTerm)
+					util.SetHelmValueInMap(affinity, []string{"nodeAffinity", "preferredDuringSchedulingIgnoredDuringExecution"}, updatedPrefferedNodeAfinities)
+				} else {
+					util.SetHelmValueInMap(affinity, []string{"nodeAffinity", "preferredDuringSchedulingIgnoredDuringExecution"}, []map[string]interface{}{preferredSchedulingTerm})
+				}
+
 			}
 		}
 	}
 
-	return af
+	return affinity
 }
-
-// // OperatorAffinityToHelm ...
-// func OperatorAffinityToHelm(opAffinity []v1.NodeAffinity) map[string]interface{} {
-// 	hardTerms := make([]map[string]interface{}, 0)
-// 	softTerms := make([]map[string]interface{}, 0)
-// 	for _, aValue := range opAffinity {
-// 		// Create Helm Values for each nodeSelectorTerm
-// 		nodeSelectorRequirements := []map[string]interface{}{
-// 			map[string]interface{}{
-// 				"key":      aValue.Key,
-// 				"operator": corev1.NodeSelectorOperator(aValue.Op),
-// 				"values":   aValue.Values,
-// 			},
-// 		}
-// 		nodeSelectorTerm := map[string]interface{}{
-// 			"matchExpressions": nodeSelectorRequirements,
-// 		}
-
-// 		// Divide each nodeSelectorTerm into hard and soft lists
-// 		if strings.EqualFold(aValue.AffinityType, "hard") {
-// 			hardTerms = append(hardTerms, nodeSelectorTerm)
-// 		} else if strings.EqualFold(aValue.AffinityType, "soft") {
-// 			softTerms = append(hardTerms, nodeSelectorTerm)
-// 		}
-// 	}
-
-// 	affinity := make(map[string]interface{}, 0)
-// 	if len(hardTerms) > 0 || len(softTerms) > 0 {
-// 		if len(hardTerms) > 0 {
-// 			nodeSelector := map[string]interface{}{
-// 				"nodeSelectorTerms": hardTerms,
-// 			}
-// 			util.SetHelmValueInMap(affinity, []string{"nodeAffinity", "requiredDuringSchedulingIgnoredDuringExecution"}, nodeSelector)
-// 		}
-// 		if len(softTerms) > 0 {
-// 			for _, s := range softTerms {
-// 				preferredSchedulingTerm := map[string]interface{}{
-// 					"weight":     100,
-// 					"preference": s,
-// 				}
-// 				currPrefferedNodeAffinities := util.GetHelmValueFromMap(affinity, []string{"nodeAffinity", "preferredDuringSchedulingIgnoredDuringExecution"})
-// 				if currPrefferedNodeAffinities != nil {
-// 					listPrefferredNodeAffinities := currPrefferedNodeAffinities.([]map[string]interface{})
-// 					updatedPrefferedNodeAfinities := append(listPrefferredNodeAffinities, preferredSchedulingTerm)
-// 					util.SetHelmValueInMap(affinity, []string{"nodeAffinity", "preferredDuringSchedulingIgnoredDuringExecution"}, updatedPrefferedNodeAfinities)
-// 				} else {
-// 					util.SetHelmValueInMap(affinity, []string{"nodeAffinity", "preferredDuringSchedulingIgnoredDuringExecution"}, []map[string]interface{}{preferredSchedulingTerm})
-// 				}
-
-// 			}
-// 		}
-// 	}
-
-// 	return affinity
-// }
 
 // CorePodSecurityContextToHelm converts pod security context format for Helm Values
 // NOTE: SecurityContext doens't have fsGroup (PodSecurityContext has fsGroup)

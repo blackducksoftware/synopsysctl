@@ -344,6 +344,10 @@ func blackDuckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 		util.SetHelmValueInMap(helmConfig, []string{"imagePullSecrets"}, bd.Spec.RegistryConfiguration.PullSecrets)
 	}
 
+	if len(bd.Spec.ImageRegistries) > 0 {
+		blackduck.SetBlackDuckImageRegistriesInHelmValuesMap(helmConfig, bd.Spec.ImageRegistries)
+	}
+
 	var isSourceCodeUploadEnabled bool
 	if isSourceCodeUploadEnabled, bd.Spec.Environs = popEnvironAndCompareValue(bd.Spec.Environs, "ENABLE_SOURCE_UPLOADS", "true"); isSourceCodeUploadEnabled {
 		util.SetHelmValueInMap(helmConfig, []string{"enableSourceCodeUpload"}, true)

@@ -39,7 +39,7 @@ func OperatorAffinityToHelm(opAffinity []v1.NodeAffinity) map[string]interface{}
 	for _, aValue := range opAffinity {
 		// Create Helm Values for each nodeSelectorTerm
 		nodeSelectorRequirements := []map[string]interface{}{
-			map[string]interface{}{
+			{
 				"key":      aValue.Key,
 				"operator": corev1.NodeSelectorOperator(aValue.Op),
 				"values":   aValue.Values,

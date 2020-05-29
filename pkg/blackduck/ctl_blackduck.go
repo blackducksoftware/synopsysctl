@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -44,10 +45,19 @@ type HelmValuesFromCobraFlags struct {
 
 // FlagTree is a set of fields needed to configure the Blackduck Helm Chart
 type FlagTree struct {
-	Size                          string
-	DeploymentResourcesFilePath   string
-	Version                       string
-	ExposeService                 string
+	Version string
+
+	Registry    string
+	PullSecrets []string
+
+	PvcStorageClass             string
+	PersistentStorage           string
+	PVCFilePath                 string
+	Size                        string
+	DeploymentResourcesFilePath string
+
+	ExposeService string
+
 	ExternalPostgresHost          string
 	ExternalPostgresPort          int
 	ExternalPostgresAdmin         string
@@ -55,28 +65,51 @@ type FlagTree struct {
 	ExternalPostgresSsl           string
 	ExternalPostgresAdminPassword string
 	ExternalPostgresUserPassword  string
-	PvcStorageClass               string
-	LivenessProbes                string
-	PersistentStorage             string
-	PVCFilePath                   string
 	PostgresClaimSize             string
-	CertificateName               string
-	CertificateFilePath           string
-	CertificateKeyFilePath        string
-	ProxyCertificateFilePath      string
-	AuthCustomCAFilePath          string
-	MigrationMode                 bool
-	Environs                      []string
 	AdminPassword                 string
 	UserPassword                  string
-	EnableBinaryAnalysis          bool
-	EnableSourceCodeUpload        bool
-	NodeAffinityFilePath          string
-	SecurityContextFilePath       string
-	Registry                      string
-	RegistryNamespace             string
-	PullSecrets                   []string
-	SealKey                       string
+
+	CertificateName          string
+	CertificateFilePath      string
+	CertificateKeyFilePath   string
+	ProxyCertificateFilePath string
+	AuthCustomCAFilePath     string
+
+	SealKey string
+
+	Environs []string
+
+	LivenessProbes         string
+	EnableBinaryAnalysis   bool
+	EnableSourceCodeUpload bool
+
+	NodeAffinityFilePath    string
+	SecurityContextFilePath string
+}
+
+// DefaultFlagTree ...
+// [Dev Note]: These should match the Helm Chart's Values.yaml
+var DefaultFlagTree = FlagTree{
+	// Version
+	Version: globals.BlackDuckVersion,
+	//Registry Config
+	Registry: "docker.io/blackducksoftware",
+	// Storage
+	PersistentStorage: "true",
+	// Expose UI
+	ExposeService: util.NONE,
+	// Postgres
+	ExternalPostgresPort: 5432,
+	ExternalPostgresUser: "blackduck_user",
+	ExternalPostgresSsl:  "true",
+	PostgresClaimSize:    "150Gi",
+	// Certificates
+	// Seal Key
+	// Environs
+	// Enable Features
+	EnableBinaryAnalysis:   false,
+	EnableSourceCodeUpload: false,
+	// Extra Config Settings
 }
 
 // NewHelmValuesFromCobraFlags creates a new HelmValuesFromCobraFlags type
@@ -104,20 +137,6 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 	}
 }
 
-// Constants for predefined specs
-const (
-	EmptySpec                           string = "empty"
-	PersistentStorageLatestSpec         string = "persistentStorageLatest"
-	PersistentStorageV1Spec             string = "persistentStorageV1"
-	ExternalPersistentStorageLatestSpec string = "externalPersistentStorageLatest"
-	ExternalPersistentStorageV1Spec     string = "externalPersistentStorageV1"
-	BDBASpec                            string = "bdba"
-	EphemeralSpec                       string = "ephemeral"
-	EphemeralCustomAuthCASpec           string = "ephemeralCustomAuthCA"
-	ExternalDBSpec                      string = "externalDB"
-	IPV6DisabledSpec                    string = "IPV6Disabled"
-)
-
 // AddCRSpecFlagsToCommand adds flags to a Cobra Command that are need for BlackDuck's Spec.
 // The flags map to fields in the CRSpecBuilderFromCobraFlags struct.
 // master - if false, doesn't add flags that all Users shouldn't use
@@ -126,37 +145,37 @@ func (ctl *HelmValuesFromCobraFlags) AddCRSpecFlagsToCommand(cmd *cobra.Command,
 	cmd.Flags().SortFlags = false
 
 	// Version
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "2020.4.1", "Version of Black Duck\n")
+	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Black Duck\n")
 
 	// Registry Config
-	cmd.Flags().StringVar(&ctl.flagTree.Registry, "registry", "docker.io/blackducksoftware", "Name of the registry to use for images e.g. docker.io/blackducksoftware")
+	cmd.Flags().StringVar(&ctl.flagTree.Registry, "registry", DefaultFlagTree.Registry, "Name of the registry to use for images e.g. docker.io/blackducksoftware")
 	cmd.Flags().StringSliceVar(&ctl.flagTree.PullSecrets, "pull-secret-name", ctl.flagTree.PullSecrets, "Only if the registry requires authentication\n")
 
 	// Storage
 	if master {
 		cmd.Flags().StringVar(&ctl.flagTree.PvcStorageClass, "pvc-storage-class", ctl.flagTree.PvcStorageClass, "Name of Storage Class for the PVC")
-		cmd.Flags().StringVar(&ctl.flagTree.PersistentStorage, "persistent-storage", "true", "If true, Black Duck has persistent storage [true|false]")
+		cmd.Flags().StringVar(&ctl.flagTree.PersistentStorage, "persistent-storage", DefaultFlagTree.PersistentStorage, "If true, Black Duck has persistent storage [true|false]")
 		cmd.Flags().StringVar(&ctl.flagTree.PVCFilePath, "pvc-file-path", ctl.flagTree.PVCFilePath, "Absolute path to a file containing a list of PVC json structs")
 	}
 	cmd.Flags().StringVar(&ctl.flagTree.Size, "size", ctl.flagTree.Size, "Size of Black Duck [small|medium|large|x-large]")
 	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", ctl.flagTree.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs\n")
 
-	// Expose Ui
+	// Expose UI
 	if master {
-		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", util.NONE, "Service type of Black Duck webserver's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
+		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", DefaultFlagTree.ExposeService, "Service type of Black Duck webserver's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
 	} else {
 		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", ctl.flagTree.ExposeService, "Service type of Black Duck webserver's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
 	}
 
 	// Postgres
 	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresHost, "external-postgres-host", ctl.flagTree.ExternalPostgresHost, "Host of external Postgres")
-	cmd.Flags().IntVar(&ctl.flagTree.ExternalPostgresPort, "external-postgres-port", 5432, "Port of external Postgres")
+	cmd.Flags().IntVar(&ctl.flagTree.ExternalPostgresPort, "external-postgres-port", DefaultFlagTree.ExternalPostgresPort, "Port of external Postgres")
 	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresAdmin, "external-postgres-admin", ctl.flagTree.ExternalPostgresAdmin, "Name of 'admin' of external Postgres database")
-	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresUser, "external-postgres-user", "blackduck_user", "Name of 'user' of external Postgres database")
-	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresSsl, "external-postgres-ssl", "true", "If true, Black Duck uses SSL for external Postgres connection [true|false]")
+	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresUser, "external-postgres-user", DefaultFlagTree.ExternalPostgresUser, "Name of 'user' of external Postgres database")
+	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresSsl, "external-postgres-ssl", DefaultFlagTree.ExternalPostgresSsl, "If true, Black Duck uses SSL for external Postgres connection [true|false]")
 	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresAdminPassword, "external-postgres-admin-password", ctl.flagTree.ExternalPostgresAdminPassword, "'admin' password of external Postgres database")
 	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresUserPassword, "external-postgres-user-password", ctl.flagTree.ExternalPostgresUserPassword, "'user' password of external Postgres database")
-	cmd.Flags().StringVar(&ctl.flagTree.PostgresClaimSize, "postgres-claim-size", "150Gi", "Size of the blackduck-postgres PVC")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresClaimSize, "postgres-claim-size", DefaultFlagTree.PostgresClaimSize, "Size of the blackduck-postgres PVC")
 	cmd.Flags().StringVar(&ctl.flagTree.AdminPassword, "admin-password", ctl.flagTree.AdminPassword, "'admin' password of Postgres database")
 	cmd.Flags().StringVar(&ctl.flagTree.UserPassword, "user-password", ctl.flagTree.UserPassword, "'user' password of Postgres database\n")
 
@@ -177,8 +196,8 @@ func (ctl *HelmValuesFromCobraFlags) AddCRSpecFlagsToCommand(cmd *cobra.Command,
 
 	// Enable Features
 	cmd.Flags().StringVar(&ctl.flagTree.LivenessProbes, "liveness-probes", ctl.flagTree.LivenessProbes, "If true, Black Duck uses liveness probes [true|false]")
-	cmd.Flags().BoolVar(&ctl.flagTree.EnableBinaryAnalysis, "enable-binary-analysis", false, "If true, enable binary analysis by setting the environment variable (this takes priority over environs flag values)")
-	cmd.Flags().BoolVar(&ctl.flagTree.EnableSourceCodeUpload, "enable-source-code-upload", false, "If true, enable source code upload by setting the environment variable (this takes priority over environs flag values)\n")
+	cmd.Flags().BoolVar(&ctl.flagTree.EnableBinaryAnalysis, "enable-binary-analysis", DefaultFlagTree.EnableBinaryAnalysis, "If true, enable binary analysis by setting the environment variable (this takes priority over environs flag values)")
+	cmd.Flags().BoolVar(&ctl.flagTree.EnableSourceCodeUpload, "enable-source-code-upload", DefaultFlagTree.EnableSourceCodeUpload, "If true, enable source code upload by setting the environment variable (this takes priority over environs flag values)\n")
 
 	// Extra Config Settings
 	cmd.Flags().StringVar(&ctl.flagTree.NodeAffinityFilePath, "node-affinity-file-path", ctl.flagTree.NodeAffinityFilePath, "Absolute path to a file containing a list of node affinities")

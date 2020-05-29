@@ -23,9 +23,13 @@ package util
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/blackducksoftware/synopsysctl/pkg/api"
@@ -36,14 +40,22 @@ import (
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
+	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/kube"
 	"helm.sh/helm/v3/pkg/release"
+	"helm.sh/helm/v3/pkg/repo"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
 )
 
 var settings = cli.New()
+
+func initSettings() *cli.EnvSettings {
+	conf := cli.New()
+	conf.RepositoryCache = "/tmp"
+	return conf
+}
 
 // CreateWithHelm3 uses the helm NewInstall action to create a resource in the cluster
 // Modified from https://github.com/openshift/console/blob/cdf6b189b71e488033ecaba7d90258d9f9453478/pkg/helm/actions/install_chart.go
@@ -339,6 +351,215 @@ func LoadChart(chartURL string, actionConfig *action.Configuration) (*chart.Char
 		return nil, fmt.Errorf("failed to load resources from '%s' due to %s", chartFullPath, err)
 	}
 	return chart, nil
+}
+
+// ParseChartVersion ...
+func ParseChartVersion(chartURL string) string {
+	chartPackageSplit := ParsePackageName(chartURL)
+	chartVersion := chartPackageSplit[1]
+	if chartPackageSplit[2] != "" {
+		chartVersion = fmt.Sprintf("%s-%s", chartVersion, chartPackageSplit[2])
+	}
+	return chartVersion
+}
+
+// GetLatestChartVersionForAppVersion ...
+func GetLatestChartVersionForAppVersion(repoURL, appName, version string) (string, error) {
+	url, err := GetLatestChartURLForAppVersion(repoURL, appName, version)
+	if err != nil {
+		return "", fmt.Errorf("%s", err)
+	}
+	return ParseChartVersion(url), nil
+}
+
+// GetLatestChartURLForAppVersion ...
+func GetLatestChartURLForAppVersion(repoURL, appName, version string) (string, error) {
+	chartURLs, err := GetChartURLs(repoURL, "")
+	if err != nil {
+		return "", err
+	}
+	url, err := GetLatestChartURLForAppVersionHelper(chartURLs, appName, version)
+	if err != nil {
+		return "", fmt.Errorf("%s", err)
+	}
+	if url == "" {
+		return "", fmt.Errorf("could not locate chart for App '%s-%s' in repo '%s'", appName, version, repoURL)
+	}
+	return url, nil
+}
+
+// GetLatestChartURLForAppVersionHelper ...
+func GetLatestChartURLForAppVersionHelper(chartURLs []string, appName, version string) (string, error) {
+	latestChartNum := 0
+	latestURL := ""
+	for _, url := range chartURLs {
+		packageNameSlice := ParsePackageName(url)
+		pkgName := packageNameSlice[0]
+		pkgVersion := packageNameSlice[1]
+		chrtNum := packageNameSlice[2]
+		if chrtNum == "" {
+			chrtNum = "0"
+		}
+		if pkgName == appName {
+			if CompareVersions(pkgVersion, version) == 0 {
+				chrtNumInt, _ := strconv.Atoi(chrtNum)
+				if chrtNumInt >= latestChartNum {
+					latestURL = url
+					latestChartNum = chrtNumInt
+				}
+			}
+		}
+	}
+	return latestURL, nil
+}
+
+// GetLatestChartURLForApp ...
+func GetLatestChartURLForApp(repoURL, appName string) (string, error) {
+	chartURLs, err := GetChartURLs(repoURL, "")
+	if err != nil {
+		return "", err
+	}
+	url, err := GetLatestChartURLForAppHelper(chartURLs, appName)
+	if err != nil {
+		return "", fmt.Errorf("%s", err)
+	}
+	if url == "" {
+		return "", fmt.Errorf("could not locate chart for App '%s' in repo '%s'", appName, repoURL)
+	}
+	return url, nil
+}
+
+// GetLatestChartURLForAppHelper ...
+func GetLatestChartURLForAppHelper(chartURLs []string, appName string) (string, error) {
+	latestVersion := "0.0.0"
+	latestChartNum := 0
+	latestURL := ""
+	for _, url := range chartURLs {
+		packageNameSlice := ParsePackageName(url)
+		pkgName := packageNameSlice[0]
+		pkgVersion := packageNameSlice[1]
+		chrtNum := packageNameSlice[2]
+		if chrtNum == "" {
+			chrtNum = "0"
+		}
+		if pkgName == appName {
+			if CompareVersions(pkgVersion, latestVersion) >= 0 {
+				if CompareVersions(pkgVersion, latestVersion) > 0 {
+					latestChartNum = 0 // reset latestChartNum if a greater version is found
+				}
+				latestVersion = pkgVersion
+				chrtNumInt, _ := strconv.Atoi(chrtNum)
+				if chrtNumInt >= latestChartNum {
+					latestURL = url
+					latestChartNum = chrtNumInt
+				}
+			}
+		}
+	}
+	return latestURL, nil
+}
+
+// ParsePackageName returns {app-name, app-version, chart-num}
+// synopsys-alert-5.3.1-12 -> [synopsys-alert-5.3.1-12 synopsys-alert 5.3.1 -12 12]
+// blackduck-2020.4.2 -> [blackduck-2020.4.2 blackduck 2020.4.2  ]
+func ParsePackageName(chartURL string) []string {
+	packageNameRegexp := regexp.MustCompile(`([a-z\-]+)-([0-9\.]*[0-9]+)(-([0-9]+))?`)
+	packageSubstringSubmatch := packageNameRegexp.FindStringSubmatch(chartURL)
+	parsedOutput := []string{"", "", ""}
+	if len(packageSubstringSubmatch) > 2 {
+		parsedOutput[0] = packageSubstringSubmatch[1]
+		parsedOutput[1] = packageSubstringSubmatch[2]
+	}
+	if len(packageSubstringSubmatch) > 4 {
+		parsedOutput[2] = packageSubstringSubmatch[4]
+	}
+
+	return parsedOutput
+}
+
+// GetChartURLs ...
+// if appName == "" then it returns all chart URLs (as seen in Chart.yaml)
+// (NOTE: if the package name does not match name in Chart.yaml exactly then it will not be returned)
+func GetChartURLs(repoURL, appName string) ([]string, error) {
+	chartURLs := []string{}
+
+	actionConfig, err := CreateHelmActionConfiguration("", "", "")
+	if err != nil {
+		return chartURLs, err
+	}
+
+	indexFile, err := GetIndexFile(repoURL, actionConfig)
+	if err != nil {
+		return chartURLs, err
+	}
+
+	indexEntries := indexFile.Entries
+	if appName != "" { // if set, only entries for appName will be in indexEntries
+		indexEntries = map[string]repo.ChartVersions{
+			appName: indexFile.Entries[appName],
+		}
+	}
+
+	for _, chartVersions := range indexEntries {
+		for _, chartVersion := range chartVersions {
+			for _, url := range chartVersion.URLs {
+				chartURLs = append(chartURLs, url)
+			}
+		}
+	}
+
+	return chartURLs, nil
+}
+
+// GetIndexFile ...
+func GetIndexFile(repoURL string, actionConfig *action.Configuration) (*repo.IndexFile, error) {
+	client := action.NewInstall(actionConfig)
+	if client.Version == "" && client.Devel {
+		client.Version = ">0.0.0-0"
+	}
+
+	username := client.ChartPathOptions.Username
+	password := client.ChartPathOptions.Password
+	// chartName := chartURL
+	// chartVersion :=  strings.TrimSpace(client.ChartPathOptions.Version)
+	certFile := client.ChartPathOptions.CertFile
+	keyFile := client.ChartPathOptions.KeyFile
+	caFile := client.ChartPathOptions.CaFile
+
+	s := initSettings()
+	getters := getter.All(s)
+	// getters = getter.All(settings)
+
+	// Download and write the index file to a temporary location
+	buf := make([]byte, 20)
+	rand.Read(buf)
+	name := strings.ReplaceAll(base64.StdEncoding.EncodeToString(buf), "/", "-")
+
+	c := repo.Entry{
+		URL:      repoURL,
+		Username: username,
+		Password: password,
+		CertFile: certFile,
+		KeyFile:  keyFile,
+		CAFile:   caFile,
+		Name:     name,
+	}
+	r, err := repo.NewChartRepository(&c, getters)
+	if err != nil {
+		return nil, err
+	}
+	idx, err := r.DownloadIndexFile()
+	if err != nil {
+		return nil, fmt.Errorf("looks like %q is not a valid chart repository or cannot be reached: %+v", repoURL, err)
+	}
+
+	// Read the index file for the repository to get chart information and return chart URL
+	repoIndex, err := repo.LoadIndexFile(idx)
+	if err != nil {
+		return nil, err
+	}
+
+	return repoIndex, nil
 }
 
 // isChartInstallable validates if a chart can be installed

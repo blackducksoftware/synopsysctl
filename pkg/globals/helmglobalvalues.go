@@ -23,6 +23,11 @@ package globals
 
 import (
 	"fmt"
+
+	"github.com/blackducksoftware/synopsysctl/pkg/util"
+
+	// get auth clients for gcp
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
 // BaseChartRepository ...
@@ -31,40 +36,35 @@ var BaseChartRepository = "https://sig-repo.synopsys.com/sig-cloudnative"
 /* Alert Helm Chart Constants */
 
 // AlertVersion ...
-var AlertVersion = "5.3.2"
+var AlertVersion = ""
 
 // AlertChartName ...
 var AlertChartName = "synopsys-alert"
 
 // AlertChartRepository ...
-var AlertChartRepository = fmt.Sprintf("%s/%s-%s.tgz", BaseChartRepository, AlertChartName, AlertVersion)
+var AlertChartRepository = ""
 
 /* Opssight Helm Chart Constants */
 
-// OpsSightVersionToChartVersion ...
-var OpsSightVersionToChartVersion = map[string]string{
-	"2.2.5": "2.2.5-1",
-}
-
 // OpsSightVersion ...
-var OpsSightVersion = "2.2.5"
+var OpsSightVersion = ""
 
 // OpsSightChartName ..
-var OpsSightChartName = "opssight"
+var OpsSightChartName = "blackduck-connector"
 
 // OpsSightChartRepository ...
-var OpsSightChartRepository = fmt.Sprintf("%s/%s-%s.tgz", BaseChartRepository, OpsSightChartName, OpsSightVersion)
+var OpsSightChartRepository = ""
 
 /* Black Duck Helm Chart Constants */
 
 // BlackDuckVersion ...
-var BlackDuckVersion = "2020.4.1"
+var BlackDuckVersion = ""
 
 // BlackDuckChartName ...
 var BlackDuckChartName = "blackduck"
 
 // BlackDuckChartRepository ...
-var BlackDuckChartRepository = fmt.Sprintf("%s/%s-%s.tgz", BaseChartRepository, BlackDuckChartName, BlackDuckVersion)
+var BlackDuckChartRepository = ""
 
 /* Polaris Helm Chart Constants */
 
@@ -86,13 +86,13 @@ var PolarisChartRepository = fmt.Sprintf("%s/%s-%s.tgz", BaseChartRepository, Po
 var PolarisReportingName = "polaris-reporting"
 
 // PolarisReportingVersion ...
-var PolarisReportingVersion = "2020.04"
+var PolarisReportingVersion = ""
 
 // PolarisReportingChartName ...
 var PolarisReportingChartName = "polaris-helmchart-reporting"
 
 // PolarisReportingChartRepository ...
-var PolarisReportingChartRepository = fmt.Sprintf("%s/%s-%s.tgz", BaseChartRepository, PolarisReportingChartName, PolarisReportingVersion)
+var PolarisReportingChartRepository = ""
 
 /* BDBA Helm Chart Constants */
 
@@ -100,10 +100,41 @@ var PolarisReportingChartRepository = fmt.Sprintf("%s/%s-%s.tgz", BaseChartRepos
 var BDBAName = "bdba"
 
 // BDBAVersion ...
-var BDBAVersion = "2020.03"
+var BDBAVersion = ""
 
 // BDBAChartName ...
 var BDBAChartName = "bdba"
 
 // BDBAChartRepository ...
-var BDBAChartRepository = fmt.Sprintf("%s/%s-%s.tgz", BaseChartRepository, BDBAChartName, BDBAVersion)
+var BDBAChartRepository = ""
+
+func init() {
+	// Alert
+	AlertChartRepository, _ = util.GetLatestChartURLForApp(BaseChartRepository, AlertChartName)
+	alertPackageNameSlice := util.ParsePackageName(AlertChartRepository)
+	AlertVersion = alertPackageNameSlice[1]
+
+	// Black Duck
+	BlackDuckChartRepository, _ = util.GetLatestChartURLForApp(BaseChartRepository, BlackDuckChartName)
+	blackDuckPackageNameSlice := util.ParsePackageName(BlackDuckChartRepository)
+	BlackDuckVersion = blackDuckPackageNameSlice[1]
+
+	// BDBA
+	BDBAChartRepository, _ = util.GetLatestChartURLForApp(BaseChartRepository, BDBAChartName)
+	BDBAPackageNameSlice := util.ParsePackageName(BDBAChartRepository)
+	BDBAVersion = BDBAPackageNameSlice[1]
+
+	// OpsSight (aka Black Duck Connector)
+	OpsSightChartRepository, _ = util.GetLatestChartURLForApp(BaseChartRepository, OpsSightChartName)
+	OpsSightPackageNameSlice := util.ParsePackageName(OpsSightChartRepository)
+	OpsSightVersion = OpsSightPackageNameSlice[1]
+
+	// Polaris
+	// TODO ...
+
+	// Polaris Reporting
+	PolarisReportingChartRepository, _ = util.GetLatestChartURLForApp(BaseChartRepository, PolarisReportingChartName)
+	PolarisReportingPackageNameSlice := util.ParsePackageName(PolarisReportingChartRepository)
+	PolarisReportingVersion = PolarisReportingPackageNameSlice[1]
+
+}

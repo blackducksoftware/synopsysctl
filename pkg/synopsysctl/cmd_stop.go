@@ -66,8 +66,8 @@ var stopAlertCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		alertVersion := util.GetValueFromRelease(instance, []string{"alert", "imageTag"})
-		err = SetHelmChartLocation(cmd.Flags(), globals.AlertChartName, alertVersion.(string), &globals.AlertChartRepository)
+		alertVersionFromRelease := util.GetValueFromRelease(instance, []string{"alert", "imageTag"}).(string)
+		err = SetHelmChartLocation(cmd.Flags(), globals.AlertChartName, alertVersionFromRelease, &globals.AlertChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -108,8 +108,8 @@ var stopBlackDuckCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		blackDuckVersion := util.GetValueFromRelease(instance, []string{"imageTag"})
-		err = SetHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, blackDuckVersion.(string), &globals.BlackDuckChartRepository)
+		blackDuckVersionFromRelease := util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
+		err = SetHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, blackDuckVersionFromRelease, &globals.BlackDuckChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -147,8 +147,11 @@ var stopOpsSightCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		opssightVersionFromRelease := util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
-		chartVersion := globals.OpsSightVersionToChartVersion[opssightVersionFromRelease]
+		opsSightVersionFromRelease := util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
+		chartVersion, err := util.GetLatestChartVersionForAppVersion(globals.BaseChartRepository, globals.OpsSightChartName, opsSightVersionFromRelease)
+		if err != nil {
+			return fmt.Errorf("failed to get resources version for OpsSight: %+v", err)
+		}
 		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, chartVersion, &globals.OpsSightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)

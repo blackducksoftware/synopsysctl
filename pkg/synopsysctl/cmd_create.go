@@ -283,10 +283,6 @@ func verifyPostgresFlagsWereSetForInternalOrExternal(flagset *pflag.FlagSet) {
 	}
 }
 
-func verifyUserProvidedSealKey(flagset *pflag.FlagSet) {
-	cobra.MarkFlagRequired(flagset, "seal-key")
-}
-
 func checkIfVersionRequiresCertificateSecrets(flagset *pflag.FlagSet) error {
 	// certificate-file-path and certificate-key-file-path are required for versions before 2020.6.0
 	ok, err := util.IsVersionGreaterThanOrEqualTo(flagset.Lookup("version").Value.String(), 2020, time.June, 0)
@@ -314,7 +310,7 @@ var createBlackDuckCmd = &cobra.Command{
 			return fmt.Errorf("this command takes 1 argument, but got %+v", args)
 		}
 		verifyPostgresFlagsWereSetForInternalOrExternal(cmd.Flags())
-		verifyUserProvidedSealKey(cmd.Flags())
+		cobra.MarkFlagRequired(cmd.Flags(), "seal-key")
 		err := checkIfVersionRequiresCertificateSecrets(cmd.Flags())
 		if err != nil {
 			return err
@@ -406,7 +402,7 @@ var createBlackDuckNativeCmd = &cobra.Command{
 			return fmt.Errorf("this command takes 1 argument, but got %+v", args)
 		}
 		verifyPostgresFlagsWereSetForInternalOrExternal(cmd.Flags())
-		verifyUserProvidedSealKey(cmd.Flags())
+		cobra.MarkFlagRequired(cmd.Flags(), "seal-key")
 		err := checkIfVersionRequiresCertificateSecrets(cmd.Flags())
 		if err != nil {
 			return err

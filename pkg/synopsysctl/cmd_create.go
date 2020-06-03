@@ -232,6 +232,7 @@ var createAlertNativeCmd = &cobra.Command{
 			customCertificateSecretName := "alert-custom-certificate"
 			customCertificateSecret := alert.GetAlertCustomCertificateSecret(namespace, customCertificateSecretName, certificateData, certificateKeyData)
 			util.SetHelmValueInMap(helmValuesMap, []string{"webserverCustomCertificatesSecretName"}, customCertificateSecretName)
+			fmt.Printf("---\n")
 			if _, err = PrintComponent(customCertificateSecret, "YAML"); err != nil {
 				return err
 			}
@@ -246,6 +247,7 @@ var createAlertNativeCmd = &cobra.Command{
 			javaKeystoreSecretName := "alert-java-keystore"
 			javaKeystoreSecret := alert.GetAlertJavaKeystoreSecret(namespace, javaKeystoreSecretName, javaKeystoreData)
 			util.SetHelmValueInMap(helmValuesMap, []string{"javaKeystoreSecretName"}, javaKeystoreSecretName)
+			fmt.Printf("---\n")
 			if _, err = PrintComponent(javaKeystoreSecret, "YAML"); err != nil {
 				return err
 			}
@@ -441,6 +443,7 @@ var createBlackDuckNativeCmd = &cobra.Command{
 			return err
 		}
 		for _, v := range secrets {
+			fmt.Printf("---\n")
 			PrintComponent(v, "YAML") // helm only supports yaml
 		}
 

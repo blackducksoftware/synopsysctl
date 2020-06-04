@@ -69,13 +69,13 @@ func (sc *Creater) EnsureSynopsysOperator(namespace string, blackduckClient *bla
 	oldOperatorSpec *SpecConfig, newOperatorSpec *SpecConfig) error {
 
 	// Get CRD Version Data
-	newOperatorImageVersion, err := operatorutil.GetImageTag(newOperatorSpec.Image)
-	if err != nil {
-		return fmt.Errorf("failed to get version of the new Synopsys Operator image: %s", err)
+	newOperatorImageVersion := operatorutil.ParseImageTag(newOperatorSpec.Image)
+	if newOperatorImageVersion == "" {
+		return fmt.Errorf("failed to get version of the new Synopsys Operator image")
 	}
-	oldOperatorImageVersion, err := operatorutil.GetImageTag(oldOperatorSpec.Image)
-	if err != nil {
-		return fmt.Errorf("failed to get version of the old Synopsys Operator image: %s", err)
+	oldOperatorImageVersion := operatorutil.ParseImageTag(oldOperatorSpec.Image)
+	if oldOperatorImageVersion == "" {
+		return fmt.Errorf("failed to get version of the old Synopsys Operator image")
 	}
 
 	newCrdData := SOperatorCRDVersionMap.GetCRDVersions(newOperatorImageVersion)

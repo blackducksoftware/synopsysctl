@@ -33,6 +33,9 @@ import (
 // BaseChartRepository ...
 var BaseChartRepository = "https://sig-repo.synopsys.com/sig-cloudnative"
 
+// IndexChartURLs ...
+var IndexChartURLs []string
+
 /* Alert Helm Chart Constants */
 
 // AlertVersion ...
@@ -109,23 +112,25 @@ var BDBAChartName = "bdba"
 var BDBAChartRepository = ""
 
 func init() {
+	IndexChartURLs, _ := util.GetChartURLs(BaseChartRepository, "")
+
 	// Alert
-	AlertChartRepository, _ = util.GetLatestChartURLForApp(BaseChartRepository, AlertChartName)
+	AlertChartRepository, _ = util.GetLatestChartURLForApp(IndexChartURLs, AlertChartName)
 	alertPackageNameSlice := util.ParsePackageName(AlertChartRepository)
 	AlertVersion = alertPackageNameSlice[1]
 
 	// Black Duck
-	BlackDuckChartRepository, _ = util.GetLatestChartURLForApp(BaseChartRepository, BlackDuckChartName)
+	BlackDuckChartRepository, _ = util.GetLatestChartURLForApp(IndexChartURLs, BlackDuckChartName)
 	blackDuckPackageNameSlice := util.ParsePackageName(BlackDuckChartRepository)
 	BlackDuckVersion = blackDuckPackageNameSlice[1]
 
 	// BDBA
-	BDBAChartRepository, _ = util.GetLatestChartURLForApp(BaseChartRepository, BDBAChartName)
+	BDBAChartRepository, _ = util.GetLatestChartURLForApp(IndexChartURLs, BDBAChartName)
 	BDBAPackageNameSlice := util.ParsePackageName(BDBAChartRepository)
 	BDBAVersion = BDBAPackageNameSlice[1]
 
 	// OpsSight (aka Black Duck Connector)
-	OpsSightChartRepository, _ = util.GetLatestChartURLForApp(BaseChartRepository, OpsSightChartName)
+	OpsSightChartRepository, _ = util.GetLatestChartURLForApp(IndexChartURLs, OpsSightChartName)
 	OpsSightPackageNameSlice := util.ParsePackageName(OpsSightChartRepository)
 	OpsSightVersion = OpsSightPackageNameSlice[1]
 
@@ -133,7 +138,7 @@ func init() {
 	// TODO ...
 
 	// Polaris Reporting
-	PolarisReportingChartRepository, _ = util.GetLatestChartURLForApp(BaseChartRepository, PolarisReportingChartName)
+	PolarisReportingChartRepository, _ = util.GetLatestChartURLForApp(IndexChartURLs, PolarisReportingChartName)
 	PolarisReportingPackageNameSlice := util.ParsePackageName(PolarisReportingChartRepository)
 	PolarisReportingVersion = PolarisReportingPackageNameSlice[1]
 

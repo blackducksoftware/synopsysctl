@@ -28,6 +28,31 @@ import (
 	"time"
 )
 
+// IsNotDefaultVersionGreaterThanOrEqualTo returns whether the given version is greater than or equal to the given inputs
+func IsNotDefaultVersionGreaterThanOrEqualTo(version string, majorRelease int, minorRelease int, dotRelease int) (bool, error) {
+	versionArr := strings.Split(version, ".")
+	if len(versionArr) >= 3 {
+		majorReleaseVersion, err := strconv.Atoi(versionArr[0])
+		if err != nil {
+			return false, err
+		}
+		minorReleaseVersion, err := strconv.Atoi(versionArr[1])
+		if err != nil {
+			return false, err
+		}
+		dotReleaseVersion, err := strconv.Atoi(versionArr[2])
+		if err != nil {
+			return false, err
+		}
+		if (majorReleaseVersion > majorRelease) ||
+			(majorReleaseVersion == majorRelease && minorReleaseVersion > minorRelease) ||
+			(majorReleaseVersion == majorRelease && minorReleaseVersion == minorRelease && dotReleaseVersion >= dotRelease) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // IsBlackDuckVersionSupportMultipleInstance returns whether it supports multiple instance in a single namespace
 func IsBlackDuckVersionSupportMultipleInstance(version string) (bool, error) {
 	return isYearAndMonthGreaterThanOrEqualTo(version, 2019, time.August)

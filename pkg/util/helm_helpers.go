@@ -364,8 +364,8 @@ func ParseChartVersion(chartURL string) string {
 }
 
 // GetLatestChartVersionForAppVersion ...
-func GetLatestChartVersionForAppVersion(repoURL, appName, version string) (string, error) {
-	url, err := GetLatestChartURLForAppVersion(repoURL, appName, version)
+func GetLatestChartVersionForAppVersion(chartURLs []string, appName, version string) (string, error) {
+	url, err := GetLatestChartURLForAppVersion(chartURLs, appName, version)
 	if err != nil {
 		return "", fmt.Errorf("%s", err)
 	}
@@ -373,23 +373,7 @@ func GetLatestChartVersionForAppVersion(repoURL, appName, version string) (strin
 }
 
 // GetLatestChartURLForAppVersion ...
-func GetLatestChartURLForAppVersion(repoURL, appName, version string) (string, error) {
-	chartURLs, err := GetChartURLs(repoURL, "")
-	if err != nil {
-		return "", err
-	}
-	url, err := GetLatestChartURLForAppVersionHelper(chartURLs, appName, version)
-	if err != nil {
-		return "", fmt.Errorf("%s", err)
-	}
-	if url == "" {
-		return "", fmt.Errorf("could not locate chart for App '%s-%s' in repo '%s'", appName, version, repoURL)
-	}
-	return url, nil
-}
-
-// GetLatestChartURLForAppVersionHelper ...
-func GetLatestChartURLForAppVersionHelper(chartURLs []string, appName, version string) (string, error) {
+func GetLatestChartURLForAppVersion(chartURLs []string, appName, version string) (string, error) {
 	latestChartNum := 0
 	latestURL := ""
 	for _, url := range chartURLs {
@@ -414,23 +398,7 @@ func GetLatestChartURLForAppVersionHelper(chartURLs []string, appName, version s
 }
 
 // GetLatestChartURLForApp ...
-func GetLatestChartURLForApp(repoURL, appName string) (string, error) {
-	chartURLs, err := GetChartURLs(repoURL, "")
-	if err != nil {
-		return "", err
-	}
-	url, err := GetLatestChartURLForAppHelper(chartURLs, appName)
-	if err != nil {
-		return "", fmt.Errorf("%s", err)
-	}
-	if url == "" {
-		return "", fmt.Errorf("could not locate chart for App '%s' in repo '%s'", appName, repoURL)
-	}
-	return url, nil
-}
-
-// GetLatestChartURLForAppHelper ...
-func GetLatestChartURLForAppHelper(chartURLs []string, appName string) (string, error) {
+func GetLatestChartURLForApp(chartURLs []string, appName string) (string, error) {
 	latestVersion := "0.0.0"
 	latestChartNum := 0
 	latestURL := ""

@@ -287,7 +287,7 @@ func TestParsePackageName(t *testing.T) {
 	}
 }
 
-func TestGetLatestChartForAppVersionHelper(t *testing.T) {
+func TestGetLatestChartForAppVersion(t *testing.T) {
 	testcases := []struct {
 		description string
 		appName     string
@@ -319,7 +319,7 @@ func TestGetLatestChartForAppVersionHelper(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		out, err := GetLatestChartURLForAppVersionHelper(tc.chartURLs, tc.appName, tc.version)
+		out, err := GetLatestChartURLForAppVersion(tc.chartURLs, tc.appName, tc.version)
 		if err != nil {
 			t.Errorf("%+v", err)
 		}
@@ -330,7 +330,7 @@ func TestGetLatestChartForAppVersionHelper(t *testing.T) {
 	}
 }
 
-func TestGetLatestChartURLForAppHelper(t *testing.T) {
+func TestGetLatestChartURLForApp(t *testing.T) {
 	testcases := []struct {
 		description string
 		appName     string
@@ -369,7 +369,7 @@ func TestGetLatestChartURLForAppHelper(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		out, err := GetLatestChartURLForAppHelper(tc.chartURLs, tc.appName)
+		out, err := GetLatestChartURLForApp(tc.chartURLs, tc.appName)
 		if err != nil {
 			t.Errorf("%+v", err)
 		}

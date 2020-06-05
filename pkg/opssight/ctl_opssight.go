@@ -159,7 +159,11 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().SortFlags = false
 
 	// Version
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of the OpsSight instance\n")
+	if master {
+		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of the OpsSight instance\n")
+	} else {
+		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "", "Version of the OpsSight instance\n")
+	}
 
 	// Memory
 	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", ctl.flagTree.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs\n")

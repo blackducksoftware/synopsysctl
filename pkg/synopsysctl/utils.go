@@ -390,7 +390,7 @@ func SetHelmChartLocation(flags *pflag.FlagSet, chartName, appVersion string, ch
 		*chartVariable = chartLocationFlag.Value.String()
 	} else {
 		if len(appVersion) > 0 {
-			chartURL, err := util.GetLatestChartURLForAppVersion(globals.BaseChartRepository, chartName, appVersion)
+			chartURL, err := util.GetLatestChartURLForAppVersion(globals.IndexChartURLs, chartName, appVersion)
 			if err != nil {
 				return fmt.Errorf("failed to get resources version for '%s': %+v", chartName, err)
 			}

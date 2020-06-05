@@ -218,10 +218,11 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	// [DEV NOTE:] please organize flags in order of importance
 	cmd.Flags().SortFlags = false
 
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of BDBA you want to install\n")
-	// if master {
-	// 	cobra.MarkFlagRequired(cmd.Flags(), "version")
-	// }
+	if master {
+		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of BDBA you want to install\n")
+	} else {
+		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "", "Version of BDBA you want to install\n")
+	}
 
 	cmd.Flags().StringVar(&ctl.flagTree.ClusterDomain, "cluster-domain", DefaultFlagTree.ClusterDomain, "Kubernetes cluster domain\n")
 

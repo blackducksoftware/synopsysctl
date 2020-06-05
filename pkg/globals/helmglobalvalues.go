@@ -34,7 +34,7 @@ import (
 var BaseChartRepository = "https://sig-repo.synopsys.com/sig-cloudnative"
 
 // IndexChartURLs ...
-var IndexChartURLs []string
+var IndexChartURLs = []string{}
 
 /* Alert Helm Chart Constants */
 
@@ -112,7 +112,7 @@ var BDBAChartName = "bdba"
 var BDBAChartRepository = ""
 
 func init() {
-	IndexChartURLs, _ := util.GetChartURLs(BaseChartRepository, "")
+	IndexChartURLs, _ = util.GetChartURLs(BaseChartRepository, "")
 
 	// Alert
 	AlertChartRepository, _ = util.GetLatestChartURLForApp(IndexChartURLs, AlertChartName)

@@ -50,7 +50,7 @@ var OpsSightVersionToChartVersion = map[string]string{
 var OpsSightVersion = "2.2.5"
 
 // OpsSightChartName ..
-var OpsSightChartName = "opssight"
+var OpsSightChartName = "blackduck-connector"
 
 // OpsSightChartRepository ...
 var OpsSightChartRepository = fmt.Sprintf("%s/%s-%s.tgz", BaseChartRepository, OpsSightChartName, OpsSightVersion)

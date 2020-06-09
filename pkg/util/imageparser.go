@@ -22,51 +22,64 @@ under the License.
 package util
 
 import (
-	"fmt"
 	"regexp"
 )
 
-var imageTagRegexp = regexp.MustCompile(`([0-9a-zA-Z-_:\\.]*)/([0-9a-zA-Z-_:\\.]*):([a-zA-Z0-9-\\._]+)$`)
-var imageVersionRegexp = regexp.MustCompile(`([0-9]+).([0-9]+).([0-9]+)$`)
-
-// ValidateImageString takes a docker image string and returns substring submatch if it's valid, and an error if it is not; Example:
+// ValidateFullImageString takes a docker image string and
+// verifies a repo, name, and tag were all provided
 // image := "docker.io/blackducksoftware/synopsys-operator:latest"
-// tagMatch = [blackducksoftware/synopsys-operator:latest blackducksoftware synopsys-operator latest]
-func ValidateImageString(image string) ([]string, error) {
-	imageSubstringSubmatch := imageTagRegexp.FindStringSubmatch(image)
+// subMatch = [blackducksoftware/synopsys-operator:latest blackducksoftware synopsys-operator latest]
+func ValidateFullImageString(image string) bool {
+	fullImageRegexp := regexp.MustCompile(`([0-9a-zA-Z-_:\\.]*)/([0-9a-zA-Z-_:\\.]*):([a-zA-Z0-9-\\._]+)$`)
+	imageSubstringSubmatch := fullImageRegexp.FindStringSubmatch(image)
 	if len(imageSubstringSubmatch) == 4 {
-		return imageSubstringSubmatch, nil
+		return true
 	}
-	return []string{}, fmt.Errorf("unable to parse the input image %s for regex %+v", image, imageTagRegexp)
+	return false
 }
 
-// ValidateImageVersion takes a docker image version string and returns substring submatch version if it's valid, and an error if it is not; Example:
+// ValidateImageVersion takes a docker image version string and
+// verifies that it follows the format x.x.x
 // version := "2019.4.2"
-// versionMatch = [2019.4.2 2019 4 2]
-func ValidateImageVersion(version string) ([]string, error) {
+// subMatch = [2019.4.2 2019 4 2]
+func ValidateImageVersion(version string) bool {
+	imageVersionRegexp := regexp.MustCompile(`([0-9]+).([0-9]+).([0-9]+)$`)
 	versionSubstringSubmatch := imageVersionRegexp.FindStringSubmatch(version)
 	if len(versionSubstringSubmatch) == 4 {
-		return versionSubstringSubmatch, nil
+		return true
 	}
-	return []string{}, fmt.Errorf("unable to parse the version %s for regex %+v", version, imageVersionRegexp)
+	return false
 }
 
-// GetImageTag takes a docker image string and returns the tag
-func GetImageTag(image string) (string, error) {
-	imageSubstringSubmatch, err := ValidateImageString(image)
-	if err != nil {
-		return "", err
+// ParseImageTag takes a docker image string and returns the tag
+// image := "docker.io/blackducksoftware/synopsys-operator:latest"
+// subMatch = [blackducksoftware/synopsys-operator:latest latest]
+func ParseImageTag(image string) string {
+	imageTagRegexp := regexp.MustCompile(`[0-9a-zA-Z-_:\/.]*:([a-zA-Z0-9-\\._]+)$`)
+	tagSubstringSubmatch := imageTagRegexp.FindStringSubmatch(image)
+	if len(tagSubstringSubmatch) == 2 {
+		return tagSubstringSubmatch[1]
 	}
-	tag := imageSubstringSubmatch[len(imageSubstringSubmatch)-1]
-	return tag, nil
+	return ""
 }
 
-// GetImageName takes a docker image string and returns the name
-func GetImageName(image string) (string, error) {
-	imageSubstringSubmatch, err := ValidateImageString(image)
-	if err != nil {
-		return "", err
+// ParseImageName takes a docker image string and returns the name
+// image := "docker.io/blackducksoftware/synopsys-operator:latest"
+// subMatch = [blackducksoftware/synopsys-operator:latest docker.io/blackducksoftware/ synopsys-operator :latest]
+func ParseImageName(image string) string {
+	iamgeNameRegexp := regexp.MustCompile(`([0-9a-zA-Z-_:\/.]+\/)*([0-9a-zA-Z-_\.]+):?[a-zA-Z0-9-\\._]*$`)
+	nameSubstringSubmatch := iamgeNameRegexp.FindStringSubmatch(image)
+	return nameSubstringSubmatch[len(nameSubstringSubmatch)-1]
+}
+
+// ParseImageRepo takes a docker image string and returns the repo
+// image := "docker.io/blackducksoftware/synopsys-operator:latest"
+// subMatch = [blackducksoftware/synopsys-operator:latest docker.io/blackducksoftware/ synopsys-operator :latest]
+func ParseImageRepo(image string) string {
+	repoRegexp := regexp.MustCompile(`([0-9a-zA-Z-_:\/.]+)\/[0-9a-zA-Z-_\.]+:?[a-zA-Z0-9-\\._]*$`)
+	repoSubstringSubmatch := repoRegexp.FindStringSubmatch(image)
+	if len(repoSubstringSubmatch) != 2 {
+		return ""
 	}
-	name := imageSubstringSubmatch[len(imageSubstringSubmatch)-2]
-	return name, nil
+	return repoSubstringSubmatch[1]
 }

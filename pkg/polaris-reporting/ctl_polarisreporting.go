@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -65,6 +66,25 @@ type FlagTree struct {
 	SMTPTlsTrustedHosts       string
 }
 
+// DefaultFlagTree ...
+// [Dev Note]: These should match the Helm Chart's Values.yaml
+var DefaultFlagTree = FlagTree{
+	// version
+	Version: globals.PolarisReportingVersion,
+	// domain specific flags
+	IngressClass: "nginx",
+	// license related flags
+	// storage related flags
+	ReportStorageSize: "5Gi",
+	EventstoreSize:    "50Gi",
+	// smtp related flags
+	// postgres specific flags
+	PostgresInternal: "false",
+	PostgresPort:     5432,
+	PostgresSSLMode:  "require",
+	PostgresSize:     "50Gi",
+}
+
 // NewHelmValuesFromCobraFlags returns an initialized HelmValuesFromCobraFlags
 func NewHelmValuesFromCobraFlags() *HelmValuesFromCobraFlags {
 	return &HelmValuesFromCobraFlags{
@@ -93,11 +113,11 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().SortFlags = false
 
 	// Version
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "2020.04", "Version of Polaris-Reporting you want to install [Example: \"1.0.0\"]\n") // TODO: Put a real version here
+	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Polaris-Reporting you want to install\n")
 
 	// domain specific flags
-	cmd.Flags().StringVar(&ctl.flagTree.FQDN, "fqdn", "nginx", "Fully qualified domain name [Example: \"example.polaris.synopsys.com\"]")
-	cmd.Flags().StringVar(&ctl.flagTree.IngressClass, "ingress-class", "", "Name of ingress class\n")
+	cmd.Flags().StringVar(&ctl.flagTree.FQDN, "fqdn", ctl.flagTree.FQDN, "Fully qualified domain name [Example: \"example.polaris.synopsys.com\"]")
+	cmd.Flags().StringVar(&ctl.flagTree.IngressClass, "ingress-class", DefaultFlagTree.IngressClass, "Name of ingress class\n")
 	if master {
 		cobra.MarkFlagRequired(cmd.Flags(), "fqdn")
 	}
@@ -110,8 +130,8 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 
 	// storage related flags
 	if master {
-		cmd.Flags().StringVar(&ctl.flagTree.ReportStorageSize, "reportstorage-size", "5Gi", "Persistent Volume Claim size for reportstorage")
-		cmd.Flags().StringVar(&ctl.flagTree.EventstoreSize, "eventstore-size", "50Gi", "Persistent Volume Claim size for eventstore")
+		cmd.Flags().StringVar(&ctl.flagTree.ReportStorageSize, "reportstorage-size", DefaultFlagTree.ReportStorageSize, "Persistent Volume Claim size for reportstorage")
+		cmd.Flags().StringVar(&ctl.flagTree.EventstoreSize, "eventstore-size", DefaultFlagTree.EventstoreSize, "Persistent Volume Claim size for eventstore")
 		cmd.Flags().StringVar(&ctl.flagTree.StorageClass, "storage-class", ctl.flagTree.StorageClass, "Storage Class for all Polaris-Reporting's storage\n")
 		// TODO: Once the Helm charts are fixed for the storage class issue, we can remove the required flag for storage class
 		cobra.MarkFlagRequired(cmd.Flags(), "storage-class")
@@ -136,14 +156,14 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	}
 
 	// postgres specific flags
-	cmd.Flags().StringVar(&ctl.flagTree.PostgresInternal, "enable-postgres-container", "false", "If true, synopsysctl will deploy a postgres container backed by persistent volume (Not recommended for production usage)")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresInternal, "enable-postgres-container", DefaultFlagTree.PostgresInternal, "If true, synopsysctl will deploy a postgres container backed by persistent volume (Not recommended for production usage)")
 	cmd.Flags().StringVar(&ctl.flagTree.PostgresHost, "postgres-host", ctl.flagTree.PostgresHost, "Postgres host. If --enable-postgres-container=true, the default is \"postgres\"")
-	cmd.Flags().IntVar(&ctl.flagTree.PostgresPort, "postgres-port", 5432, "Postgres port")
+	cmd.Flags().IntVar(&ctl.flagTree.PostgresPort, "postgres-port", DefaultFlagTree.PostgresPort, "Postgres port")
 	cmd.Flags().StringVar(&ctl.flagTree.PostgresUsername, "postgres-username", ctl.flagTree.PostgresUsername, "Postgres username. If --enable-postgres-container=true, the default is \"postgres\"")
 	cmd.Flags().StringVar(&ctl.flagTree.PostgresPassword, "postgres-password", ctl.flagTree.PostgresPassword, "Postgres password")
-	cmd.Flags().StringVar(&ctl.flagTree.PostgresSSLMode, "postgres-ssl-mode", "require", "Postgres ssl mode [disable|require]")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresSSLMode, "postgres-ssl-mode", DefaultFlagTree.PostgresSSLMode, "Postgres ssl mode [disable|require]")
 	if master {
-		cmd.Flags().StringVar(&ctl.flagTree.PostgresSize, "postgres-size", "50Gi", "Persistent volume claim size to use for postgres. Only applicable if --enable-postgres-container is set to true\n")
+		cmd.Flags().StringVar(&ctl.flagTree.PostgresSize, "postgres-size", DefaultFlagTree.PostgresSize, "Persistent volume claim size to use for postgres. Only applicable if --enable-postgres-container is set to true\n")
 	}
 
 	if master {

@@ -32,6 +32,7 @@ import (
 
 	alertclientset "github.com/blackducksoftware/synopsysctl/pkg/alert/client/clientset/versioned"
 	blackduckclientset "github.com/blackducksoftware/synopsysctl/pkg/blackduck/client/clientset/versioned"
+	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	opssightclientset "github.com/blackducksoftware/synopsysctl/pkg/opssight/client/clientset/versioned"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
@@ -389,7 +390,7 @@ func SetHelmChartLocation(flags *pflag.FlagSet, chartName, version string, chart
 		*chartVariable = chartLocationFlag.Value.String()
 	} else {
 		if len(version) > 0 {
-			*chartVariable = fmt.Sprintf("%s/%s-%s.tgz", baseChartRepository, chartName, version)
+			*chartVariable = fmt.Sprintf("%s/%s-%s.tgz", globals.BaseChartRepository, chartName, version)
 		}
 	}
 	return nil

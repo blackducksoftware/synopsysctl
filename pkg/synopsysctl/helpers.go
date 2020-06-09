@@ -25,11 +25,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/spf13/cobra"
 )
 
 func verifyClusterType(cType string) error {
-	if strings.EqualFold(strings.ToUpper(cType), clusterTypeKubernetes) || strings.EqualFold(strings.ToUpper(cType), clusterTypeOpenshift) {
+	if strings.EqualFold(strings.ToUpper(cType), globals.ClusterTypeKubernetes) || strings.EqualFold(strings.ToUpper(cType), globals.ClusterTypeOpenshift) {
 		return nil
 	}
 	return fmt.Errorf("invalid cluster type '%s'", cType)
@@ -42,5 +43,5 @@ func addChartLocationPathFlag(cmd *cobra.Command) {
 }
 
 func addNativeFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&nativeClusterType, "target", nativeClusterType, "Type of cluster to generate the resources for [KUBERNETES|OPENSHIFT]")
+	cmd.Flags().StringVar(&globals.NativeClusterType, "target", globals.NativeClusterType, "Type of cluster to generate the resources for [KUBERNETES|OPENSHIFT]")
 }

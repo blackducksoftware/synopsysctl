@@ -133,7 +133,11 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().SortFlags = false
 
 	// Version
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Polaris you want to install\n")
+	if master {
+		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Polaris you want to install\n")
+	} else {
+		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "", "Version of Polaris you want to install\n")
+	}
 
 	// domain-name specific flags
 	cmd.Flags().StringVar(&ctl.flagTree.IngressClass, "ingress-class", DefaultFlagTree.IngressClass, "Name of ingress class")

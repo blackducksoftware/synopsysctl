@@ -104,9 +104,11 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().SortFlags = false
 
 	// Application Version and Image Tag
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Alert\n")
 	if master {
+		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Alert\n")
 		cobra.MarkFlagRequired(cmd.Flags(), "version")
+	} else {
+		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "", "Version of Alert\n")
 	}
 
 	// Storage

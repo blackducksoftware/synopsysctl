@@ -113,7 +113,11 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().SortFlags = false
 
 	// Version
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Polaris-Reporting you want to install\n")
+	if master {
+		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Polaris-Reporting you want to install\n")
+	} else {
+		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "", "Version of Polaris-Reporting you want to install\n")
+	}
 
 	// domain specific flags
 	cmd.Flags().StringVar(&ctl.flagTree.FQDN, "fqdn", ctl.flagTree.FQDN, "Fully qualified domain name [Example: \"example.polaris.synopsys.com\"]")

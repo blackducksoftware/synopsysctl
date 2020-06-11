@@ -23,6 +23,7 @@ package util
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -221,5 +222,160 @@ func TestGetHelmValueFromMap(t *testing.T) {
 		receivedValue := GetHelmValueFromMap(tt.valueMap, tt.keyString)
 		assert := assert.New(t)
 		assert.Equal(tt.expectedValue, receivedValue, fmt.Sprintf("failed case: %s\nGot: %+v\nWanted: %+v", tt.testDesc, receivedValue, tt.expectedValue))
+	}
+}
+
+func TestParsePackageName(t *testing.T) {
+	testcases := []struct {
+		description string
+		packageName string
+		expected    []string
+	}{
+		{
+			description: "",
+			packageName: "synopsys-alert-5.3.1",
+			expected:    []string{"synopsys-alert", "5.3.1", ""},
+		},
+		{
+			description: "",
+			packageName: "synopsys-alert-5.3.1-1",
+			expected:    []string{"synopsys-alert", "5.3.1", "1"},
+		},
+		{
+			description: "",
+			packageName: "synopsys-alert-5.3.1-12",
+			expected:    []string{"synopsys-alert", "5.3.1", "12"},
+		},
+		{
+			description: "",
+			packageName: "blackduck-2020.4.2",
+			expected:    []string{"blackduck", "2020.4.2", ""},
+		},
+		{
+			description: "",
+			packageName: "blackduck-2020.4.2-1",
+			expected:    []string{"blackduck", "2020.4.2", "1"},
+		},
+		{
+			description: "",
+			packageName: "blackduck-2020.4.2-12",
+			expected:    []string{"blackduck", "2020.4.2", "12"},
+		},
+		{
+			description: "",
+			packageName: "bdba-2020.04",
+			expected:    []string{"bdba", "2020.04", ""},
+		},
+		{
+			description: "",
+			packageName: "bdba-2020.04-1",
+			expected:    []string{"bdba", "2020.04", "1"},
+		},
+		{
+			description: "",
+			packageName: "https://sig-repo.synopsys.com/sig-cloudnative/synopsys-alert-5.3.1.tgz",
+			expected:    []string{"synopsys-alert", "5.3.1", ""},
+		},
+	}
+
+	for _, tc := range testcases {
+		out := ParsePackageName(tc.packageName)
+
+		if !reflect.DeepEqual(out, tc.expected) {
+			t.Errorf("expected %+v, got %+v", tc.expected, out)
+		}
+	}
+}
+
+func TestGetLatestChartForAppVersion(t *testing.T) {
+	testcases := []struct {
+		description string
+		appName     string
+		version     string
+		chartURLs   []string
+		expected    string
+	}{
+		{
+			description: "",
+			appName:     "blackduck",
+			version:     "2020.4.1",
+			chartURLs: []string{
+				"https://sig-repo.synopsys.com/sig-cloudnative/blackduck-2020.4.1.tgz",
+				"https://sig-repo.synopsys.com/sig-cloudnative/blackduck-2020.4.1-1.tgz",
+			},
+			expected: "https://sig-repo.synopsys.com/sig-cloudnative/blackduck-2020.4.1-1.tgz",
+		},
+		{
+			description: "",
+			appName:     "blackduck",
+			version:     "2020.4.1",
+			chartURLs: []string{
+				"https://sig-repo.synopsys.com/sig-cloudnative/blackduck-2020.4.1.tgz",
+				"https://sig-repo.synopsys.com/sig-cloudnative/blackduck-2020.4.1-1.tgz",
+				"https://sig-repo.synopsys.com/sig-cloudnative/blackduck-2020.4.2.tgz",
+			},
+			expected: "https://sig-repo.synopsys.com/sig-cloudnative/blackduck-2020.4.1-1.tgz",
+		},
+	}
+
+	for _, tc := range testcases {
+		out, err := GetLatestChartURLForAppVersion(tc.chartURLs, tc.appName, tc.version)
+		if err != nil {
+			t.Errorf("%+v", err)
+		}
+
+		if !reflect.DeepEqual(out, tc.expected) {
+			t.Errorf("expected %+v, got %+v", tc.expected, out)
+		}
+	}
+}
+
+func TestGetLatestChartURLForApp(t *testing.T) {
+	testcases := []struct {
+		description string
+		appName     string
+		chartURLs   []string
+		expected    string
+	}{
+		{
+			description: "",
+			appName:     "blackduck",
+			chartURLs: []string{
+				"https://sig-repo.synopsys.com/sig-cloudnative/blackduck-2020.4.1.tgz",
+				"https://sig-repo.synopsys.com/sig-cloudnative/blackduck-2020.4.1-1.tgz",
+			},
+			expected: "https://sig-repo.synopsys.com/sig-cloudnative/blackduck-2020.4.1-1.tgz",
+		},
+		{
+			description: "",
+			appName:     "blackduck",
+			chartURLs: []string{
+				"https://sig-repo.synopsys.com/sig-cloudnative/blackduck-2020.4.1.tgz",
+				"https://sig-repo.synopsys.com/sig-cloudnative/blackduck-2020.4.1-1.tgz",
+				"https://sig-repo.synopsys.com/sig-cloudnative/blackduck-2020.4.2.tgz",
+			},
+			expected: "https://sig-repo.synopsys.com/sig-cloudnative/blackduck-2020.4.2.tgz",
+		},
+		{
+			description: "",
+			appName:     "synopsys-alert",
+			chartURLs: []string{
+				"https://sig-repo.synopsys.com/sig-cloudnative/synopsys-alert-5.3.1.tgz",
+				"https://sig-repo.synopsys.com/sig-cloudnative/synopsys-alert-5.3.2-1.tgz",
+				"https://sig-repo.synopsys.com/sig-cloudnative/blackduck-2020.4.2.tgz",
+			},
+			expected: "https://sig-repo.synopsys.com/sig-cloudnative/synopsys-alert-5.3.2-1.tgz",
+		},
+	}
+
+	for _, tc := range testcases {
+		out, err := GetLatestChartURLForApp(tc.chartURLs, tc.appName)
+		if err != nil {
+			t.Errorf("%+v", err)
+		}
+
+		if !reflect.DeepEqual(out, tc.expected) {
+			t.Errorf("expected %+v, got %+v", tc.expected, out)
+		}
 	}
 }

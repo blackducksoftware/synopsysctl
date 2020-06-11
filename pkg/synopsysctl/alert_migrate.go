@@ -27,6 +27,7 @@ import (
 
 	alertctl "github.com/blackducksoftware/synopsysctl/pkg/alert"
 	v1 "github.com/blackducksoftware/synopsysctl/pkg/api/alert/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
@@ -111,7 +112,7 @@ func migrateAlert(alert *v1.Alert, helmReleaseName string, operatorNamespace str
 	// Update the Helm Chart Location
 	helmValuesMapAlertData := helmValuesMap["alert"].(map[string]interface{})
 	alertVersion := helmValuesMapAlertData["imageTag"].(string)
-	err = SetHelmChartLocation(flags, alertChartName, alertVersion, &alertChartRepository)
+	err = SetHelmChartLocation(flags, globals.AlertChartName, alertVersion, &globals.AlertChartRepository)
 	if err != nil {
 		return fmt.Errorf("failed to set the app resources location due to %+v", err)
 	}
@@ -149,7 +150,7 @@ func migrateAlert(alert *v1.Alert, helmReleaseName string, operatorNamespace str
 	}
 
 	// Verify Alert can be created with Dry-Run before creating resources
-	err = util.CreateWithHelm3(helmReleaseName, alert.Spec.Namespace, alertChartRepository, helmValuesMap, kubeConfigPath, true)
+	err = util.CreateWithHelm3(helmReleaseName, alert.Spec.Namespace, globals.AlertChartRepository, helmValuesMap, kubeConfigPath, true)
 	if err != nil {
 		return fmt.Errorf("failed to update Alert resources dry-run: %+v", err)
 	}
@@ -210,7 +211,7 @@ func migrateAlert(alert *v1.Alert, helmReleaseName string, operatorNamespace str
 	}
 
 	// Deploy new Resources
-	err = util.CreateWithHelm3(helmReleaseName, alert.Spec.Namespace, alertChartRepository, helmValuesMap, kubeConfigPath, false)
+	err = util.CreateWithHelm3(helmReleaseName, alert.Spec.Namespace, globals.AlertChartRepository, helmValuesMap, kubeConfigPath, false)
 	if err != nil {
 		cleanErrorMsg := strings.Replace(err.Error(), helmReleaseName, alert.Name, 0)
 		return fmt.Errorf("failed to update Alert resources: %+v", cleanErrorMsg)

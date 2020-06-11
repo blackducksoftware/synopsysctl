@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 
 	log "github.com/sirupsen/logrus"
@@ -77,6 +78,33 @@ type FlagTree struct {
 	coverityLicensePath string
 }
 
+// DefaultFlagTree ...
+// [Dev Note]: These should match the Helm Chart's Values.yaml
+var DefaultFlagTree = FlagTree{
+	// Version
+	Version: globals.PolarisVersion,
+	// domain-name specific flags
+	IngressClass: "nginx",
+	// license related flags
+	// smtp related flags
+	SMTPPort:                 2525,
+	SMTPTlsMode:              "require-starttls",
+	SMTPTlsTrustedHosts:      "*",
+	SMTPTlsIgnoreInvalidCert: false,
+	// postgres specific flags
+	PostgresInternal: false,
+	PostgresPort:     5432,
+	// size parameters
+	EventstoreSize:     EVENTSTORE_PV_SIZE,
+	MongoDBSize:        MONGODB_PV_SIZE,
+	DownloadServerSize: DOWNLOAD_SERVER_PV_SIZE,
+	UploadServerSize:   UPLOAD_SERVER_PV_SIZE,
+	PostgresSize:       POSTGRES_PV_SIZE,
+	// reporting related flags
+	EnableReporting:   false,
+	ReportStorageSize: REPORT_STORAGE_PV_SIZE,
+}
+
 // NewHelmValuesFromCobraFlags returns an initialized HelmValuesFromCobraFlags
 func NewHelmValuesFromCobraFlags() *HelmValuesFromCobraFlags {
 	return &HelmValuesFromCobraFlags{
@@ -105,10 +133,10 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().SortFlags = false
 
 	// Version
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "2020.03", "Version of Polaris you want to install [Example: \"2019.11\"]\n")
+	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Polaris you want to install\n")
 
 	// domain-name specific flags
-	cmd.Flags().StringVar(&ctl.flagTree.IngressClass, "ingress-class", "nginx", "Name of ingress class")
+	cmd.Flags().StringVar(&ctl.flagTree.IngressClass, "ingress-class", DefaultFlagTree.IngressClass, "Name of ingress class")
 	cmd.Flags().StringVar(&ctl.flagTree.FQDN, "fqdn", ctl.flagTree.FQDN, "Fully qualified domain name [Example: \"example.polaris.synopsys.com\"]\n")
 
 	// license related flags
@@ -120,12 +148,12 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 
 	// smtp related flags
 	cmd.Flags().StringVar(&ctl.flagTree.SMTPHost, "smtp-host", ctl.flagTree.SMTPHost, "SMTP host")
-	cmd.Flags().IntVar(&ctl.flagTree.SMTPPort, "smtp-port", 2525, "SMTP port")
+	cmd.Flags().IntVar(&ctl.flagTree.SMTPPort, "smtp-port", DefaultFlagTree.SMTPPort, "SMTP port")
 	cmd.Flags().StringVar(&ctl.flagTree.SMTPUsername, "smtp-username", ctl.flagTree.SMTPUsername, "SMTP username")
 	cmd.Flags().StringVar(&ctl.flagTree.SMTPPassword, "smtp-password", ctl.flagTree.SMTPPassword, "SMTP password")
-	cmd.Flags().StringVar(&ctl.flagTree.SMTPTlsMode, "smtp-tls-mode", "require-starttls", "SMTP TLS mode [disable|try-starttls|require-starttls|require-tls]")
-	cmd.Flags().StringVar(&ctl.flagTree.SMTPTlsTrustedHosts, "smtp-trusted-hosts", "*", "Whitespace separated list of trusted hosts")
-	cmd.Flags().BoolVar(&ctl.flagTree.SMTPTlsIgnoreInvalidCert, "insecure-skip-smtp-tls-verify", false, "SMTP server's certificates won't be validated")
+	cmd.Flags().StringVar(&ctl.flagTree.SMTPTlsMode, "smtp-tls-mode", DefaultFlagTree.SMTPTlsMode, "SMTP TLS mode [disable|try-starttls|require-starttls|require-tls]")
+	cmd.Flags().StringVar(&ctl.flagTree.SMTPTlsTrustedHosts, "smtp-trusted-hosts", DefaultFlagTree.SMTPTlsTrustedHosts, "Whitespace separated list of trusted hosts")
+	cmd.Flags().BoolVar(&ctl.flagTree.SMTPTlsIgnoreInvalidCert, "insecure-skip-smtp-tls-verify", DefaultFlagTree.SMTPTlsIgnoreInvalidCert, "SMTP server's certificates won't be validated")
 	cmd.Flags().StringVar(&ctl.flagTree.SMTPSenderEmail, "smtp-sender-email", ctl.flagTree.SMTPSenderEmail, "SMTP sender email\n")
 
 	if master {
@@ -138,9 +166,9 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 
 	// postgres specific flags
 	// these flags are specific for an external managed postgres
-	cmd.Flags().BoolVar(&ctl.flagTree.PostgresInternal, "enable-postgres-container", false, "If true, synopsysctl will deploy a postgres container backed by persistent volume (Not recommended for production usage)")
+	cmd.Flags().BoolVar(&ctl.flagTree.PostgresInternal, "enable-postgres-container", DefaultFlagTree.PostgresInternal, "If true, synopsysctl will deploy a postgres container backed by persistent volume (Not recommended for production usage)")
 	cmd.Flags().StringVar(&ctl.flagTree.PostgresHost, "postgres-host", ctl.flagTree.PostgresHost, "Postgres host. If --enable-postgres-container=true, the defualt is \"postgres\"")
-	cmd.Flags().IntVar(&ctl.flagTree.PostgresPort, "postgres-port", 5432, "Postgres port")
+	cmd.Flags().IntVar(&ctl.flagTree.PostgresPort, "postgres-port", DefaultFlagTree.PostgresPort, "Postgres port")
 	cmd.Flags().StringVar(&ctl.flagTree.PostgresSSLMode, "postgres-ssl-mode", ctl.flagTree.PostgresSSLMode, "Postgres ssl mode [disable|require]")
 	cmd.Flags().StringVar(&ctl.flagTree.PostgresUsername, "postgres-username", ctl.flagTree.PostgresUsername, "Postgres username. If --enable-postgres-container=true, the defualt is \"postgres\"")
 	// if using in-cluster containerized Postgres, then currently we require "enable-postgres-container", "postgres-password" and optionally "postgres-size"
@@ -149,17 +177,17 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 
 	// size parameters are not allowed to change during update because of Kubernetes not allowing storage to be decreased (although note that it does allow it to be increased, see https://kubernetes.io/docs/concepts/storage/persistent-volumes/#expanding-persistent-volumes-claims)
 	if master {
-		cmd.Flags().StringVar(&ctl.flagTree.EventstoreSize, "eventstore-size", EVENTSTORE_PV_SIZE, "Persistent volume claim size for eventstore")
-		cmd.Flags().StringVar(&ctl.flagTree.MongoDBSize, "mongodb-size", MONGODB_PV_SIZE, "Persistent volume claim size for mongodb")
-		cmd.Flags().StringVar(&ctl.flagTree.DownloadServerSize, "downloadserver-size", DOWNLOAD_SERVER_PV_SIZE, "Persistent volume claim size for download server")
-		cmd.Flags().StringVar(&ctl.flagTree.UploadServerSize, "uploadserver-size", UPLOAD_SERVER_PV_SIZE, "Persistent volume claim size for upload server")
-		cmd.Flags().StringVar(&ctl.flagTree.PostgresSize, "postgres-size", POSTGRES_PV_SIZE, "Persistent volume claim size to use for postgres. Only applicable if --enable-postgres-container is set to true")
+		cmd.Flags().StringVar(&ctl.flagTree.EventstoreSize, "eventstore-size", DefaultFlagTree.EventstoreSize, "Persistent volume claim size for eventstore")
+		cmd.Flags().StringVar(&ctl.flagTree.MongoDBSize, "mongodb-size", DefaultFlagTree.MongoDBSize, "Persistent volume claim size for mongodb")
+		cmd.Flags().StringVar(&ctl.flagTree.DownloadServerSize, "downloadserver-size", DefaultFlagTree.DownloadServerSize, "Persistent volume claim size for download server")
+		cmd.Flags().StringVar(&ctl.flagTree.UploadServerSize, "uploadserver-size", DefaultFlagTree.UploadServerSize, "Persistent volume claim size for upload server")
+		cmd.Flags().StringVar(&ctl.flagTree.PostgresSize, "postgres-size", DefaultFlagTree.PostgresSize, "Persistent volume claim size to use for postgres. Only applicable if --enable-postgres-container is set to true")
 		cmd.Flags().StringVar(&ctl.flagTree.StorageClass, "storage-class", ctl.flagTree.StorageClass, "Set the storage class to use for all persistent volume claims\n")
 	}
 
 	// reporting related flags
-	cmd.Flags().BoolVar(&ctl.flagTree.EnableReporting, "enable-reporting", false, "Enable Reporting Platform")
-	cmd.Flags().StringVar(&ctl.flagTree.ReportStorageSize, "reportstorage-size", REPORT_STORAGE_PV_SIZE, "Persistent volume claim size for reportstorage. Only applicable if --enable-reporting is set to true")
+	cmd.Flags().BoolVar(&ctl.flagTree.EnableReporting, "enable-reporting", DefaultFlagTree.EnableReporting, "Enable Reporting Platform")
+	cmd.Flags().StringVar(&ctl.flagTree.ReportStorageSize, "reportstorage-size", DefaultFlagTree.ReportStorageSize, "Persistent volume claim size for reportstorage. Only applicable if --enable-reporting is set to true")
 }
 
 // CheckValuesFromFlags returns an error if a value set by a flag is invalid

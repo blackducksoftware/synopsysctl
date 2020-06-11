@@ -27,6 +27,7 @@ import (
 
 	v1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
 	"github.com/blackducksoftware/synopsysctl/pkg/blackduck"
+	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	"github.com/imdario/mergo"
 	log "github.com/sirupsen/logrus"
@@ -84,7 +85,7 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 
 	// Update the Helm Chart Location
 	bdVersion := helmValuesMap["imageTag"].(string)
-	err = SetHelmChartLocation(flags, blackDuckChartName, bdVersion, &blackduckChartRepository)
+	err = SetHelmChartLocation(flags, globals.BlackDuckChartName, bdVersion, &globals.BlackDuckChartRepository)
 	if err != nil {
 		return fmt.Errorf("failed to set the app resources location due to %+v", err)
 	}
@@ -132,10 +133,11 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 		return err
 	}
 
-	err = util.CreateWithHelm3(bd.Name, bd.Spec.Namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath, true, extraFiles...)
+	err = util.CreateWithHelm3(bd.Name, bd.Spec.Namespace, globals.BlackDuckChartRepository, helmValuesMap, kubeConfigPath, true, extraFiles...)
 	if err != nil {
-		return fmt.Errorf("failed to create Blackduck resources: %+v", err)
+		return fmt.Errorf("failed to update File Ownerships in PVs: %+v", err)
 	}
+	util.SetHelmValueInMap(helmValuesMap, []string{"status"}, "Running")
 
 	// Update Security Context Permissions
 	// stop the black duck
@@ -147,7 +149,7 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 	util.SetHelmValueInMap(helmValuesMap, []string{"status"}, "Running")
 
 	// Deploy Resources
-	err = util.CreateWithHelm3(bd.Name, bd.Spec.Namespace, blackduckChartRepository, helmValuesMap, kubeConfigPath, false, extraFiles...)
+	err = util.CreateWithHelm3(bd.Name, bd.Spec.Namespace, globals.BlackDuckChartRepository, helmValuesMap, kubeConfigPath, false, extraFiles...)
 	if err != nil {
 		return fmt.Errorf("failed to create Blackduck resources: %+v", err)
 	}
@@ -343,6 +345,10 @@ func blackDuckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 		util.SetHelmValueInMap(helmConfig, []string{"imagePullSecrets"}, bd.Spec.RegistryConfiguration.PullSecrets)
 	}
 
+	if len(bd.Spec.ImageRegistries) > 0 {
+		blackduck.SetBlackDuckImageRegistriesInHelmValuesMap(helmConfig, bd.Spec.ImageRegistries)
+	}
+
 	var isSourceCodeUploadEnabled bool
 	if isSourceCodeUploadEnabled, bd.Spec.Environs = popEnvironAndCompareValue(bd.Spec.Environs, "ENABLE_SOURCE_UPLOADS", "true"); isSourceCodeUploadEnabled {
 		util.SetHelmValueInMap(helmConfig, []string{"enableSourceCodeUpload"}, true)
@@ -355,7 +361,7 @@ func blackDuckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 
 	// NodeAffinities
 	for k, v := range bd.Spec.NodeAffinities {
-		util.SetHelmValueInMap(helmConfig, []string{k, "affinity"}, blackduck.OperatorAffinityTok8sAffinity(v))
+		util.SetHelmValueInMap(helmConfig, []string{k, "affinity"}, blackduck.OperatorAffinityToHelm(v))
 	}
 
 	//SecurityContexts

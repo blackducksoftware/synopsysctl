@@ -28,6 +28,7 @@ import (
 
 	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
 	"github.com/blackducksoftware/synopsysctl/pkg/blackduck"
+	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -64,6 +65,17 @@ type FlagTree struct {
 	Port                        int32
 }
 
+// DefaultFlagTree ...
+// [Dev Note]: These should match the Helm Chart's Values.yaml
+var DefaultFlagTree = FlagTree{
+	Version:           globals.AlertVersion,
+	Registry:          "docker.io/blackducksoftware",
+	StandAlone:        "true",
+	ExposeService:     util.NODEPORT,
+	PersistentStorage: "true",
+	Port:              8443,
+}
+
 // NewHelmValuesFromCobraFlags returns an initialized HelmValuesFromCobraFlags
 func NewHelmValuesFromCobraFlags() *HelmValuesFromCobraFlags {
 	return &HelmValuesFromCobraFlags{
@@ -92,7 +104,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().SortFlags = false
 
 	// Application Version and Image Tag
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "5.3.2", "Version of Alert\n")
+	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Alert\n")
 	if master {
 		cobra.MarkFlagRequired(cmd.Flags(), "version")
 	}
@@ -106,15 +118,15 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringVar(&ctl.flagTree.PVCFilePath, "pvc-file-path", ctl.flagTree.PVCFilePath, "Absolute path to a file containing a list of PVC json structs\n")
 
 	// Pulling images values
-	cmd.Flags().StringVar(&ctl.flagTree.Registry, "registry", "docker.io/blackducksoftware", "Name of the registry to use for images")
+	cmd.Flags().StringVar(&ctl.flagTree.Registry, "registry", DefaultFlagTree.Registry, "Name of the registry to use for images")
 	cmd.Flags().StringSliceVar(&ctl.flagTree.PullSecrets, "pull-secret-name", ctl.flagTree.PullSecrets, "Only if the registry requires authentication\n")
 
 	// Standalone (uses it's own cfssl)
-	cmd.Flags().StringVar(&ctl.flagTree.StandAlone, "standalone", "true", "If true, Alert runs in standalone mode [true|false]\n")
+	cmd.Flags().StringVar(&ctl.flagTree.StandAlone, "standalone", DefaultFlagTree.StandAlone, "If true, Alert runs in standalone mode [true|false]\n")
 
 	// Exposing the UI
 	if master {
-		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", util.NONE, "Service type to expose Alert's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
+		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", DefaultFlagTree.ExposeService, "Service type to expose Alert's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
 	} else {
 		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", ctl.flagTree.ExposeService, "Service type to expose Alert's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
 	}
@@ -133,7 +145,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringVar(&ctl.flagTree.SecurityContextFilePath, "security-context-file-path", ctl.flagTree.SecurityContextFilePath, "Absolute path to a file containing a map of pod names to security contexts runAsUser, fsGroup, and runAsGroup\n")
 
 	// Port
-	cmd.Flags().Int32Var(&ctl.flagTree.Port, "port", ctl.flagTree.Port, "Port of Alert") // only for devs
+	cmd.Flags().Int32Var(&ctl.flagTree.Port, "port", DefaultFlagTree.Port, "Port of Alert") // only for devs
 	cmd.Flags().MarkHidden("port")
 }
 

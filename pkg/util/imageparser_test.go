@@ -22,223 +22,268 @@ under the License.
 package util
 
 import (
-	"fmt"
-	"strconv"
 	"testing"
 )
 
 func TestParseImageVersion(t *testing.T) {
 	version := "1.0.6"
-	versions, err := ValidateImageVersion(version)
-	t.Logf("versions: %+v", versions)
-	if err != nil {
-		t.Errorf("unable to parse image version: %+v", err)
-	}
-	if len(versions) == 4 {
-		version1, _ := strconv.Atoi(versions[1])
-		version3, _ := strconv.Atoi(versions[3])
-		if err == nil && version1 >= 1 && version3 > 3 {
-			t.Logf("/opt/blackduck/hub/blackduck-upload-cache")
-		} else {
-			t.Logf("/opt/blackduck/hub/hub-upload-cache")
-		}
+	valid := ValidateImageVersion(version)
+	if valid == false {
+		t.Errorf("invalid version format: %+v", version)
 	}
 
 	version = "2019.1.0"
-	_, err = ValidateImageVersion(version)
-	if err != nil {
-		t.Errorf("unable to parse image version: %+v", err)
+	valid = ValidateImageVersion(version)
+	if valid == false {
+		t.Errorf("invalid version format: %+v", version)
 	}
 
 	version = "2019.a.b.c"
-	versions, err = ValidateImageVersion(version)
-	if err == nil {
-		t.Errorf("unable to get image version: %+v", versions)
+	valid = ValidateImageVersion(version)
+	if valid == true {
+		t.Errorf("version %+v should not be valid", version)
 	}
 
 	version = "2019.1.0-SNAPSHOT"
-	versions, err = ValidateImageVersion(version)
-	if err == nil {
-		t.Errorf("unable to get image version: %+v", versions)
+	valid = ValidateImageVersion(version)
+	if valid == true {
+		t.Errorf("version %+v should not be valid", version)
 	}
 }
 
-func TestParseImageString(t *testing.T) {
+func TestValidateImageString(t *testing.T) {
 	testcases := []struct {
-		description    string
-		repo           string
-		tag            string
-		expectedLength int
+		description string
+		image       string
+		valid       bool
 	}{
 		{
-			description:    "repo with path and tag",
-			repo:           "url.com/imagename",
-			tag:            "latest",
-			expectedLength: 4,
+			description: "repo with path and tag",
+			image:       "url.com/imagename:latest",
+			valid:       true,
 		},
 		{
-			description:    "repo with path and tag",
-			repo:           "url.com/projectname/imagename",
-			tag:            "5.0.0",
-			expectedLength: 4,
+			description: "repo with path and tag",
+			image:       "url.com/projectname/imagename:5.0.0",
+			valid:       true,
 		},
 		{
-			description:    "repo with path without tag",
-			repo:           "url.com/imagename",
-			tag:            "",
-			expectedLength: 0,
+			description: "repo with path without tag",
+			image:       "url.com/imagename",
+			valid:       false,
 		},
 		{
-			description:    "repo with path and port and tag",
-			repo:           "url.com:80/imagename",
-			tag:            "latest",
-			expectedLength: 4,
+			description: "repo with path and port and tag",
+			image:       "url.com:80/imagename:latest",
+			valid:       true,
 		},
 		{
-			description:    "repo with path and port without tag",
-			repo:           "url.com:80/imagename",
-			tag:            "",
-			expectedLength: 0,
+			description: "repo with path and port without tag",
+			image:       "url.com:80/imagename",
+			valid:       false,
 		},
 		{
-			description:    "image name only with tag",
-			repo:           "imagename",
-			tag:            "1.2.3",
-			expectedLength: 0,
+			description: "image name only with tag",
+			image:       "imagename:1.2.3",
+			valid:       false,
 		},
 		{
-			description:    "image name only without tag",
-			repo:           "imagename",
-			tag:            "",
-			expectedLength: 0,
+			description: "image name only without tag",
+			image:       "imagename",
+			valid:       false,
 		},
 	}
 
 	for _, tc := range testcases {
-		var image string
-		if len(tc.tag) > 0 {
-			image = fmt.Sprintf("%s:%s", tc.repo, tc.tag)
-		} else {
-			image = tc.repo
-		}
-		imageSubstringSubmatch, err := ValidateImageString(image)
-		length := len(imageSubstringSubmatch)
+		valid := ValidateFullImageString(tc.image)
 
-		if length != tc.expectedLength {
-			t.Errorf("expected length %d got %d, err %+v", tc.expectedLength, length, err)
+		if valid != tc.valid {
+			t.Errorf("expected valid=%t, got %t", tc.valid, valid)
 		}
 	}
 }
 
-func TestGetImageVersion(t *testing.T) {
+func TestParseImageTag(t *testing.T) {
 	type args struct {
 		image string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr bool
+		name string
+		args args
+		want string
 	}{
 		{
 			name: "base",
 			args: args{
 				image: "docker.io/blackducksoftware/synopsys-operator:2019.4.2",
 			},
-			want:    "2019.4.2",
-			wantErr: false,
+			want: "2019.4.2",
 		},
 		{
 			name: "edge",
 			args: args{
 				image: "artifactory.test.lab:8321/blackducksoftware/synopsys-operator:2019.4.2",
 			},
-			want:    "2019.4.2",
-			wantErr: false,
+			want: "2019.4.2",
+		},
+		{
+			name: "non version format",
+			args: args{
+				image: "artifactory.test.lab:8321/blackducksoftware/synopsys-operator:latest",
+			},
+			want: "latest",
+		},
+		{
+			name: "snapshot format",
+			args: args{
+				image: "artifactory.test.lab:8321/blackducksoftware/synopsys-operator:2020.4.0-SNAPSHOT",
+			},
+			want: "2020.4.0-SNAPSHOT",
 		},
 		{
 			name: "no version tag fed",
 			args: args{
 				image: "docker.io/blackducksoftware/synopsys-operator",
 			},
-			want:    "",
-			wantErr: true,
+			want: "",
 		},
 		{
 			name: "no version tag, but still two or more splits; also testing weird tag",
 			args: args{
 				image: "artifactory.test.lab:8321/blackducksoftware/synopsys-operator",
 			},
-			want:    "",
-			wantErr: true,
+			want: "",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetImageTag(tt.args.image)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetImageTag() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := ParseImageTag(tt.args.image)
 			if got != tt.want {
-				t.Errorf("GetImageTag() = %v, want %v", got, tt.want)
+				t.Errorf("ParseImageTag() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestGetImageName(t *testing.T) {
+func TestParseImageName(t *testing.T) {
 	type args struct {
 		image string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr bool
+		name string
+		args args
+		want string
 	}{
 		{
 			name: "base",
 			args: args{
 				image: "docker.io/blackducksoftware/synopsys-operator:2019.4.2",
 			},
-			want:    "synopsys-operator",
-			wantErr: false,
+			want: "synopsys-operator",
 		},
 		{
 			name: "edge",
 			args: args{
 				image: "artifactory.test.lab:8321/blackducksoftware/synopsys-operator:2019.4.2",
 			},
-			want:    "synopsys-operator",
-			wantErr: false,
+			want: "synopsys-operator",
 		},
 		{
 			name: "no version tag fed",
 			args: args{
 				image: "docker.io/blackducksoftware/synopsys-operator",
 			},
-			want:    "",
-			wantErr: true,
+			want: "synopsys-operator",
 		},
 		{
 			name: "no version tag, but still two or more splits; also testing weird tag",
 			args: args{
 				image: "artifactory.test.lab:8321/blackducksoftware/synopsys-operator",
 			},
-			want:    "",
-			wantErr: true,
+			want: "synopsys-operator",
+		},
+		{
+			name: "no repo",
+			args: args{
+				image: "synopsys-operator:latest",
+			},
+			want: "synopsys-operator",
+		},
+		{
+			name: "no repo, no tag",
+			args: args{
+				image: "synopsys-operator",
+			},
+			want: "synopsys-operator",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetImageName(tt.args.image)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetImageTag() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := ParseImageName(tt.args.image)
 			if got != tt.want {
-				t.Errorf("GetImageTag() = %v, want %v", got, tt.want)
+				t.Errorf("ParseImageName() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseImageRepo(t *testing.T) {
+	type args struct {
+		image string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "base",
+			args: args{
+				image: "docker.io/blackducksoftware/synopsys-operator:2019.4.2",
+			},
+			want: "docker.io/blackducksoftware",
+		},
+		{
+			name: "edge",
+			args: args{
+				image: "artifactory.test.lab:8321/blackducksoftware/synopsys-operator:2019.4.2",
+			},
+			want: "artifactory.test.lab:8321/blackducksoftware",
+		},
+		{
+			name: "no version tag fed",
+			args: args{
+				image: "docker.io/blackducksoftware/synopsys-operator",
+			},
+			want: "docker.io/blackducksoftware",
+		},
+		{
+			name: "no version tag, but still two or more splits; also testing weird tag",
+			args: args{
+				image: "artifactory.test.lab:8321/blackducksoftware/synopsys-operator",
+			},
+			want: "artifactory.test.lab:8321/blackducksoftware",
+		},
+		{
+			name: "no repo",
+			args: args{
+				image: "synopsys-operator:latest",
+			},
+			want: "",
+		},
+		{
+			name: "no repo, no tag",
+			args: args{
+				image: "synopsys-operator",
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ParseImageRepo(tt.args.image)
+			if got != tt.want {
+				t.Errorf("ParseImageName() = %v, want %v", got, tt.want)
 			}
 		})
 	}

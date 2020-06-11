@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -44,10 +45,20 @@ type HelmValuesFromCobraFlags struct {
 
 // FlagTree is a set of fields needed to configure the Blackduck Helm Chart
 type FlagTree struct {
-	Size                          string
-	DeploymentResourcesFilePath   string
-	Version                       string
-	ExposeService                 string
+	Version string
+
+	Registry        string
+	PullSecrets     []string
+	ImageRegistries []string
+
+	PvcStorageClass             string
+	PersistentStorage           string
+	PVCFilePath                 string
+	Size                        string
+	DeploymentResourcesFilePath string
+
+	ExposeService string
+
 	ExternalPostgresHost          string
 	ExternalPostgresPort          int
 	ExternalPostgresAdmin         string
@@ -55,28 +66,51 @@ type FlagTree struct {
 	ExternalPostgresSsl           string
 	ExternalPostgresAdminPassword string
 	ExternalPostgresUserPassword  string
-	PvcStorageClass               string
-	LivenessProbes                string
-	PersistentStorage             string
-	PVCFilePath                   string
 	PostgresClaimSize             string
-	CertificateName               string
-	CertificateFilePath           string
-	CertificateKeyFilePath        string
-	ProxyCertificateFilePath      string
-	AuthCustomCAFilePath          string
-	MigrationMode                 bool
-	Environs                      []string
 	AdminPassword                 string
 	UserPassword                  string
-	EnableBinaryAnalysis          bool
-	EnableSourceCodeUpload        bool
-	NodeAffinityFilePath          string
-	SecurityContextFilePath       string
-	Registry                      string
-	RegistryNamespace             string
-	PullSecrets                   []string
-	SealKey                       string
+
+	CertificateName          string
+	CertificateFilePath      string
+	CertificateKeyFilePath   string
+	ProxyCertificateFilePath string
+	AuthCustomCAFilePath     string
+
+	SealKey string
+
+	Environs []string
+
+	LivenessProbes         string
+	EnableBinaryAnalysis   bool
+	EnableSourceCodeUpload bool
+
+	NodeAffinityFilePath    string
+	SecurityContextFilePath string
+}
+
+// DefaultFlagTree ...
+// [Dev Note]: These should match the Helm Chart's Values.yaml
+var DefaultFlagTree = FlagTree{
+	// Version
+	Version: globals.BlackDuckVersion,
+	//Registry Config
+	Registry: "docker.io/blackducksoftware",
+	// Storage
+	PersistentStorage: "true",
+	// Expose UI
+	ExposeService: util.NONE,
+	// Postgres
+	ExternalPostgresPort: 5432,
+	ExternalPostgresUser: "blackduck_user",
+	ExternalPostgresSsl:  "true",
+	PostgresClaimSize:    "150Gi",
+	// Certificates
+	// Seal Key
+	// Environs
+	// Enable Features
+	EnableBinaryAnalysis:   false,
+	EnableSourceCodeUpload: false,
+	// Extra Config Settings
 }
 
 // NewHelmValuesFromCobraFlags creates a new HelmValuesFromCobraFlags type
@@ -86,37 +120,12 @@ func NewHelmValuesFromCobraFlags() *HelmValuesFromCobraFlags {
 	}
 }
 
-// GenerateHelmFlagsFromCobraFlags checks each flag in synopsysctl and updates the map to
-// contain the corresponding helm chart field and value
-func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pflag.FlagSet) (map[string]interface{}, error) {
-	err := ctl.CheckValuesFromFlags(flagset)
-	if err != nil {
-		return nil, err
-	}
-	flagset.VisitAll(ctl.AddHelmValueByCobraFlag)
-	return ctl.args, nil
-}
-
 // SetArgs set the map to values
 func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 	for key, value := range args {
 		ctl.args[key] = value
 	}
 }
-
-// Constants for predefined specs
-const (
-	EmptySpec                           string = "empty"
-	PersistentStorageLatestSpec         string = "persistentStorageLatest"
-	PersistentStorageV1Spec             string = "persistentStorageV1"
-	ExternalPersistentStorageLatestSpec string = "externalPersistentStorageLatest"
-	ExternalPersistentStorageV1Spec     string = "externalPersistentStorageV1"
-	BDBASpec                            string = "bdba"
-	EphemeralSpec                       string = "ephemeral"
-	EphemeralCustomAuthCASpec           string = "ephemeralCustomAuthCA"
-	ExternalDBSpec                      string = "externalDB"
-	IPV6DisabledSpec                    string = "IPV6Disabled"
-)
 
 // AddCRSpecFlagsToCommand adds flags to a Cobra Command that are need for BlackDuck's Spec.
 // The flags map to fields in the CRSpecBuilderFromCobraFlags struct.
@@ -126,37 +135,39 @@ func (ctl *HelmValuesFromCobraFlags) AddCRSpecFlagsToCommand(cmd *cobra.Command,
 	cmd.Flags().SortFlags = false
 
 	// Version
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "2020.4.1", "Version of Black Duck\n")
+	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Black Duck\n")
 
 	// Registry Config
-	cmd.Flags().StringVar(&ctl.flagTree.Registry, "registry", "docker.io/blackducksoftware", "Name of the registry to use for images e.g. docker.io/blackducksoftware")
+	cmd.Flags().StringVar(&ctl.flagTree.Registry, "registry", DefaultFlagTree.Registry, "Name of the registry to use for images e.g. docker.io/blackducksoftware")
 	cmd.Flags().StringSliceVar(&ctl.flagTree.PullSecrets, "pull-secret-name", ctl.flagTree.PullSecrets, "Only if the registry requires authentication\n")
+	cmd.Flags().StringSliceVar(&ctl.flagTree.ImageRegistries, "image-registries", ctl.flagTree.ImageRegistries, "Set the image registry for each image")
+	cmd.Flags().MarkHidden("image-registries") // only for devs
 
 	// Storage
 	if master {
 		cmd.Flags().StringVar(&ctl.flagTree.PvcStorageClass, "pvc-storage-class", ctl.flagTree.PvcStorageClass, "Name of Storage Class for the PVC")
-		cmd.Flags().StringVar(&ctl.flagTree.PersistentStorage, "persistent-storage", "true", "If true, Black Duck has persistent storage [true|false]")
+		cmd.Flags().StringVar(&ctl.flagTree.PersistentStorage, "persistent-storage", DefaultFlagTree.PersistentStorage, "If true, Black Duck has persistent storage [true|false]")
 		cmd.Flags().StringVar(&ctl.flagTree.PVCFilePath, "pvc-file-path", ctl.flagTree.PVCFilePath, "Absolute path to a file containing a list of PVC json structs")
 	}
 	cmd.Flags().StringVar(&ctl.flagTree.Size, "size", ctl.flagTree.Size, "Size of Black Duck [small|medium|large|x-large]")
 	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", ctl.flagTree.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs\n")
 
-	// Expose Ui
+	// Expose UI
 	if master {
-		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", util.NONE, "Service type of Black Duck webserver's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
+		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", DefaultFlagTree.ExposeService, "Service type of Black Duck webserver's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
 	} else {
 		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", ctl.flagTree.ExposeService, "Service type of Black Duck webserver's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
 	}
 
 	// Postgres
 	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresHost, "external-postgres-host", ctl.flagTree.ExternalPostgresHost, "Host of external Postgres")
-	cmd.Flags().IntVar(&ctl.flagTree.ExternalPostgresPort, "external-postgres-port", 5432, "Port of external Postgres")
+	cmd.Flags().IntVar(&ctl.flagTree.ExternalPostgresPort, "external-postgres-port", DefaultFlagTree.ExternalPostgresPort, "Port of external Postgres")
 	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresAdmin, "external-postgres-admin", ctl.flagTree.ExternalPostgresAdmin, "Name of 'admin' of external Postgres database")
-	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresUser, "external-postgres-user", "blackduck_user", "Name of 'user' of external Postgres database")
-	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresSsl, "external-postgres-ssl", "true", "If true, Black Duck uses SSL for external Postgres connection [true|false]")
+	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresUser, "external-postgres-user", DefaultFlagTree.ExternalPostgresUser, "Name of 'user' of external Postgres database")
+	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresSsl, "external-postgres-ssl", DefaultFlagTree.ExternalPostgresSsl, "If true, Black Duck uses SSL for external Postgres connection [true|false]")
 	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresAdminPassword, "external-postgres-admin-password", ctl.flagTree.ExternalPostgresAdminPassword, "'admin' password of external Postgres database")
 	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresUserPassword, "external-postgres-user-password", ctl.flagTree.ExternalPostgresUserPassword, "'user' password of external Postgres database")
-	cmd.Flags().StringVar(&ctl.flagTree.PostgresClaimSize, "postgres-claim-size", "150Gi", "Size of the blackduck-postgres PVC")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresClaimSize, "postgres-claim-size", DefaultFlagTree.PostgresClaimSize, "Size of the blackduck-postgres PVC")
 	cmd.Flags().StringVar(&ctl.flagTree.AdminPassword, "admin-password", ctl.flagTree.AdminPassword, "'admin' password of Postgres database")
 	cmd.Flags().StringVar(&ctl.flagTree.UserPassword, "user-password", ctl.flagTree.UserPassword, "'user' password of Postgres database\n")
 
@@ -177,8 +188,8 @@ func (ctl *HelmValuesFromCobraFlags) AddCRSpecFlagsToCommand(cmd *cobra.Command,
 
 	// Enable Features
 	cmd.Flags().StringVar(&ctl.flagTree.LivenessProbes, "liveness-probes", ctl.flagTree.LivenessProbes, "If true, Black Duck uses liveness probes [true|false]")
-	cmd.Flags().BoolVar(&ctl.flagTree.EnableBinaryAnalysis, "enable-binary-analysis", false, "If true, enable binary analysis by setting the environment variable (this takes priority over environs flag values)")
-	cmd.Flags().BoolVar(&ctl.flagTree.EnableSourceCodeUpload, "enable-source-code-upload", false, "If true, enable source code upload by setting the environment variable (this takes priority over environs flag values)\n")
+	cmd.Flags().BoolVar(&ctl.flagTree.EnableBinaryAnalysis, "enable-binary-analysis", DefaultFlagTree.EnableBinaryAnalysis, "If true, enable binary analysis by setting the environment variable (this takes priority over environs flag values)")
+	cmd.Flags().BoolVar(&ctl.flagTree.EnableSourceCodeUpload, "enable-source-code-upload", DefaultFlagTree.EnableSourceCodeUpload, "If true, enable source code upload by setting the environment variable (this takes priority over environs flag values)\n")
 
 	// Extra Config Settings
 	cmd.Flags().StringVar(&ctl.flagTree.NodeAffinityFilePath, "node-affinity-file-path", ctl.flagTree.NodeAffinityFilePath, "Absolute path to a file containing a list of node affinities")
@@ -235,171 +246,250 @@ func FlagWasSet(flagset *pflag.FlagSet, flagName string) bool {
 	return false
 }
 
-// AddHelmValueByCobraFlag updates a field in the blackDuckSpec if the flag was set by the user. It gets the
-// value from the corresponding struct field.
-// Note: It should only handle values with a 1 to 1 mapping - struct-field to spec
-func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
-	if f.Changed {
-		log.Debugf("flag '%s': CHANGED", f.Name)
-		switch f.Name {
-		case "version":
-			util.SetHelmValueInMap(ctl.args, []string{"imageTag"}, ctl.flagTree.Version)
-		case "size":
-			util.SetHelmValueInMap(ctl.args, []string{"size"}, strings.ToLower(ctl.flagTree.Size))
-		case "expose-ui":
-			util.SetHelmValueInMap(ctl.args, []string{"exposeui"}, true)
-			switch ctl.flagTree.ExposeService {
-			case util.NODEPORT:
-				util.SetHelmValueInMap(ctl.args, []string{"exposedServiceType"}, "NodePort")
-			case util.LOADBALANCER:
-				util.SetHelmValueInMap(ctl.args, []string{"exposedServiceType"}, "LoadBalancer")
-			case util.OPENSHIFT:
-				util.SetHelmValueInMap(ctl.args, []string{"exposedServiceType"}, "OpenShift")
-			default:
-				util.SetHelmValueInMap(ctl.args, []string{"exposeui"}, false)
-			}
-		case "environs":
-			for _, value := range ctl.flagTree.Environs {
-				values := strings.SplitN(value, ":", 2)
-				if len(values) != 2 {
-					panic(fmt.Errorf("invalid environ configuration for %s", value))
-				}
-				util.SetHelmValueInMap(ctl.args, []string{"environs", values[0]}, values[1])
-			}
-		case "enable-binary-analysis":
-			util.SetHelmValueInMap(ctl.args, []string{"enableBinaryScanner"}, ctl.flagTree.EnableBinaryAnalysis)
-		case "enable-source-code-upload":
-			util.SetHelmValueInMap(ctl.args, []string{"enableSourceCodeUpload"}, ctl.flagTree.EnableSourceCodeUpload)
-		case "external-postgres-host":
-			util.SetHelmValueInMap(ctl.args, []string{"postgres", "host"}, ctl.flagTree.ExternalPostgresHost)
-		case "external-postgres-port":
-			util.SetHelmValueInMap(ctl.args, []string{"postgres", "port"}, ctl.flagTree.ExternalPostgresPort)
-		case "external-postgres-admin":
-			util.SetHelmValueInMap(ctl.args, []string{"postgres", "adminUserName"}, ctl.flagTree.ExternalPostgresAdmin)
-		case "external-postgres-user":
-			util.SetHelmValueInMap(ctl.args, []string{"postgres", "userUserName"}, ctl.flagTree.ExternalPostgresUser)
-		case "external-postgres-ssl":
-			util.SetHelmValueInMap(ctl.args, []string{"postgres", "ssl"}, strings.ToUpper(ctl.flagTree.ExternalPostgresSsl) == "TRUE")
-		case "external-postgres-admin-password":
-			util.SetHelmValueInMap(ctl.args, []string{"postgres", "adminPassword"}, ctl.flagTree.ExternalPostgresAdminPassword)
-		case "external-postgres-user-password":
-			util.SetHelmValueInMap(ctl.args, []string{"postgres", "userPassword"}, ctl.flagTree.ExternalPostgresUserPassword)
-		case "pvc-storage-class":
-			util.SetHelmValueInMap(ctl.args, []string{"storageClass"}, ctl.flagTree.PvcStorageClass)
-		case "liveness-probes":
-			util.SetHelmValueInMap(ctl.args, []string{"enableLivenessProbe"}, strings.ToUpper(ctl.flagTree.LivenessProbes) == "TRUE")
-		case "persistent-storage":
-			util.SetHelmValueInMap(ctl.args, []string{"enablePersistentStorage"}, strings.ToUpper(ctl.flagTree.PersistentStorage) == "TRUE")
-		case "pvc-file-path":
-			data, err := util.ReadFileData(ctl.flagTree.PVCFilePath)
-			if err != nil {
-				log.Fatalf("failed to read pvc file: %+v", err)
-			}
-			pvcs := []blackduckv1.PVC{}
-			err = json.Unmarshal([]byte(data), &pvcs)
-			if err != nil {
-				log.Fatalf("failed to unmarshal pvc structs: %+v", err)
-			}
-			// Add values here if the path in Values.yaml is different than just the pvcIDName
-			// ex: the pvcIDName as "postgres" but the path is postgres.something.claimSize
-			// ex: the pvcIDName is "blackduck-postgres" but the path is postgres.claimSize
-			pvcIDNameToHelmPath := map[string][]string{
-				"blackduck-postgres":         {"postgres"},
-				"blackduck-authentication":   {"authentication"},
-				"blackduck-cfssl":            {"cfssl"},
-				"blackduck-registration":     {"registration"},
-				"blackduck-webapp":           {"webapp"},
-				"blackduck-logstash":         {"logstash"},
-				"blackduck-uploadcache-data": {"uploadcache"},
-			}
-			for _, pvc := range pvcs {
-				pvcIDName := pvc.Name
-				pathToHelmValue := []string{pvcIDName}                            // default path is the pvcIDName
-				if newPathToHelmValue, ok := pvcIDNameToHelmPath[pvcIDName]; ok { // Override the path if it isn't the pvcIDName
-					pathToHelmValue = newPathToHelmValue
-				}
-				// Support custom PVC (different than the PVC provided in the Helm Chart)
-				util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "persistentVolumeClaimName"), pvc.PVCName)
-				// Set values for PVC provided in the Helm Chart
-				util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "claimSize"), pvc.Size)
-				util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "storageClass"), pvc.StorageClass)
-				util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "volumeName"), pvc.VolumeName)
-			}
-		case "deployment-resources-file-path":
-			util.GetDeploymentResources(ctl.flagTree.DeploymentResourcesFilePath, ctl.args, "hubMaxMemory")
-		case "node-affinity-file-path":
-			data, err := util.ReadFileData(ctl.flagTree.NodeAffinityFilePath)
-			if err != nil {
-				log.Fatalf("failed to read node affinity file: %+v", err)
-			}
-			nodeAffinities := map[string][]blackduckv1.NodeAffinity{}
-			err = json.Unmarshal([]byte(data), &nodeAffinities)
-			if err != nil {
-				log.Fatalf("failed to unmarshal node affinities: %+v", err)
-			}
-
-			for k, v := range nodeAffinities {
-				kubeAff := OperatorAffinityTok8sAffinity(v)
-				util.SetHelmValueInMap(ctl.args, []string{k, "affinity"}, kubeAff)
-			}
-		case "security-context-file-path":
-			data, err := util.ReadFileData(ctl.flagTree.SecurityContextFilePath)
-			if err != nil {
-				log.Errorf("failed to read security context file: %+v", err)
-				return
-			}
-			securityContexts := map[string]corev1.PodSecurityContext{}
-			err = json.Unmarshal([]byte(data), &securityContexts)
-			if err != nil {
-				log.Errorf("failed to unmarshal security contexts: %+v", err)
-				return
-			}
-			securityContextIDNameToHelmPath := map[string][]string{
-				"blackduck-postgres":       {"postgres", "podSecurityContext"},
-				"blackduck-init":           {"init", "securityContext"},
-				"blackduck-authentication": {"authentication", "podSecurityContext"},
-				"blackduck-binnaryscanner": {"binaryscanner", "podSecurityContext"},
-				"blackduck-cfssl":          {"cfssl", "podSecurityContext"},
-				"blackduck-documentation":  {"documentation", "podSecurityContext"},
-				"blackduck-jobrunner":      {"jobrunner", "podSecurityContext"},
-				"blackduck-rabbitmq":       {"rabbitmq", "podSecurityContext"},
-				"blackduck-registration":   {"registration", "podSecurityContext"},
-				"blackduck-scan":           {"scan", "podSecurityContext"},
-				"blackduck-uploadcache":    {"uploadcache", "podSecurityContext"},
-				"blackduck-webapp":         {"webapp", "podSecurityContext"},
-				"blackduck-logstash":       {"logstash", "securityContext"},
-				"blackduck-nginx":          {"webserver", "podSecurityContext"},
-				"appcheck-worker":          {"binaryscanner", "podSecurityContext"},
-			}
-			for k, v := range securityContexts {
-				pathToHelmValue := []string{k, "podSecurityContext"}                  // default path for new pods
-				if newPathToHelmValue, ok := securityContextIDNameToHelmPath[k]; ok { // Override the security if it's present in the list
-					pathToHelmValue = newPathToHelmValue
-				}
-				util.SetHelmValueInMap(ctl.args, pathToHelmValue, CorePodSecurityContextToHelm(v))
-			}
-		case "postgres-claim-size":
-			util.SetHelmValueInMap(ctl.args, []string{"postgres", "claimSize"}, ctl.flagTree.PostgresClaimSize)
-		case "admin-password":
-			util.SetHelmValueInMap(ctl.args, []string{"postgres", "adminPassword"}, ctl.flagTree.AdminPassword)
-			util.SetHelmValueInMap(ctl.args, []string{"postgres", "isExternal"}, false)
-		case "user-password":
-			util.SetHelmValueInMap(ctl.args, []string{"postgres", "userPassword"}, ctl.flagTree.UserPassword)
-			util.SetHelmValueInMap(ctl.args, []string{"postgres", "isExternal"}, false)
-		case "registry":
-			util.SetHelmValueInMap(ctl.args, []string{"registry"}, ctl.flagTree.Registry)
-		case "pull-secret-name":
-			var pullSecrets []corev1.LocalObjectReference
-			for _, v := range ctl.flagTree.PullSecrets {
-				pullSecrets = append(pullSecrets, corev1.LocalObjectReference{Name: v})
-			}
-			util.SetHelmValueInMap(ctl.args, []string{"imagePullSecrets"}, pullSecrets)
-		case "seal-key":
-			util.SetHelmValueInMap(ctl.args, []string{"sealKey"}, ctl.flagTree.SealKey)
-		default:
-			log.Debugf("flag '%s': NOT FOUND", f.Name)
-		}
-	} else {
-		log.Debugf("flag '%s': UNCHANGED", f.Name)
+// GenerateHelmFlagsFromCobraFlags checks each flag in synopsysctl and updates the map to
+// contain the corresponding helm chart field and value
+func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pflag.FlagSet) (map[string]interface{}, error) {
+	err := ctl.CheckValuesFromFlags(flagset)
+	if err != nil {
+		return nil, err
 	}
+	foundErrors := false
+	flagset.VisitAll(func(f *pflag.Flag) {
+		if f.Changed {
+			log.Debugf("flag '%s': CHANGED", f.Name)
+			switch f.Name {
+			case "version":
+				util.SetHelmValueInMap(ctl.args, []string{"imageTag"}, ctl.flagTree.Version)
+			case "size":
+				util.SetHelmValueInMap(ctl.args, []string{"size"}, strings.ToLower(ctl.flagTree.Size))
+			case "expose-ui":
+				util.SetHelmValueInMap(ctl.args, []string{"exposeui"}, true)
+				switch ctl.flagTree.ExposeService {
+				case util.NODEPORT:
+					util.SetHelmValueInMap(ctl.args, []string{"exposedServiceType"}, "NodePort")
+				case util.LOADBALANCER:
+					util.SetHelmValueInMap(ctl.args, []string{"exposedServiceType"}, "LoadBalancer")
+				case util.OPENSHIFT:
+					util.SetHelmValueInMap(ctl.args, []string{"exposedServiceType"}, "OpenShift")
+				default:
+					util.SetHelmValueInMap(ctl.args, []string{"exposeui"}, false)
+				}
+			case "environs":
+				for _, value := range ctl.flagTree.Environs {
+					values := strings.SplitN(value, ":", 2)
+					if len(values) != 2 {
+						panic(fmt.Errorf("invalid environ configuration for %s", value))
+					}
+					util.SetHelmValueInMap(ctl.args, []string{"environs", values[0]}, values[1])
+				}
+			case "enable-binary-analysis":
+				util.SetHelmValueInMap(ctl.args, []string{"enableBinaryScanner"}, ctl.flagTree.EnableBinaryAnalysis)
+			case "enable-source-code-upload":
+				util.SetHelmValueInMap(ctl.args, []string{"enableSourceCodeUpload"}, ctl.flagTree.EnableSourceCodeUpload)
+			case "external-postgres-host":
+				util.SetHelmValueInMap(ctl.args, []string{"postgres", "host"}, ctl.flagTree.ExternalPostgresHost)
+			case "external-postgres-port":
+				util.SetHelmValueInMap(ctl.args, []string{"postgres", "port"}, ctl.flagTree.ExternalPostgresPort)
+			case "external-postgres-admin":
+				util.SetHelmValueInMap(ctl.args, []string{"postgres", "adminUserName"}, ctl.flagTree.ExternalPostgresAdmin)
+			case "external-postgres-user":
+				util.SetHelmValueInMap(ctl.args, []string{"postgres", "userUserName"}, ctl.flagTree.ExternalPostgresUser)
+			case "external-postgres-ssl":
+				util.SetHelmValueInMap(ctl.args, []string{"postgres", "ssl"}, strings.ToUpper(ctl.flagTree.ExternalPostgresSsl) == "TRUE")
+			case "external-postgres-admin-password":
+				util.SetHelmValueInMap(ctl.args, []string{"postgres", "adminPassword"}, ctl.flagTree.ExternalPostgresAdminPassword)
+			case "external-postgres-user-password":
+				util.SetHelmValueInMap(ctl.args, []string{"postgres", "userPassword"}, ctl.flagTree.ExternalPostgresUserPassword)
+			case "pvc-storage-class":
+				util.SetHelmValueInMap(ctl.args, []string{"storageClass"}, ctl.flagTree.PvcStorageClass)
+			case "liveness-probes":
+				util.SetHelmValueInMap(ctl.args, []string{"enableLivenessProbe"}, strings.ToUpper(ctl.flagTree.LivenessProbes) == "TRUE")
+			case "persistent-storage":
+				util.SetHelmValueInMap(ctl.args, []string{"enablePersistentStorage"}, strings.ToUpper(ctl.flagTree.PersistentStorage) == "TRUE")
+			case "pvc-file-path":
+				data, err := util.ReadFileData(ctl.flagTree.PVCFilePath)
+				if err != nil {
+					log.Errorf("failed to read pvc file: %+v", err)
+					foundErrors = true
+					return
+				}
+				pvcs := []blackduckv1.PVC{}
+				err = json.Unmarshal([]byte(data), &pvcs)
+				if err != nil {
+					log.Errorf("failed to unmarshal pvc structs: %+v", err)
+					foundErrors = true
+					return
+				}
+				// Add values here if the path in Values.yaml is different than just the pvcIDName
+				// ex: the pvcIDName as "postgres" but the path is postgres.something.claimSize
+				// ex: the pvcIDName is "blackduck-postgres" but the path is postgres.claimSize
+				pvcIDNameToHelmPath := map[string][]string{
+					"blackduck-postgres":         {"postgres"},
+					"blackduck-authentication":   {"authentication"},
+					"blackduck-cfssl":            {"cfssl"},
+					"blackduck-registration":     {"registration"},
+					"blackduck-webapp":           {"webapp"},
+					"blackduck-logstash":         {"logstash"},
+					"blackduck-uploadcache-data": {"uploadcache"},
+				}
+				for _, pvc := range pvcs {
+					pvcIDName := pvc.Name
+					pathToHelmValue := []string{pvcIDName}                            // default path is the pvcIDName
+					if newPathToHelmValue, ok := pvcIDNameToHelmPath[pvcIDName]; ok { // Override the path if it isn't the pvcIDName
+						pathToHelmValue = newPathToHelmValue
+					}
+					// Support custom PVC (different than the PVC provided in the Helm Chart)
+					util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "persistentVolumeClaimName"), pvc.PVCName)
+					// Set values for PVC provided in the Helm Chart
+					util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "claimSize"), pvc.Size)
+					util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "storageClass"), pvc.StorageClass)
+					util.SetHelmValueInMap(ctl.args, append(pathToHelmValue, "volumeName"), pvc.VolumeName)
+				}
+			case "deployment-resources-file-path":
+				util.GetDeploymentResources(ctl.flagTree.DeploymentResourcesFilePath, ctl.args, "hubMaxMemory")
+			case "node-affinity-file-path":
+				data, err := util.ReadFileData(ctl.flagTree.NodeAffinityFilePath)
+				if err != nil {
+					log.Errorf("failed to read node affinity file: %+v", err)
+					foundErrors = true
+					return
+				}
+				nodeAffinities := map[string][]blackduckv1.NodeAffinity{}
+				err = json.Unmarshal([]byte(data), &nodeAffinities)
+				if err != nil {
+					log.Errorf("failed to unmarshal node affinities: %+v", err)
+					foundErrors = true
+					return
+				}
+
+				for k, v := range nodeAffinities {
+					kubeAff := OperatorAffinityToHelm(v)
+					util.SetHelmValueInMap(ctl.args, []string{k, "affinity"}, kubeAff)
+				}
+			case "security-context-file-path":
+				data, err := util.ReadFileData(ctl.flagTree.SecurityContextFilePath)
+				if err != nil {
+					log.Errorf("failed to read security context file: %+v", err)
+					return
+				}
+				securityContexts := map[string]corev1.PodSecurityContext{}
+				err = json.Unmarshal([]byte(data), &securityContexts)
+				if err != nil {
+					log.Errorf("failed to unmarshal security contexts: %+v", err)
+					return
+				}
+				securityContextIDNameToHelmPath := map[string][]string{
+					"blackduck-postgres":       {"postgres", "podSecurityContext"},
+					"blackduck-init":           {"init", "securityContext"},
+					"blackduck-authentication": {"authentication", "podSecurityContext"},
+					"blackduck-binnaryscanner": {"binaryscanner", "podSecurityContext"},
+					"blackduck-cfssl":          {"cfssl", "podSecurityContext"},
+					"blackduck-documentation":  {"documentation", "podSecurityContext"},
+					"blackduck-jobrunner":      {"jobrunner", "podSecurityContext"},
+					"blackduck-rabbitmq":       {"rabbitmq", "podSecurityContext"},
+					"blackduck-registration":   {"registration", "podSecurityContext"},
+					"blackduck-scan":           {"scan", "podSecurityContext"},
+					"blackduck-uploadcache":    {"uploadcache", "podSecurityContext"},
+					"blackduck-webapp":         {"webapp", "podSecurityContext"},
+					"blackduck-logstash":       {"logstash", "securityContext"},
+					"blackduck-nginx":          {"webserver", "podSecurityContext"},
+					"appcheck-worker":          {"binaryscanner", "podSecurityContext"},
+				}
+				for k, v := range securityContexts {
+					pathToHelmValue := []string{k, "podSecurityContext"}                  // default path for new pods
+					if newPathToHelmValue, ok := securityContextIDNameToHelmPath[k]; ok { // Override the security if it's present in the list
+						pathToHelmValue = newPathToHelmValue
+					}
+					util.SetHelmValueInMap(ctl.args, pathToHelmValue, CorePodSecurityContextToHelm(v))
+				}
+			case "postgres-claim-size":
+				util.SetHelmValueInMap(ctl.args, []string{"postgres", "claimSize"}, ctl.flagTree.PostgresClaimSize)
+			case "admin-password":
+				util.SetHelmValueInMap(ctl.args, []string{"postgres", "adminPassword"}, ctl.flagTree.AdminPassword)
+				util.SetHelmValueInMap(ctl.args, []string{"postgres", "isExternal"}, false)
+			case "user-password":
+				util.SetHelmValueInMap(ctl.args, []string{"postgres", "userPassword"}, ctl.flagTree.UserPassword)
+				util.SetHelmValueInMap(ctl.args, []string{"postgres", "isExternal"}, false)
+			case "registry":
+				util.SetHelmValueInMap(ctl.args, []string{"registry"}, ctl.flagTree.Registry)
+				if !ImageRegistryIsSet(ctl.flagTree.ImageRegistries, "postgresql-96-centos7") {
+					util.SetHelmValueInMap(ctl.args, []string{"postgres", "registry"}, ctl.flagTree.Registry)
+				}
+				if !ImageRegistryIsSet(ctl.flagTree.ImageRegistries, "bdba-worker") {
+					util.SetHelmValueInMap(ctl.args, []string{"binaryscanner", "registry"}, ctl.flagTree.Registry)
+				}
+			case "image-registries":
+				SetBlackDuckImageRegistriesInHelmValuesMap(ctl.args, ctl.flagTree.ImageRegistries)
+			case "pull-secret-name":
+				var pullSecrets []corev1.LocalObjectReference
+				for _, v := range ctl.flagTree.PullSecrets {
+					pullSecrets = append(pullSecrets, corev1.LocalObjectReference{Name: v})
+				}
+				util.SetHelmValueInMap(ctl.args, []string{"imagePullSecrets"}, pullSecrets)
+			case "seal-key":
+				util.SetHelmValueInMap(ctl.args, []string{"sealKey"}, ctl.flagTree.SealKey)
+			default:
+				log.Debugf("flag '%s': NOT FOUND", f.Name)
+			}
+		} else {
+			log.Debugf("flag '%s': UNCHANGED", f.Name)
+		}
+	})
+
+	if foundErrors {
+		log.Fatalf("please fix all the above errors to continue")
+	}
+
+	return ctl.args, nil
+}
+
+// SetBlackDuckImageRegistriesInHelmValuesMap uses the image name to set the registry and tag
+// in the Helm Chart for each image in imageRegistries
+func SetBlackDuckImageRegistriesInHelmValuesMap(helmValues map[string]interface{}, imageRegistries []string) {
+	imageNameToHelmPath := map[string][]string{
+		"postgresql-96-centos7":    {"postgres"},
+		"synopsys-init":            {"init"},
+		"blackduck-authentication": {"authentication"},
+		"bdba-worker":              {"binaryscanner"},
+		"blackduck-cfssl":          {"cfssl"},
+		"blackduck-documentation":  {"documentation"},
+		"blackduck-jobrunner":      {"jobrunner"},
+		"rabbitmq":                 {"rabbitmq"},
+		"blackduck-registration":   {"registration"},
+		"blackduck-scan":           {"scan"},
+		"blackduck-upload-cache":   {"uploadcache"},
+		"blackduck-webapp":         {"webapp"},
+		"blackduck-logstash":       {"logstash"},
+		"blackduck-nginx":          {"webserver"},
+	}
+
+	for _, image := range imageRegistries {
+		imageName := util.ParseImageName(image)
+		imageReg := util.ParseImageRepo(image)
+		imageTag := util.ParseImageTag(image)
+
+		pathToHelmValueRegistry := []string{imageName, "registry"}
+		pathToHelmValueImageTag := []string{imageName, "imageTag"}
+		if newPathToHelmValue, ok := imageNameToHelmPath[imageName]; ok {
+			pathToHelmValueRegistry = append(newPathToHelmValue, "registry")
+			pathToHelmValueImageTag = append(newPathToHelmValue, "imageTag")
+		}
+		util.SetHelmValueInMap(helmValues, pathToHelmValueRegistry, imageReg)
+		if imageName == "postgresql-96-centos7" && imageTag != "" {
+			log.Warnf("cannot set image tag for postgres with --image-registries")
+		}
+		util.SetHelmValueInMap(helmValues, pathToHelmValueImageTag, imageTag)
+	}
+}
+
+// ImageRegistryIsSet checks if imageRegistries contains and image with the name imageName
+func ImageRegistryIsSet(imageRegistries []string, imageName string) bool {
+	found := false
+	for _, image := range imageRegistries {
+		if util.ParseImageName(image) == imageName {
+			found = true
+			break
+		}
+	}
+	return found
 }

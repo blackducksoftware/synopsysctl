@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -56,7 +57,7 @@ var deleteAlertCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		alertName := args[0]
-		helmReleaseName := fmt.Sprintf("%s%s", alertName, AlertPostSuffix)
+		helmReleaseName := fmt.Sprintf("%s%s", alertName, globals.AlertPostSuffix)
 
 		// Delete the Secrets
 		helmRelease, err := util.GetWithHelm3(helmReleaseName, namespace, kubeConfigPath)
@@ -218,7 +219,7 @@ var deletePolarisCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Delete Polaris Resources
-		err := util.DeleteWithHelm3(polarisName, namespace, kubeConfigPath)
+		err := util.DeleteWithHelm3(globals.PolarisName, namespace, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("failed to delete Polaris resources: %+v", err)
 		}
@@ -253,7 +254,7 @@ var deletePolarisReportingCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Delete Polaris-Reporting Resources
-		err := util.DeleteWithHelm3(polarisReportingName, namespace, kubeConfigPath)
+		err := util.DeleteWithHelm3(globals.PolarisReportingName, namespace, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("failed to delete Polaris-Reporting resources: %+v", err)
 		}
@@ -316,7 +317,7 @@ var deleteBDBACmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Delete Resources
-		err := util.DeleteWithHelm3(bdbaName, namespace, kubeConfigPath)
+		err := util.DeleteWithHelm3(globals.BDBAName, namespace, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("failed to delete BDBA resources: %+v", err)
 		}

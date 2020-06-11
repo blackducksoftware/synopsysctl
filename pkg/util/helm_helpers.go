@@ -51,12 +51,6 @@ import (
 
 var settings = cli.New()
 
-func initSettings() *cli.EnvSettings {
-	conf := cli.New()
-	conf.RepositoryCache = "/tmp"
-	return conf
-}
-
 // CreateWithHelm3 uses the helm NewInstall action to create a resource in the cluster
 // Modified from https://github.com/openshift/console/blob/cdf6b189b71e488033ecaba7d90258d9f9453478/pkg/helm/actions/install_chart.go
 // Helm Actions: https://github.com/helm/helm/tree/9bc7934f350233fa72a11d2d29065aa78ab62792/pkg/action
@@ -494,9 +488,7 @@ func GetIndexFile(repoURL string, actionConfig *action.Configuration) (*repo.Ind
 	keyFile := client.ChartPathOptions.KeyFile
 	caFile := client.ChartPathOptions.CaFile
 
-	s := initSettings()
-	getters := getter.All(s)
-	// getters = getter.All(settings)
+	getters := getter.All(settings)
 
 	// Download and write the index file to a temporary location
 	buf := make([]byte, 20)

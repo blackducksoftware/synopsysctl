@@ -57,7 +57,8 @@ type FlagTree struct {
 	Size                        string
 	DeploymentResourcesFilePath string
 
-	ExposeService string
+	ExposeService   string
+	ExposedNodePort string
 
 	ExternalPostgresHost          string
 	ExternalPostgresPort          int
@@ -127,10 +128,15 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 	}
 }
 
-// AddCRSpecFlagsToCommand adds flags to a Cobra Command that are need for BlackDuck's Spec.
+// GetArgs returns the map of helm chart fields to values
+func (ctl *HelmValuesFromCobraFlags) GetArgs() map[string]interface{} {
+	return ctl.args
+}
+
+// AddCobraFlagsToCommand adds flags to a Cobra Command that are need for BlackDuck's Spec.
 // The flags map to fields in the CRSpecBuilderFromCobraFlags struct.
 // master - if false, doesn't add flags that all Users shouldn't use
-func (ctl *HelmValuesFromCobraFlags) AddCRSpecFlagsToCommand(cmd *cobra.Command, master bool) {
+func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, master bool) {
 	// [DEV NOTE:] please organize flags in order of importance
 	cmd.Flags().SortFlags = false
 
@@ -162,6 +168,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCRSpecFlagsToCommand(cmd *cobra.Command,
 	} else {
 		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", ctl.flagTree.ExposeService, "Service type of Black Duck webserver's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
 	}
+	cmd.Flags().StringVar(&ctl.flagTree.ExposedNodePort, "node-port", ctl.flagTree.ExposedNodePort, "Value for the NodePort's port (default random)\n")
 
 	// Postgres
 	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresHost, "external-postgres-host", ctl.flagTree.ExternalPostgresHost, "Host of external Postgres")
@@ -278,6 +285,8 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 				default:
 					util.SetHelmValueInMap(ctl.args, []string{"exposeui"}, false)
 				}
+			case "node-port":
+				util.SetHelmValueInMap(ctl.args, []string{"exposedNodePort"}, ctl.flagTree.ExposedNodePort)
 			case "environs":
 				for _, value := range ctl.flagTree.Environs {
 					values := strings.SplitN(value, ":", 2)
@@ -315,14 +324,14 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 				if err != nil {
 					log.Errorf("failed to read pvc file: %+v", err)
 					foundErrors = true
-					return
+					break
 				}
 				pvcs := []blackduckv1.PVC{}
 				err = json.Unmarshal([]byte(data), &pvcs)
 				if err != nil {
 					log.Errorf("failed to unmarshal pvc structs: %+v", err)
 					foundErrors = true
-					return
+					break
 				}
 				// Add values here if the path in Values.yaml is different than just the pvcIDName
 				// ex: the pvcIDName as "postgres" but the path is postgres.something.claimSize
@@ -356,14 +365,14 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 				if err != nil {
 					log.Errorf("failed to read node affinity file: %+v", err)
 					foundErrors = true
-					return
+					break
 				}
 				nodeAffinities := map[string][]blackduckv1.NodeAffinity{}
 				err = json.Unmarshal([]byte(data), &nodeAffinities)
 				if err != nil {
 					log.Errorf("failed to unmarshal node affinities: %+v", err)
 					foundErrors = true
-					return
+					break
 				}
 
 				for k, v := range nodeAffinities {
@@ -374,13 +383,13 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 				data, err := util.ReadFileData(ctl.flagTree.SecurityContextFilePath)
 				if err != nil {
 					log.Errorf("failed to read security context file: %+v", err)
-					return
+					break
 				}
 				securityContexts := map[string]corev1.PodSecurityContext{}
 				err = json.Unmarshal([]byte(data), &securityContexts)
 				if err != nil {
 					log.Errorf("failed to unmarshal security contexts: %+v", err)
-					return
+					break
 				}
 				securityContextIDNameToHelmPath := map[string][]string{
 					"blackduck-postgres":       {"postgres", "podSecurityContext"},

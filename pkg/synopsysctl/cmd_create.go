@@ -936,10 +936,10 @@ func init() {
 	createBlackDuckCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
 	cobra.MarkFlagRequired(createBlackDuckCmd.PersistentFlags(), "namespace")
 	addChartLocationPathFlag(createBlackDuckCmd)
-	createBlackDuckCobraHelper.AddCRSpecFlagsToCommand(createBlackDuckCmd, true)
+	createBlackDuckCobraHelper.AddCobraFlagsToCommand(createBlackDuckCmd, true)
 	createCmd.AddCommand(createBlackDuckCmd)
 
-	createBlackDuckCobraHelper.AddCRSpecFlagsToCommand(createBlackDuckNativeCmd, true)
+	createBlackDuckCobraHelper.AddCobraFlagsToCommand(createBlackDuckNativeCmd, true)
 	addNativeFlags(createBlackDuckNativeCmd)
 	addChartLocationPathFlag(createBlackDuckNativeCmd)
 	createBlackDuckCmd.AddCommand(createBlackDuckNativeCmd)

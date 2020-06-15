@@ -37,7 +37,7 @@ func TestCreateBDBA_Default(t *testing.T) {
 
 	// Tear Down
 	fmt.Printf("Deleting BDBA\n")
-	_, err = tu.Synospysctl("delete bdba %s -n %s", bdbaTester.Name, bdbaTester.Namespace)
+	_, err = tu.Synospysctl("delete bdba -n %s", bdbaTester.Namespace)
 	if err != nil {
 		t.Errorf("%s", err)
 		return

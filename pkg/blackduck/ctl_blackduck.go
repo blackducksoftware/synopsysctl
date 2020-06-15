@@ -135,12 +135,12 @@ func (ctl *HelmValuesFromCobraFlags) GetArgs() map[string]interface{} {
 
 // AddCobraFlagsToCommand adds flags to a Cobra Command that are need for BlackDuck's Spec.
 // The flags map to fields in the CRSpecBuilderFromCobraFlags struct.
-func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, updating bool) {
+func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, isCreateCmd bool) {
 	// [DEV NOTE:] please organize flags in order of importance
 	cmd.Flags().SortFlags = false
 
 	// Version
-	if updating {
+	if isCreateCmd {
 		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Black Duck")
 	} else {
 		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "", "Version of Black Duck")
@@ -153,7 +153,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().MarkHidden("image-registries") // only for devs
 
 	// Storage
-	if updating {
+	if isCreateCmd {
 		cmd.Flags().StringVar(&ctl.flagTree.PvcStorageClass, "pvc-storage-class", ctl.flagTree.PvcStorageClass, "Name of Storage Class for the PVC")
 		cmd.Flags().StringVar(&ctl.flagTree.PersistentStorage, "persistent-storage", DefaultFlagTree.PersistentStorage, "If true, Black Duck has persistent storage [true|false]")
 		cmd.Flags().StringVar(&ctl.flagTree.PVCFilePath, "pvc-file-path", ctl.flagTree.PVCFilePath, "Absolute path to a file containing a list of PVC json structs")
@@ -162,7 +162,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", ctl.flagTree.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs\n")
 
 	// Expose UI
-	if updating {
+	if isCreateCmd {
 		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", DefaultFlagTree.ExposeService, "Service type of Black Duck webserver's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
 	} else {
 		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", ctl.flagTree.ExposeService, "Service type of Black Duck webserver's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
@@ -189,7 +189,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringVar(&ctl.flagTree.AuthCustomCAFilePath, "auth-custom-ca-file-path", ctl.flagTree.AuthCustomCAFilePath, "Absolute path to a file for the Custom Auth CA for Black Duck\n")
 
 	// Seal Key
-	if updating {
+	if isCreateCmd {
 		cmd.Flags().StringVar(&ctl.flagTree.SealKey, "seal-key", ctl.flagTree.SealKey, "Seal key to encrypt the master key when Source code upload is enabled and it should be of length 32\n")
 	}
 
@@ -359,14 +359,14 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 				if err != nil {
 					log.Errorf("failed to read pvc file: %+v", err)
 					foundErrors = true
-					break
+					return
 				}
 				pvcs := []blackduckv1.PVC{}
 				err = json.Unmarshal([]byte(data), &pvcs)
 				if err != nil {
 					log.Errorf("failed to unmarshal pvc structs: %+v", err)
 					foundErrors = true
-					break
+					return
 				}
 				// Add values here if the path in Values.yaml is different than just the pvcIDName
 				// ex: the pvcIDName as "postgres" but the path is postgres.something.claimSize
@@ -400,14 +400,14 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 				if err != nil {
 					log.Errorf("failed to read node affinity file: %+v", err)
 					foundErrors = true
-					break
+					return
 				}
 				nodeAffinities := map[string][]blackduckv1.NodeAffinity{}
 				err = json.Unmarshal([]byte(data), &nodeAffinities)
 				if err != nil {
 					log.Errorf("failed to unmarshal node affinities: %+v", err)
 					foundErrors = true
-					break
+					return
 				}
 
 				for k, v := range nodeAffinities {
@@ -418,13 +418,13 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 				data, err := util.ReadFileData(ctl.flagTree.SecurityContextFilePath)
 				if err != nil {
 					log.Errorf("failed to read security context file: %+v", err)
-					break
+					return
 				}
 				securityContexts := map[string]corev1.PodSecurityContext{}
 				err = json.Unmarshal([]byte(data), &securityContexts)
 				if err != nil {
 					log.Errorf("failed to unmarshal security contexts: %+v", err)
-					break
+					return
 				}
 				securityContextIDNameToHelmPath := map[string][]string{
 					"blackduck-postgres":       {"postgres", "podSecurityContext"},

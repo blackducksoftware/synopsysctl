@@ -127,13 +127,12 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 
 // AddCobraFlagsToCommand adds flags for the Polaris helm chart to the cmd
 // The flags map to fields in the CRSpecBuilderFromCobraFlags struct.
-// master - Set to true for create and false for update
-func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, master bool) {
+func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, isCreateCmd bool) {
 	// [DEV NOTE:] please organize flags in order of importance
 	cmd.Flags().SortFlags = false
 
 	// Version
-	if master {
+	if isCreateCmd {
 		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Polaris you want to install\n")
 	} else {
 		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "", "Version of Polaris you want to install\n")
@@ -144,7 +143,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringVar(&ctl.flagTree.FQDN, "fqdn", ctl.flagTree.FQDN, "Fully qualified domain name [Example: \"example.polaris.synopsys.com\"]\n")
 
 	// license related flags
-	if master {
+	if isCreateCmd {
 		// licenses are not allowed to be changed during update
 		cmd.Flags().StringVar(&ctl.flagTree.GCPServiceAccountFilePath, "gcp-service-account-path", ctl.flagTree.GCPServiceAccountFilePath, "Absolute path to given Google Cloud Platform service account for pulling images")
 		cmd.Flags().StringVar(&ctl.flagTree.coverityLicensePath, "coverity-license-path", ctl.flagTree.coverityLicensePath, "Absolute path to given Coverity license\n")
@@ -160,7 +159,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().BoolVar(&ctl.flagTree.SMTPTlsIgnoreInvalidCert, "insecure-skip-smtp-tls-verify", DefaultFlagTree.SMTPTlsIgnoreInvalidCert, "SMTP server's certificates won't be validated")
 	cmd.Flags().StringVar(&ctl.flagTree.SMTPSenderEmail, "smtp-sender-email", ctl.flagTree.SMTPSenderEmail, "SMTP sender email\n")
 
-	if master {
+	if isCreateCmd {
 		cobra.MarkFlagRequired(cmd.Flags(), "smtp-host")
 		cobra.MarkFlagRequired(cmd.Flags(), "smtp-port")
 		cobra.MarkFlagRequired(cmd.Flags(), "smtp-username")
@@ -180,7 +179,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringVar(&ctl.flagTree.PostgresPassword, "postgres-password", ctl.flagTree.PostgresPassword, "Postgres password\n")
 
 	// size parameters are not allowed to change during update because of Kubernetes not allowing storage to be decreased (although note that it does allow it to be increased, see https://kubernetes.io/docs/concepts/storage/persistent-volumes/#expanding-persistent-volumes-claims)
-	if master {
+	if isCreateCmd {
 		cmd.Flags().StringVar(&ctl.flagTree.EventstoreSize, "eventstore-size", DefaultFlagTree.EventstoreSize, "Persistent volume claim size for eventstore")
 		cmd.Flags().StringVar(&ctl.flagTree.MongoDBSize, "mongodb-size", DefaultFlagTree.MongoDBSize, "Persistent volume claim size for mongodb")
 		cmd.Flags().StringVar(&ctl.flagTree.DownloadServerSize, "downloadserver-size", DefaultFlagTree.DownloadServerSize, "Persistent volume claim size for download server")

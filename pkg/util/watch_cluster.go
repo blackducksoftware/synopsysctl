@@ -62,7 +62,6 @@ func WaitForPodsToBeDeletedOrComplete(kubeClient *kubernetes.Clientset, namespac
 			}
 		}
 	}
-	return nil
 }
 
 // WaitForPodsToBeRunningOrComplete ...
@@ -95,7 +94,6 @@ func WaitForPodsToBeRunningOrComplete(kubeClient *kubernetes.Clientset, namespac
 			}
 		}
 	}
-	return nil
 }
 
 // WaitForPodsToStartChanging ...
@@ -131,7 +129,6 @@ func WaitForPodsToStartChanging(kubeClient *kubernetes.Clientset, namespace stri
 			}
 		}
 	}
-	return nil
 }
 
 // WaitForPodsToStopTerminating ...
@@ -163,7 +160,6 @@ func WaitForPodsToStopTerminating(kubeClient *kubernetes.Clientset, namespace st
 			}
 		}
 	}
-	return nil
 }
 
 // PodIsRunningOrComplete ...
@@ -192,19 +188,6 @@ func PodIsTerminating(pod corev1.Pod) bool {
 	return false
 }
 
-// // PodIsInErrorState ...
-// func PodIsInErrorState(pod corev1.Pod) bool {
-// 	if pod.ObjectMeta.DeletionTimestamp != nil {
-// 		return true
-// 	}
-// 	return false
-// }
-
-// // PodIsInCrashLoopBackoffState ...
-// func PodIsInCrashLoopBackoffState(pod corev1.Pod) bool {
-// 	pod.Status.ContainerStatuses
-// }
-
 // WaitForPodsToAppear ...
 func WaitForPodsToAppear(kubeClient *kubernetes.Clientset, namespace string, labelSelector string) error {
 	timeout := time.NewTimer(1 * time.Minute) // fail after 1 minute
@@ -226,7 +209,6 @@ func WaitForPodsToAppear(kubeClient *kubernetes.Clientset, namespace string, lab
 			}
 		}
 	}
-	return nil
 }
 
 // WaitForMoreThanNPods ...
@@ -250,5 +232,4 @@ func WaitForMoreThanNPods(kubeClient *kubernetes.Clientset, namespace string, la
 			}
 		}
 	}
-	return nil
 }

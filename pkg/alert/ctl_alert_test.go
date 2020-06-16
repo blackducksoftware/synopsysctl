@@ -32,33 +32,33 @@ import (
 
 func TestNewHelmValuesFromCobraFlags(t *testing.T) {
 	assert := assert.New(t)
-	bdbaCobraHelper := NewHelmValuesFromCobraFlags()
+	cobraHelper := NewHelmValuesFromCobraFlags()
 	assert.Equal(&HelmValuesFromCobraFlags{
 		args:     map[string]interface{}{},
 		flagTree: FlagTree{},
-	}, bdbaCobraHelper)
+	}, cobraHelper)
 }
 
 func TestGetArgs(t *testing.T) {
 	assert := assert.New(t)
-	bdbaCobraHelper := NewHelmValuesFromCobraFlags()
-	assert.Equal(map[string]interface{}{}, bdbaCobraHelper.GetArgs())
+	cobraHelper := NewHelmValuesFromCobraFlags()
+	assert.Equal(map[string]interface{}{}, cobraHelper.GetArgs())
 }
 
 func TestGenerateHelmFlagsFromCobraFlags(t *testing.T) {
 	assert := assert.New(t)
 
-	bdbaCobraHelper := NewHelmValuesFromCobraFlags()
+	cobraHelper := NewHelmValuesFromCobraFlags()
 	cmd := &cobra.Command{}
-	bdbaCobraHelper.AddCobraFlagsToCommand(cmd, true)
+	cobraHelper.AddCobraFlagsToCommand(cmd, true)
 	flagset := cmd.Flags()
 	// Set flags here...
 
-	bdbaCobraHelper.GenerateHelmFlagsFromCobraFlags(flagset)
+	cobraHelper.GenerateHelmFlagsFromCobraFlags(flagset)
 
 	expectedArgs := map[string]interface{}{}
 
-	assert.Equal(expectedArgs, bdbaCobraHelper.GetArgs())
+	assert.Equal(expectedArgs, cobraHelper.GetArgs())
 
 }
 
@@ -291,8 +291,8 @@ func TestSetCRSpecFieldByFlag(t *testing.T) {
 
 	// get the flagset
 	cmd := &cobra.Command{}
-	bdbaCobraHelper := NewHelmValuesFromCobraFlags()
-	bdbaCobraHelper.AddCobraFlagsToCommand(cmd, true)
+	cobraHelper := NewHelmValuesFromCobraFlags()
+	cobraHelper.AddCobraFlagsToCommand(cmd, true)
 	flagset := cmd.Flags()
 
 	for _, test := range tests {
@@ -304,18 +304,18 @@ func TestSetCRSpecFieldByFlag(t *testing.T) {
 		}
 		// test setting the flag
 		f := &pflag.Flag{Changed: true, Name: test.flagName}
-		bdbaCobraHelper = test.changedCtl
-		bdbaCobraHelper.args = map[string]interface{}{}
-		bdbaCobraHelper.AddHelmValueByCobraFlag(f)
-		if isEqual := assert.Equal(test.changedArgs, bdbaCobraHelper.GetArgs()); !isEqual {
+		cobraHelper = test.changedCtl
+		cobraHelper.args = map[string]interface{}{}
+		cobraHelper.AddHelmValueByCobraFlag(f)
+		if isEqual := assert.Equal(test.changedArgs, cobraHelper.GetArgs()); !isEqual {
 			t.Errorf("failed case for flag '%s'", test.flagName)
 		}
 	}
 
 	// case: nothing set if flag doesn't exist
-	bdbaCobraHelper = NewHelmValuesFromCobraFlags()
+	cobraHelper = NewHelmValuesFromCobraFlags()
 	f := &pflag.Flag{Changed: true, Name: "bad-flag"}
-	bdbaCobraHelper.AddHelmValueByCobraFlag(f)
-	assert.Equal(map[string]interface{}{}, bdbaCobraHelper.GetArgs())
+	cobraHelper.AddHelmValueByCobraFlag(f)
+	assert.Equal(map[string]interface{}{}, cobraHelper.GetArgs())
 
 }

@@ -152,14 +152,12 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 }
 
 // AddCobraFlagsToCommand adds flags for the Opssight helm chart to the cmd
-// master=true is used to add all flags for creating an instance
-// master=false is used to add a subset of flags for updating an instance
-func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, master bool) {
+func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, isCreateCmd bool) {
 	// [DEV NOTE:] please organize flags in order of importance
 	cmd.Flags().SortFlags = false
 
 	// Version
-	if master {
+	if isCreateCmd {
 		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of the OpsSight instance\n")
 	} else {
 		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "", "Version of the OpsSight instance\n")
@@ -177,7 +175,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringVar(&ctl.flagTree.LogLevel, "log-level", DefaultFlagTree.LogLevel, "Log level of Opssight\n")
 
 	// Black Duck Configuration
-	if master {
+	if isCreateCmd {
 		// During create users can specify files, otherwise they need to use commands like "./synopsysctl update opssight externalhost"
 		cmd.Flags().StringVar(&ctl.flagTree.BlackduckExternalHostsFilePath, "blackduck-external-hosts-file-path", ctl.flagTree.BlackduckExternalHostsFilePath, "Absolute path to a file containing a list of Black Duck External Hosts")
 		cmd.Flags().StringVar(&ctl.flagTree.BlackduckSecuredRegistriesFilePath, "blackduck-secured-registries-file-path", ctl.flagTree.BlackduckSecuredRegistriesFilePath, "Absolute path to a file containing a list of Black Duck Secured Registries")
@@ -190,7 +188,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 
 	// Metrics
 	cmd.Flags().StringVar(&ctl.flagTree.EnableMetrics, "enable-metrics", DefaultFlagTree.EnableMetrics, "If true, Opssight records Prometheus Metrics [true|false]")
-	if master {
+	if isCreateCmd {
 		cmd.Flags().StringVar(&ctl.flagTree.PrometheusExpose, "expose-metrics", DefaultFlagTree.PrometheusExpose, "Type of service of Opssight's Prometheus Metrics [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
 	} else {
 		cmd.Flags().StringVar(&ctl.flagTree.PrometheusExpose, "expose-metrics", ctl.flagTree.PrometheusExpose, "Type of service of Opssight's Prometheus Metrics [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")

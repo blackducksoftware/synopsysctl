@@ -97,14 +97,12 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 }
 
 // AddCobraFlagsToCommand adds flags for the Polaris-Reporting helm chart to the cmd
-// master=true is used to add all flags for creating an instance
-// master=false is used to add a subset of flags for updating an instance
-func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, master bool) {
+func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, isCreateCmd bool) {
 	// [DEV NOTE:] please organize flags in order of importance
 	cmd.Flags().SortFlags = false
 
 	// Application Version and Image Tag
-	if master {
+	if isCreateCmd {
 		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Alert\n")
 		cobra.MarkFlagRequired(cmd.Flags(), "version")
 	} else {
@@ -113,7 +111,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 
 	// Storage
 	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", ctl.flagTree.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs")
-	if master {
+	if isCreateCmd {
 		cmd.Flags().StringVar(&ctl.flagTree.PVCStorageClass, "pvc-storage-class", ctl.flagTree.PVCStorageClass, "Storage class for the persistent volume claim")
 		cmd.Flags().StringVar(&ctl.flagTree.PersistentStorage, "persistent-storage", "true", "If true, Alert has persistent storage [true|false]")
 	}
@@ -127,7 +125,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringVar(&ctl.flagTree.StandAlone, "standalone", DefaultFlagTree.StandAlone, "If true, Alert runs in standalone mode [true|false]\n")
 
 	// Exposing the UI
-	if master {
+	if isCreateCmd {
 		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", DefaultFlagTree.ExposeService, "Service type to expose Alert's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
 	} else {
 		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", ctl.flagTree.ExposeService, "Service type to expose Alert's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")

@@ -57,7 +57,8 @@ type FlagTree struct {
 	Size                        string
 	DeploymentResourcesFilePath string
 
-	ExposeService string
+	ExposeService   string
+	ExposedNodePort string
 
 	ExternalPostgresHost          string
 	ExternalPostgresPort          int
@@ -127,15 +128,19 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 	}
 }
 
-// AddCRSpecFlagsToCommand adds flags to a Cobra Command that are need for BlackDuck's Spec.
+// GetArgs returns the map of helm chart fields to values
+func (ctl *HelmValuesFromCobraFlags) GetArgs() map[string]interface{} {
+	return ctl.args
+}
+
+// AddCobraFlagsToCommand adds flags to a Cobra Command that are need for BlackDuck's Spec.
 // The flags map to fields in the CRSpecBuilderFromCobraFlags struct.
-// master - if false, doesn't add flags that all Users shouldn't use
-func (ctl *HelmValuesFromCobraFlags) AddCRSpecFlagsToCommand(cmd *cobra.Command, master bool) {
+func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, isCreateCmd bool) {
 	// [DEV NOTE:] please organize flags in order of importance
 	cmd.Flags().SortFlags = false
 
 	// Version
-	if master {
+	if isCreateCmd {
 		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Black Duck")
 	} else {
 		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "", "Version of Black Duck")
@@ -148,7 +153,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCRSpecFlagsToCommand(cmd *cobra.Command,
 	cmd.Flags().MarkHidden("image-registries") // only for devs
 
 	// Storage
-	if master {
+	if isCreateCmd {
 		cmd.Flags().StringVar(&ctl.flagTree.PvcStorageClass, "pvc-storage-class", ctl.flagTree.PvcStorageClass, "Name of Storage Class for the PVC")
 		cmd.Flags().StringVar(&ctl.flagTree.PersistentStorage, "persistent-storage", DefaultFlagTree.PersistentStorage, "If true, Black Duck has persistent storage [true|false]")
 		cmd.Flags().StringVar(&ctl.flagTree.PVCFilePath, "pvc-file-path", ctl.flagTree.PVCFilePath, "Absolute path to a file containing a list of PVC json structs")
@@ -157,11 +162,12 @@ func (ctl *HelmValuesFromCobraFlags) AddCRSpecFlagsToCommand(cmd *cobra.Command,
 	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", ctl.flagTree.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs\n")
 
 	// Expose UI
-	if master {
+	if isCreateCmd {
 		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", DefaultFlagTree.ExposeService, "Service type of Black Duck webserver's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
 	} else {
 		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", ctl.flagTree.ExposeService, "Service type of Black Duck webserver's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
 	}
+	cmd.Flags().StringVar(&ctl.flagTree.ExposedNodePort, "node-port", ctl.flagTree.ExposedNodePort, "Value for the NodePort's port (default random)\n")
 
 	// Postgres
 	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresHost, "external-postgres-host", ctl.flagTree.ExternalPostgresHost, "Host of external Postgres")
@@ -183,7 +189,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCRSpecFlagsToCommand(cmd *cobra.Command,
 	cmd.Flags().StringVar(&ctl.flagTree.AuthCustomCAFilePath, "auth-custom-ca-file-path", ctl.flagTree.AuthCustomCAFilePath, "Absolute path to a file for the Custom Auth CA for Black Duck\n")
 
 	// Seal Key
-	if master {
+	if isCreateCmd {
 		cmd.Flags().StringVar(&ctl.flagTree.SealKey, "seal-key", ctl.flagTree.SealKey, "Seal key to encrypt the master key when Source code upload is enabled and it should be of length 32\n")
 	}
 
@@ -213,8 +219,7 @@ func isValidSize(size string) bool {
 	return false
 }
 
-// CheckValuesFromFlags returns an error if a value stored in the struct will not be able to be
-// used in the blackDuckSpec
+// CheckValuesFromFlags returns an error if a value stored in the struct will not be able to be used
 func (ctl *HelmValuesFromCobraFlags) CheckValuesFromFlags(flagset *pflag.FlagSet) error {
 	if FlagWasSet(flagset, "size") {
 		if !isValidSize(ctl.flagTree.Size) {
@@ -239,6 +244,43 @@ func (ctl *HelmValuesFromCobraFlags) CheckValuesFromFlags(flagset *pflag.FlagSet
 			return fmt.Errorf("seal key should be of length 32")
 		}
 	}
+	return nil
+}
+
+// MarkRequiredFlags ...
+func (ctl *HelmValuesFromCobraFlags) MarkRequiredFlags(flagset *pflag.FlagSet, version string, updating bool) error {
+	if flagset.Lookup("admin-password").Changed ||
+		flagset.Lookup("user-password").Changed {
+		// user is explicitly required to set the postgres passwords for: 'admin', 'postgres', and 'user'
+		cobra.MarkFlagRequired(flagset, "admin-password")
+		cobra.MarkFlagRequired(flagset, "user-password")
+	} else {
+		// require all external-postgres parameters
+		cobra.MarkFlagRequired(flagset, "external-postgres-host")
+		cobra.MarkFlagRequired(flagset, "external-postgres-port")
+		cobra.MarkFlagRequired(flagset, "external-postgres-admin")
+		cobra.MarkFlagRequired(flagset, "external-postgres-user")
+		cobra.MarkFlagRequired(flagset, "external-postgres-ssl")
+		cobra.MarkFlagRequired(flagset, "external-postgres-admin-password")
+		cobra.MarkFlagRequired(flagset, "external-postgres-user-password")
+	}
+
+	cobra.MarkFlagRequired(flagset, "seal-key")
+
+	if util.CompareVersions(version, "2020.6.0") < 0 {
+		cobra.MarkFlagRequired(flagset, "certificate-file-path")
+		cobra.MarkFlagRequired(flagset, "certificate-key-file-path")
+	}
+
+	return nil
+}
+
+// VerifyChartVersionSupportsChangedFlags ...
+func (ctl *HelmValuesFromCobraFlags) VerifyChartVersionSupportsChangedFlags(flagset *pflag.FlagSet, version string) error {
+	if flagset.Lookup("node-port").Changed && (util.CompareVersions(version, "2020.6.0") < 0) {
+		return fmt.Errorf("--node-port is not supported in Black Duck versions before 2020.6.0")
+	}
+
 	return nil
 }
 
@@ -278,6 +320,8 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 				default:
 					util.SetHelmValueInMap(ctl.args, []string{"exposeui"}, false)
 				}
+			case "node-port":
+				util.SetHelmValueInMap(ctl.args, []string{"exposedNodePort"}, ctl.flagTree.ExposedNodePort)
 			case "environs":
 				for _, value := range ctl.flagTree.Environs {
 					values := strings.SplitN(value, ":", 2)

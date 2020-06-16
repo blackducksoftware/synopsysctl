@@ -32,7 +32,7 @@ type CRSpecBuilderFromCobraFlagsInterface interface {
 	GetCRSpec() interface{}                                      // returns the spec for the resource
 	SetCRSpec(interface{}) error                                 // sets the spec
 	SetPredefinedCRSpec(string) error                            // sets the spec to a predefined spec
-	AddCRSpecFlagsToCommand(*cobra.Command, bool)                // Adds flags for the resource's spec to a Cobra command
+	AddCobraFlagsToCommand(*cobra.Command, bool)                 // Adds flags for the resource's spec to a Cobra command
 	CheckValuesFromFlags(*pflag.FlagSet) error                   // returns an error if a value for the spec is invalid
 	GenerateCRSpecFromFlags(*pflag.FlagSet) (interface{}, error) // calls SetSpecFieldByFlag on each flag in flagset
 	SetCRSpecFieldByFlag(*pflag.Flag)                            // updates the resource's spec with the value from a flag

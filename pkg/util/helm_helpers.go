@@ -177,9 +177,10 @@ func TemplateWithHelm3(releaseName, namespace, chartURL string, vals map[string]
 	}
 
 	fileValues := map[string]interface{}{}
-	if err := mergeValuesWithExtraFilesFromChart(chart, vals, extraFiles); err != nil {
+	if err := mergeValuesWithExtraFilesFromChart(chart, fileValues, extraFiles); err != nil {
 		return fmt.Errorf("failed to merge extra configuration files during template due to %s", err)
 	}
+	vals = MergeMaps(fileValues, vals)
 
 	templateOutput, err := RenderManifests(releaseName, namespace, chart, vals, actionConfig)
 	if err != nil {

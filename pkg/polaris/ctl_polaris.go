@@ -105,6 +105,11 @@ var DefaultFlagTree = FlagTree{
 	ReportStorageSize: REPORT_STORAGE_PV_SIZE,
 }
 
+// GetDefaultFlagTree ...
+func GetDefaultFlagTree() *FlagTree {
+	return &DefaultFlagTree
+}
+
 // NewHelmValuesFromCobraFlags returns an initialized HelmValuesFromCobraFlags
 func NewHelmValuesFromCobraFlags() *HelmValuesFromCobraFlags {
 	return &HelmValuesFromCobraFlags{
@@ -131,33 +136,34 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	// [DEV NOTE:] please organize flags in order of importance
 	cmd.Flags().SortFlags = false
 
-	// Version
+	defaults := &FlagTree{}
 	if isCreateCmd {
-		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Polaris you want to install\n")
-	} else {
-		cmd.Flags().StringVar(&ctl.flagTree.Version, "version", "", "Version of Polaris you want to install\n")
+		defaults = GetDefaultFlagTree()
 	}
 
+	// Version
+	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", defaults.Version, "Version of Polaris you want to install\n")
+
 	// domain-name specific flags
-	cmd.Flags().StringVar(&ctl.flagTree.IngressClass, "ingress-class", DefaultFlagTree.IngressClass, "Name of ingress class")
-	cmd.Flags().StringVar(&ctl.flagTree.FQDN, "fqdn", ctl.flagTree.FQDN, "Fully qualified domain name [Example: \"example.polaris.synopsys.com\"]\n")
+	cmd.Flags().StringVar(&ctl.flagTree.IngressClass, "ingress-class", defaults.IngressClass, "Name of ingress class")
+	cmd.Flags().StringVar(&ctl.flagTree.FQDN, "fqdn", defaults.FQDN, "Fully qualified domain name [Example: \"example.polaris.synopsys.com\"]\n")
 
 	// license related flags
 	if isCreateCmd {
 		// licenses are not allowed to be changed during update
-		cmd.Flags().StringVar(&ctl.flagTree.GCPServiceAccountFilePath, "gcp-service-account-path", ctl.flagTree.GCPServiceAccountFilePath, "Absolute path to given Google Cloud Platform service account for pulling images")
-		cmd.Flags().StringVar(&ctl.flagTree.coverityLicensePath, "coverity-license-path", ctl.flagTree.coverityLicensePath, "Absolute path to given Coverity license\n")
+		cmd.Flags().StringVar(&ctl.flagTree.GCPServiceAccountFilePath, "gcp-service-account-path", defaults.GCPServiceAccountFilePath, "Absolute path to given Google Cloud Platform service account for pulling images")
+		cmd.Flags().StringVar(&ctl.flagTree.coverityLicensePath, "coverity-license-path", defaults.coverityLicensePath, "Absolute path to given Coverity license\n")
 	}
 
 	// smtp related flags
-	cmd.Flags().StringVar(&ctl.flagTree.SMTPHost, "smtp-host", ctl.flagTree.SMTPHost, "SMTP host")
-	cmd.Flags().IntVar(&ctl.flagTree.SMTPPort, "smtp-port", DefaultFlagTree.SMTPPort, "SMTP port")
-	cmd.Flags().StringVar(&ctl.flagTree.SMTPUsername, "smtp-username", ctl.flagTree.SMTPUsername, "SMTP username")
-	cmd.Flags().StringVar(&ctl.flagTree.SMTPPassword, "smtp-password", ctl.flagTree.SMTPPassword, "SMTP password")
-	cmd.Flags().StringVar(&ctl.flagTree.SMTPTlsMode, "smtp-tls-mode", DefaultFlagTree.SMTPTlsMode, "SMTP TLS mode [disable|try-starttls|require-starttls|require-tls]")
-	cmd.Flags().StringVar(&ctl.flagTree.SMTPTlsTrustedHosts, "smtp-trusted-hosts", DefaultFlagTree.SMTPTlsTrustedHosts, "Whitespace separated list of trusted hosts")
-	cmd.Flags().BoolVar(&ctl.flagTree.SMTPTlsIgnoreInvalidCert, "insecure-skip-smtp-tls-verify", DefaultFlagTree.SMTPTlsIgnoreInvalidCert, "SMTP server's certificates won't be validated")
-	cmd.Flags().StringVar(&ctl.flagTree.SMTPSenderEmail, "smtp-sender-email", ctl.flagTree.SMTPSenderEmail, "SMTP sender email\n")
+	cmd.Flags().StringVar(&ctl.flagTree.SMTPHost, "smtp-host", defaults.SMTPHost, "SMTP host")
+	cmd.Flags().IntVar(&ctl.flagTree.SMTPPort, "smtp-port", defaults.SMTPPort, "SMTP port")
+	cmd.Flags().StringVar(&ctl.flagTree.SMTPUsername, "smtp-username", defaults.SMTPUsername, "SMTP username")
+	cmd.Flags().StringVar(&ctl.flagTree.SMTPPassword, "smtp-password", defaults.SMTPPassword, "SMTP password")
+	cmd.Flags().StringVar(&ctl.flagTree.SMTPTlsMode, "smtp-tls-mode", defaults.SMTPTlsMode, "SMTP TLS mode [disable|try-starttls|require-starttls|require-tls]")
+	cmd.Flags().StringVar(&ctl.flagTree.SMTPTlsTrustedHosts, "smtp-trusted-hosts", defaults.SMTPTlsTrustedHosts, "Whitespace separated list of trusted hosts")
+	cmd.Flags().BoolVar(&ctl.flagTree.SMTPTlsIgnoreInvalidCert, "insecure-skip-smtp-tls-verify", defaults.SMTPTlsIgnoreInvalidCert, "SMTP server's certificates won't be validated")
+	cmd.Flags().StringVar(&ctl.flagTree.SMTPSenderEmail, "smtp-sender-email", defaults.SMTPSenderEmail, "SMTP sender email\n")
 
 	if isCreateCmd {
 		cobra.MarkFlagRequired(cmd.Flags(), "smtp-host")
@@ -169,28 +175,28 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 
 	// postgres specific flags
 	// these flags are specific for an external managed postgres
-	cmd.Flags().BoolVar(&ctl.flagTree.PostgresInternal, "enable-postgres-container", DefaultFlagTree.PostgresInternal, "If true, synopsysctl will deploy a postgres container backed by persistent volume (Not recommended for production usage)")
-	cmd.Flags().StringVar(&ctl.flagTree.PostgresHost, "postgres-host", ctl.flagTree.PostgresHost, "Postgres host. If --enable-postgres-container=true, the defualt is \"postgres\"")
-	cmd.Flags().IntVar(&ctl.flagTree.PostgresPort, "postgres-port", DefaultFlagTree.PostgresPort, "Postgres port")
-	cmd.Flags().StringVar(&ctl.flagTree.PostgresSSLMode, "postgres-ssl-mode", ctl.flagTree.PostgresSSLMode, "Postgres ssl mode [disable|require]")
-	cmd.Flags().StringVar(&ctl.flagTree.PostgresUsername, "postgres-username", ctl.flagTree.PostgresUsername, "Postgres username. If --enable-postgres-container=true, the defualt is \"postgres\"")
+	cmd.Flags().BoolVar(&ctl.flagTree.PostgresInternal, "enable-postgres-container", defaults.PostgresInternal, "If true, synopsysctl will deploy a postgres container backed by persistent volume (Not recommended for production usage)")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresHost, "postgres-host", defaults.PostgresHost, "Postgres host. If --enable-postgres-container=true, the defualt is \"postgres\"")
+	cmd.Flags().IntVar(&ctl.flagTree.PostgresPort, "postgres-port", defaults.PostgresPort, "Postgres port")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresSSLMode, "postgres-ssl-mode", defaults.PostgresSSLMode, "Postgres ssl mode [disable|require]")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresUsername, "postgres-username", defaults.PostgresUsername, "Postgres username. If --enable-postgres-container=true, the defualt is \"postgres\"")
 	// if using in-cluster containerized Postgres, then currently we require "enable-postgres-container", "postgres-password" and optionally "postgres-size"
 	// [TODO: make the above point clear to customers]
-	cmd.Flags().StringVar(&ctl.flagTree.PostgresPassword, "postgres-password", ctl.flagTree.PostgresPassword, "Postgres password\n")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresPassword, "postgres-password", defaults.PostgresPassword, "Postgres password\n")
 
 	// size parameters are not allowed to change during update because of Kubernetes not allowing storage to be decreased (although note that it does allow it to be increased, see https://kubernetes.io/docs/concepts/storage/persistent-volumes/#expanding-persistent-volumes-claims)
 	if isCreateCmd {
-		cmd.Flags().StringVar(&ctl.flagTree.EventstoreSize, "eventstore-size", DefaultFlagTree.EventstoreSize, "Persistent volume claim size for eventstore")
-		cmd.Flags().StringVar(&ctl.flagTree.MongoDBSize, "mongodb-size", DefaultFlagTree.MongoDBSize, "Persistent volume claim size for mongodb")
-		cmd.Flags().StringVar(&ctl.flagTree.DownloadServerSize, "downloadserver-size", DefaultFlagTree.DownloadServerSize, "Persistent volume claim size for download server")
-		cmd.Flags().StringVar(&ctl.flagTree.UploadServerSize, "uploadserver-size", DefaultFlagTree.UploadServerSize, "Persistent volume claim size for upload server")
-		cmd.Flags().StringVar(&ctl.flagTree.PostgresSize, "postgres-size", DefaultFlagTree.PostgresSize, "Persistent volume claim size to use for postgres. Only applicable if --enable-postgres-container is set to true")
-		cmd.Flags().StringVar(&ctl.flagTree.StorageClass, "storage-class", ctl.flagTree.StorageClass, "Set the storage class to use for all persistent volume claims\n")
+		cmd.Flags().StringVar(&ctl.flagTree.EventstoreSize, "eventstore-size", defaults.EventstoreSize, "Persistent volume claim size for eventstore")
+		cmd.Flags().StringVar(&ctl.flagTree.MongoDBSize, "mongodb-size", defaults.MongoDBSize, "Persistent volume claim size for mongodb")
+		cmd.Flags().StringVar(&ctl.flagTree.DownloadServerSize, "downloadserver-size", defaults.DownloadServerSize, "Persistent volume claim size for download server")
+		cmd.Flags().StringVar(&ctl.flagTree.UploadServerSize, "uploadserver-size", defaults.UploadServerSize, "Persistent volume claim size for upload server")
+		cmd.Flags().StringVar(&ctl.flagTree.PostgresSize, "postgres-size", defaults.PostgresSize, "Persistent volume claim size to use for postgres. Only applicable if --enable-postgres-container is set to true")
+		cmd.Flags().StringVar(&ctl.flagTree.StorageClass, "storage-class", defaults.StorageClass, "Set the storage class to use for all persistent volume claims\n")
 	}
 
 	// reporting related flags
-	cmd.Flags().BoolVar(&ctl.flagTree.EnableReporting, "enable-reporting", DefaultFlagTree.EnableReporting, "Enable Reporting Platform")
-	cmd.Flags().StringVar(&ctl.flagTree.ReportStorageSize, "reportstorage-size", DefaultFlagTree.ReportStorageSize, "Persistent volume claim size for reportstorage. Only applicable if --enable-reporting is set to true")
+	cmd.Flags().BoolVar(&ctl.flagTree.EnableReporting, "enable-reporting", defaults.EnableReporting, "Enable Reporting Platform")
+	cmd.Flags().StringVar(&ctl.flagTree.ReportStorageSize, "reportstorage-size", defaults.ReportStorageSize, "Persistent volume claim size for reportstorage. Only applicable if --enable-reporting is set to true")
 }
 
 // CheckValuesFromFlags returns an error if a value set by a flag is invalid

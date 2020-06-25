@@ -341,8 +341,11 @@ var createBlackDuckCmd = &cobra.Command{
 
 		// Set Helm Chart Value - size
 		var extraFiles []string
+		if !cmd.Flags().Lookup("size").Changed {
+			helmValuesMap["size"] = "small"
+		}
 		size, found := helmValuesMap["size"]
-		if found {
+		if found && len(size.(string)) > 0 {
 			extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", strings.ToLower(size.(string))))
 		}
 
@@ -454,8 +457,11 @@ var createBlackDuckNativeCmd = &cobra.Command{
 
 		// Set Helm Chart Value - size
 		var extraFiles []string
+		if !cmd.Flags().Lookup("size").Changed {
+			helmValuesMap["size"] = "small"
+		}
 		size, found := helmValuesMap["size"]
-		if found {
+		if found && len(size.(string)) > 0 {
 			extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", strings.ToLower(size.(string))))
 		}
 

@@ -340,7 +340,9 @@ func blackDuckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 	}
 
 	if bd.Spec.RegistryConfiguration != nil {
-		util.SetHelmValueInMap(helmConfig, []string{"registry"}, bd.Spec.RegistryConfiguration.Registry)
+		if len(bd.Spec.RegistryConfiguration.Registry) > 0 {
+			util.SetHelmValueInMap(helmConfig, []string{"registry"}, bd.Spec.RegistryConfiguration.Registry)
+		}
 		util.SetHelmValueInMap(helmConfig, []string{"imagePullSecrets"}, bd.Spec.RegistryConfiguration.PullSecrets)
 	}
 

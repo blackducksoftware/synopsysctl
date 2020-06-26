@@ -18,7 +18,7 @@ func GetLatestBlackDuckVersion() string {
 	if TestConfig.BlackDuck.Version != "" {
 		return TestConfig.BlackDuck.Version
 	}
-	return "2020.4.0"
+	return "2020.6.0"
 }
 
 // GetBlackDuckTLSCertPath ...
@@ -79,6 +79,20 @@ func (t BlackDuckTester) WaitUntilReady() {
 	if err != nil {
 		log.Fatalf("%+v", err)
 	}
+}
+
+// ScaleUpPostgresDeployment ...
+func (t BlackDuckTester) ScaleUpPostgresDeployment() error {
+	postgresDeployment, err := util.GetDeployment(KubeClient, t.Namespace, fmt.Sprintf("%s-blackduck-postgres", t.Name))
+	if err != nil {
+		return fmt.Errorf("%s", err)
+	}
+	postgresDeployment.Spec.Replicas = util.IntToInt32(1)
+	_, err = util.UpdateDeployment(KubeClient, t.Namespace, postgresDeployment)
+	if err != nil {
+		return fmt.Errorf("%s", err)
+	}
+	return nil
 }
 
 // Verify ...

@@ -85,6 +85,10 @@ func TestMigrateBlackDuck(t *testing.T) {
 	if err != nil {
 		t.Errorf("%s", err)
 	}
+	err = util.WaitForNamespaceToTerminate(tu.KubeClient, "synopsys-operator")
+	if err != nil {
+		t.Errorf("%s", err)
+	}
 }
 
 // TestMigrateBlackDuck_EmptyRegistry ...
@@ -161,6 +165,10 @@ func TestMigrateBlackDuck_EmptyRegistry(t *testing.T) {
 
 	fmt.Printf("Deleting Synopsys Operator Namespace\n")
 	err = util.DeleteNamespace(tu.KubeClient, "synopsys-operator")
+	if err != nil {
+		t.Errorf("%s", err)
+	}
+	err = util.WaitForNamespaceToTerminate(tu.KubeClient, "synopsys-operator")
 	if err != nil {
 		t.Errorf("%s", err)
 	}

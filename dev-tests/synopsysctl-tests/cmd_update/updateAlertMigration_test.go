@@ -85,4 +85,8 @@ func TestMigrateAlert(t *testing.T) {
 	if err != nil {
 		t.Errorf("%s", err)
 	}
+	err = util.WaitForNamespaceToTerminate(tu.KubeClient, "synopsys-operator")
+	if err != nil {
+		t.Errorf("%s", err)
+	}
 }

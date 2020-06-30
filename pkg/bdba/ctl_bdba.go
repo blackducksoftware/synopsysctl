@@ -102,10 +102,11 @@ type FlagTree struct {
 	// Logging
 	DisableFrontendLogging bool `json:"disableFrontendLogging"`
 	DisableWorkerLogging   bool `json:"disableWorkerLogging"`
+	LogRetention           int  `json:"logRetention"`
 
 	// Worker scaling
 	WorkerReplicas    int `json:"workerReplicas"`
-	WorkerConcurrency int `json:"workerConcurrency"` // TODO: Patcher
+	WorkerConcurrency int `json:"workerConcurrency"`
 
 	// Networking and security
 	RootCASecret string `json:"rootCASecret"`
@@ -174,6 +175,7 @@ var DefaultFlagTree = FlagTree{
 	// Logging
 	DisableFrontendLogging: false,
 	DisableWorkerLogging:   false,
+	LogRetention: 30,
 	// Worker scaling
 	WorkerReplicas:    1,
 	WorkerConcurrency: 1,
@@ -283,7 +285,8 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 
 	// Logging
 	cmd.Flags().BoolVar(&ctl.flagTree.DisableFrontendLogging, "disable-frontend-logging", defaults.DisableFrontendLogging, "Disable log collection in web application pods")
-	cmd.Flags().BoolVar(&ctl.flagTree.DisableWorkerLogging, "disable-worker-logging", defaults.DisableWorkerLogging, "Disable log collection in scanner pods\n")
+	cmd.Flags().BoolVar(&ctl.flagTree.DisableWorkerLogging, "disable-worker-logging", defaults.DisableWorkerLogging, "Disable log collection in scanner pods")
+	cmd.Flags().IntVar(&ctl.flagTree.LogRetention, "log-retention", defaults.LogRetention, "Retain logs for number of days\n")
 
 	// Worker scaling
 	cmd.Flags().IntVar(&ctl.flagTree.WorkerReplicas, "worker-replicas", defaults.WorkerReplicas, "Number of worker replicas")
@@ -520,6 +523,8 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 			util.SetHelmValueInMap(ctl.args, []string{"frontend", "applicationLogging", "enabled"}, !ctl.flagTree.DisableFrontendLogging)
 		case "disable-worker-logging":
 			util.SetHelmValueInMap(ctl.args, []string{"worker", "applicationLogging", "enabled"}, !ctl.flagTree.DisableWorkerLogging)
+		case "log-retention":
+			util.SetHelmValueInMap(ctl.args, []string{"logRetention"}, ctl.flagTree.LogRetention)
 		case "worker-replicas":
 			util.SetHelmValueInMap(ctl.args, []string{"worker", "replicas"}, ctl.flagTree.WorkerReplicas)
 		case "worker-concurrency":

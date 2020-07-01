@@ -303,7 +303,7 @@ func blackDuckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 		util.SetHelmValueInMap(helmConfig, []string{"postgres", "port"}, bd.Spec.ExternalPostgres.PostgresPort)
 		util.SetHelmValueInMap(helmConfig, []string{"postgres", "adminUserName"}, bd.Spec.ExternalPostgres.PostgresAdmin)
 		util.SetHelmValueInMap(helmConfig, []string{"postgres", "userUserName"}, bd.Spec.ExternalPostgres.PostgresUser)
-		util.SetHelmValueInMap(helmConfig, []string{"postgres", "ssl"}, bd.Spec.ExternalPostgres.PostgresUser)
+		util.SetHelmValueInMap(helmConfig, []string{"postgres", "ssl"}, bd.Spec.ExternalPostgres.PostgresSsl)
 		util.SetHelmValueInMap(helmConfig, []string{"postgres", "adminPassword"}, adminPassword)
 		util.SetHelmValueInMap(helmConfig, []string{"postgres", "userPassword"}, userPassword)
 	} else {

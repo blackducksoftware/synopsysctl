@@ -20,7 +20,7 @@ func GetLatestAlertVersion() string {
 	if TestConfig.Alert.Version != "" {
 		return TestConfig.Alert.Version
 	}
-	return "5.3.2"
+	return "6.0.0"
 }
 
 // NewAlertTester ...

@@ -27,6 +27,7 @@ import (
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -228,6 +229,31 @@ func WaitForMoreThanNPods(kubeClient *kubernetes.Clientset, namespace string, la
 				return errors.Wrap(err, "failed to list pods")
 			}
 			if len(pods.Items) > n {
+				return nil
+			}
+		}
+	}
+}
+
+// WaitForNamespaceToTerminate ...
+func WaitForNamespaceToTerminate(kubeClient *kubernetes.Clientset, namespace string) error {
+	timeout := time.NewTimer(2 * time.Minute) // fail after 2 minutes
+	ticker := time.NewTicker(1 * time.Second) // check every 1 second
+	defer ticker.Stop()
+	defer timeout.Stop()
+
+	for {
+		select {
+		case <-timeout.C:
+			return fmt.Errorf("namespace '%s' failed to terminate", namespace)
+		case <-ticker.C:
+			ns, err := GetNamespace(kubeClient, namespace)
+			if err != nil && k8serrors.IsNotFound(err) {
+				return nil
+			} else if err != nil {
+				return fmt.Errorf("%+v", err)
+			}
+			if (ns == &corev1.Namespace{}) {
 				return nil
 			}
 		}

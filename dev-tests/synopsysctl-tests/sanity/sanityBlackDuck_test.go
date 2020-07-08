@@ -53,6 +53,13 @@ func TestSanityBlackDuck(t *testing.T) {
 		return
 	}
 
+	fmt.Printf("Customer Manually Starts Postgres\n")
+	err = blackDuckTester.ScaleUpPostgresDeployment()
+	if err != nil {
+		t.Errorf("%s", err)
+		return
+	}
+
 	fmt.Printf("Starting BlackDuck\n")
 	_, err = tu.Synospysctl("start blackduck %s -n %s", blackDuckTester.Name, blackDuckTester.Namespace)
 	if err != nil {

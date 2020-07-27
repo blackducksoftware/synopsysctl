@@ -67,8 +67,11 @@ func ParseImageTag(image string) string {
 // image := "docker.io/blackducksoftware/synopsys-operator:latest"
 // subMatch = [blackducksoftware/synopsys-operator:latest docker.io/blackducksoftware/ synopsys-operator :latest]
 func ParseImageName(image string) string {
-	iamgeNameRegexp := regexp.MustCompile(`([0-9a-zA-Z-_:\/.]+\/)*([0-9a-zA-Z-_\.]+):?[a-zA-Z0-9-\\._]*$`)
-	nameSubstringSubmatch := iamgeNameRegexp.FindStringSubmatch(image)
+	imageNameRegexp := regexp.MustCompile(`([0-9a-zA-Z-_:\/.]+\/)*([0-9a-zA-Z-_\.]+):?[a-zA-Z0-9-\\._]*$`)
+	nameSubstringSubmatch := imageNameRegexp.FindStringSubmatch(image)
+	if len(nameSubstringSubmatch) < 2 {
+		return ""
+	}
 	return nameSubstringSubmatch[len(nameSubstringSubmatch)-1]
 }
 

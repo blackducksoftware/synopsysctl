@@ -78,11 +78,17 @@ var DefaultFlagTree = FlagTree{
 	ReportStorageSize: "5Gi",
 	EventstoreSize:    "50Gi",
 	// smtp related flags
+	SMTPTlsIgnoreInvalidCert: "false",
 	// postgres specific flags
 	PostgresInternal: "false",
 	PostgresPort:     5432,
 	PostgresSSLMode:  "require",
 	PostgresSize:     "50Gi",
+}
+
+// GetDefaultFlagTree ...
+func GetDefaultFlagTree() *FlagTree {
+	return &DefaultFlagTree
 }
 
 // NewHelmValuesFromCobraFlags returns an initialized HelmValuesFromCobraFlags
@@ -106,48 +112,51 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 }
 
 // AddCobraFlagsToCommand adds flags for the Polaris-Reporting helm chart to the cmd
-// master=true is used to add all flags for creating an instance
-// master=false is used to add a subset of flags for updating an instance
-func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, master bool) {
+func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, isCreateCmd bool) {
 	// [DEV NOTE:] please organize flags in order of importance
 	cmd.Flags().SortFlags = false
 
+	defaults := &FlagTree{}
+	if isCreateCmd {
+		defaults = GetDefaultFlagTree()
+	}
+
 	// Version
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Polaris-Reporting you want to install\n")
+	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", defaults.Version, "Version of Polaris-Reporting you want to install\n")
 
 	// domain specific flags
-	cmd.Flags().StringVar(&ctl.flagTree.FQDN, "fqdn", ctl.flagTree.FQDN, "Fully qualified domain name [Example: \"example.polaris.synopsys.com\"]")
-	cmd.Flags().StringVar(&ctl.flagTree.IngressClass, "ingress-class", DefaultFlagTree.IngressClass, "Name of ingress class\n")
-	if master {
+	cmd.Flags().StringVar(&ctl.flagTree.FQDN, "fqdn", defaults.FQDN, "Fully qualified domain name [Example: \"example.polaris.synopsys.com\"]")
+	cmd.Flags().StringVar(&ctl.flagTree.IngressClass, "ingress-class", defaults.IngressClass, "Name of ingress class\n")
+	if isCreateCmd {
 		cobra.MarkFlagRequired(cmd.Flags(), "fqdn")
 	}
 
 	// license related flags
-	if master {
-		cmd.Flags().StringVar(&ctl.flagTree.GCPServiceAccountFilePath, "gcp-service-account-path", "", "Absolute path to given Google Cloud Platform service account for pulling images\n")
+	if isCreateCmd {
+		cmd.Flags().StringVar(&ctl.flagTree.GCPServiceAccountFilePath, "gcp-service-account-path", defaults.GCPServiceAccountFilePath, "Absolute path to given Google Cloud Platform service account for pulling images\n")
 		cobra.MarkFlagRequired(cmd.Flags(), "gcp-service-account-path")
 	}
 
 	// storage related flags
-	if master {
-		cmd.Flags().StringVar(&ctl.flagTree.ReportStorageSize, "reportstorage-size", DefaultFlagTree.ReportStorageSize, "Persistent Volume Claim size for reportstorage")
-		cmd.Flags().StringVar(&ctl.flagTree.EventstoreSize, "eventstore-size", DefaultFlagTree.EventstoreSize, "Persistent Volume Claim size for eventstore")
-		cmd.Flags().StringVar(&ctl.flagTree.StorageClass, "storage-class", ctl.flagTree.StorageClass, "Storage Class for all Polaris-Reporting's storage\n")
+	if isCreateCmd {
+		cmd.Flags().StringVar(&ctl.flagTree.ReportStorageSize, "reportstorage-size", defaults.ReportStorageSize, "Persistent Volume Claim size for reportstorage")
+		cmd.Flags().StringVar(&ctl.flagTree.EventstoreSize, "eventstore-size", defaults.EventstoreSize, "Persistent Volume Claim size for eventstore")
+		cmd.Flags().StringVar(&ctl.flagTree.StorageClass, "storage-class", defaults.StorageClass, "Storage Class for all Polaris-Reporting's storage\n")
 		// TODO: Once the Helm charts are fixed for the storage class issue, we can remove the required flag for storage class
 		cobra.MarkFlagRequired(cmd.Flags(), "storage-class")
 	}
 
 	// smtp related flags
-	cmd.Flags().StringVar(&ctl.flagTree.SMTPHost, "smtp-host", ctl.flagTree.SMTPHost, "SMTP host")
-	cmd.Flags().IntVar(&ctl.flagTree.SMTPPort, "smtp-port", ctl.flagTree.SMTPPort, "SMTP port")
-	cmd.Flags().StringVar(&ctl.flagTree.SMTPUsername, "smtp-username", ctl.flagTree.SMTPUsername, "SMTP username")
-	cmd.Flags().StringVar(&ctl.flagTree.SMTPPassword, "smtp-password", ctl.flagTree.SMTPPassword, "SMTP password")
-	cmd.Flags().StringVar(&ctl.flagTree.SMTPSenderEmail, "smtp-sender-email", ctl.flagTree.SMTPSenderEmail, "SMTP sender email")
-	cmd.Flags().StringVar(&ctl.flagTree.SMTPTlsMode, "smtp-tls-mode", ctl.flagTree.SMTPTlsMode, "SMTP TLS mode [disable|try-starttls|require-starttls|require-tls]")
-	cmd.Flags().StringVar(&ctl.flagTree.SMTPTlsTrustedHosts, "smtp-trusted-hosts", ctl.flagTree.SMTPTlsTrustedHosts, "Whitespace separated list of trusted hosts")
-	cmd.Flags().StringVar(&ctl.flagTree.SMTPTlsIgnoreInvalidCert, "insecure-skip-smtp-tls-verify", "false", "SMTP server's certificates won't be validated\n")
+	cmd.Flags().StringVar(&ctl.flagTree.SMTPHost, "smtp-host", defaults.SMTPHost, "SMTP host")
+	cmd.Flags().IntVar(&ctl.flagTree.SMTPPort, "smtp-port", defaults.SMTPPort, "SMTP port")
+	cmd.Flags().StringVar(&ctl.flagTree.SMTPUsername, "smtp-username", defaults.SMTPUsername, "SMTP username")
+	cmd.Flags().StringVar(&ctl.flagTree.SMTPPassword, "smtp-password", defaults.SMTPPassword, "SMTP password")
+	cmd.Flags().StringVar(&ctl.flagTree.SMTPSenderEmail, "smtp-sender-email", defaults.SMTPSenderEmail, "SMTP sender email")
+	cmd.Flags().StringVar(&ctl.flagTree.SMTPTlsMode, "smtp-tls-mode", defaults.SMTPTlsMode, "SMTP TLS mode [disable|try-starttls|require-starttls|require-tls]")
+	cmd.Flags().StringVar(&ctl.flagTree.SMTPTlsTrustedHosts, "smtp-trusted-hosts", defaults.SMTPTlsTrustedHosts, "Whitespace separated list of trusted hosts")
+	cmd.Flags().StringVar(&ctl.flagTree.SMTPTlsIgnoreInvalidCert, "insecure-skip-smtp-tls-verify", defaults.SMTPTlsIgnoreInvalidCert, "SMTP server's certificates won't be validated\n")
 
-	if master {
+	if isCreateCmd {
 		cobra.MarkFlagRequired(cmd.Flags(), "smtp-host")
 		cobra.MarkFlagRequired(cmd.Flags(), "smtp-port")
 		cobra.MarkFlagRequired(cmd.Flags(), "smtp-username")
@@ -156,17 +165,17 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	}
 
 	// postgres specific flags
-	cmd.Flags().StringVar(&ctl.flagTree.PostgresInternal, "enable-postgres-container", DefaultFlagTree.PostgresInternal, "If true, synopsysctl will deploy a postgres container backed by persistent volume (Not recommended for production usage)")
-	cmd.Flags().StringVar(&ctl.flagTree.PostgresHost, "postgres-host", ctl.flagTree.PostgresHost, "Postgres host. If --enable-postgres-container=true, the default is \"postgres\"")
-	cmd.Flags().IntVar(&ctl.flagTree.PostgresPort, "postgres-port", DefaultFlagTree.PostgresPort, "Postgres port")
-	cmd.Flags().StringVar(&ctl.flagTree.PostgresUsername, "postgres-username", ctl.flagTree.PostgresUsername, "Postgres username. If --enable-postgres-container=true, the default is \"postgres\"")
-	cmd.Flags().StringVar(&ctl.flagTree.PostgresPassword, "postgres-password", ctl.flagTree.PostgresPassword, "Postgres password")
-	cmd.Flags().StringVar(&ctl.flagTree.PostgresSSLMode, "postgres-ssl-mode", DefaultFlagTree.PostgresSSLMode, "Postgres ssl mode [disable|require]")
-	if master {
-		cmd.Flags().StringVar(&ctl.flagTree.PostgresSize, "postgres-size", DefaultFlagTree.PostgresSize, "Persistent volume claim size to use for postgres. Only applicable if --enable-postgres-container is set to true\n")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresInternal, "enable-postgres-container", defaults.PostgresInternal, "If true, synopsysctl will deploy a postgres container backed by persistent volume (Not recommended for production usage)")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresHost, "postgres-host", defaults.PostgresHost, "Postgres host. If --enable-postgres-container=true, the default is \"postgres\"")
+	cmd.Flags().IntVar(&ctl.flagTree.PostgresPort, "postgres-port", defaults.PostgresPort, "Postgres port")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresUsername, "postgres-username", defaults.PostgresUsername, "Postgres username. If --enable-postgres-container=true, the default is \"postgres\"")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresPassword, "postgres-password", defaults.PostgresPassword, "Postgres password")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresSSLMode, "postgres-ssl-mode", defaults.PostgresSSLMode, "Postgres ssl mode [disable|require]")
+	if isCreateCmd {
+		cmd.Flags().StringVar(&ctl.flagTree.PostgresSize, "postgres-size", defaults.PostgresSize, "Persistent volume claim size to use for postgres. Only applicable if --enable-postgres-container is set to true\n")
 	}
 
-	if master {
+	if isCreateCmd {
 		cobra.MarkFlagRequired(cmd.Flags(), "postgres-password")
 	}
 }

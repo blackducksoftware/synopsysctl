@@ -137,47 +137,6 @@ func IsExposeServiceValid(serviceType string) bool {
 	return false
 }
 
-// IsBlackDuckVersionSupportMultipleInstance returns whether it supports multiple instance in a single namespace
-func IsBlackDuckVersionSupportMultipleInstance(version string) (bool, error) {
-	return isYearAndMonthGreaterThanOrEqualTo(version, 2019, time.August)
-}
-
-// isYearAndMonthGreaterThanOrEqualTo returns whether the given version is greater than or equal to the given year and month
-func isYearAndMonthGreaterThanOrEqualTo(version string, year int, month time.Month) (bool, error) {
-	versionArr := strings.Split(version, ".")
-	if len(versionArr) >= 3 {
-		t, err := time.Parse("2006.1", fmt.Sprintf("%s.%s", versionArr[0], versionArr[1]))
-		if err != nil {
-			return false, err
-		}
-		if t.Year() >= year && t.Month() >= month {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-// IsVersionEqualTo returns whether the given version is equal to the given year, month and dot release
-func IsVersionEqualTo(version string, year int, month time.Month, dotRelease int) (bool, error) {
-	versionArr := strings.Split(version, ".")
-	if len(versionArr) >= 3 {
-		t, err := time.Parse("2006.1", fmt.Sprintf("%s.%s", versionArr[0], versionArr[1]))
-		if err != nil {
-			return false, err
-		}
-
-		minorDotVersion, err := strconv.Atoi(versionArr[2])
-		if err != nil {
-			return false, err
-		}
-
-		if t.Year() == year && t.Month() == month && minorDotVersion == dotRelease {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
 // IsVersionGreaterThanOrEqualTo returns whether the given version is greater than or equal to the given year, month and dot release
 func IsVersionGreaterThanOrEqualTo(version string, year int, month time.Month, dotRelease int) (bool, error) {
 	versionArr := strings.Split(version, ".")
@@ -195,31 +154,6 @@ func IsVersionGreaterThanOrEqualTo(version string, year int, month time.Month, d
 		if (t.Year() > year) ||
 			(t.Year() == year && t.Month() > month) ||
 			(t.Year() == year && t.Month() == month && minorDotVersion >= dotRelease) {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-// IsNotDefaultVersionGreaterThanOrEqualTo returns whether the given version is greater than or equal to the given inputs
-func IsNotDefaultVersionGreaterThanOrEqualTo(version string, majorRelease int, minorRelease int, dotRelease int) (bool, error) {
-	versionArr := strings.Split(version, ".")
-	if len(versionArr) >= 3 {
-		majorReleaseVersion, err := strconv.Atoi(versionArr[0])
-		if err != nil {
-			return false, err
-		}
-		minorReleaseVersion, err := strconv.Atoi(versionArr[1])
-		if err != nil {
-			return false, err
-		}
-		dotReleaseVersion, err := strconv.Atoi(versionArr[2])
-		if err != nil {
-			return false, err
-		}
-		if (majorReleaseVersion > majorRelease) ||
-			(majorReleaseVersion == majorRelease && minorReleaseVersion > minorRelease) ||
-			(majorReleaseVersion == majorRelease && minorReleaseVersion == minorRelease && dotReleaseVersion >= dotRelease) {
 			return true, nil
 		}
 	}

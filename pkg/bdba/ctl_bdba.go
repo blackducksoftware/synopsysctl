@@ -102,10 +102,11 @@ type FlagTree struct {
 	// Logging
 	DisableFrontendLogging bool `json:"disableFrontendLogging"`
 	DisableWorkerLogging   bool `json:"disableWorkerLogging"`
+	LogRetention           int  `json:"logRetention"`
 
 	// Worker scaling
 	WorkerReplicas    int `json:"workerReplicas"`
-	WorkerConcurrency int `json:"workerConcurrency"` // TODO: Patcher
+	WorkerConcurrency int `json:"workerConcurrency"`
 
 	// Networking and security
 	RootCASecret string `json:"rootCASecret"`
@@ -174,6 +175,7 @@ var DefaultFlagTree = FlagTree{
 	// Logging
 	DisableFrontendLogging: false,
 	DisableWorkerLogging:   false,
+	LogRetention:           30,
 	// Worker scaling
 	WorkerReplicas:    1,
 	WorkerConcurrency: 1,
@@ -189,6 +191,11 @@ var DefaultFlagTree = FlagTree{
 	ExternalPGSSLMode: "disable",
 	// Secrets
 	PGPassword: "default",
+}
+
+// GetDefaultFlagTree ...
+func GetDefaultFlagTree() *FlagTree {
+	return &DefaultFlagTree
 }
 
 // NewHelmValuesFromCobraFlags returns an initialized HelmValuesFromCobraFlags
@@ -212,106 +219,107 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 }
 
 // AddCobraFlagsToCommand adds flags for the BDBA helm chart to the cmd
-// master=true is used to add all flags for creating an instance
-// master=false is used to add a subset of flags for updating an instance
-func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, master bool) {
+func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, isCreateCmd bool) {
 	// [DEV NOTE:] please organize flags in order of importance
 	cmd.Flags().SortFlags = false
 
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of BDBA you want to install\n")
-	// if master {
-	// 	cobra.MarkFlagRequired(cmd.Flags(), "version")
-	// }
+	defaults := &FlagTree{}
+	if isCreateCmd {
+		defaults = GetDefaultFlagTree()
+	}
 
-	cmd.Flags().StringVar(&ctl.flagTree.ClusterDomain, "cluster-domain", DefaultFlagTree.ClusterDomain, "Kubernetes cluster domain\n")
+	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", defaults.Version, "Version of BDBA you want to install\n")
+
+	cmd.Flags().StringVar(&ctl.flagTree.ClusterDomain, "cluster-domain", defaults.ClusterDomain, "Kubernetes cluster domain\n")
 
 	// Storage
-	cmd.Flags().StringVar(&ctl.flagTree.PGStorageClass, "postgres-storage-class", DefaultFlagTree.PGStorageClass, "Storage class for PostgreSQL")
-	cmd.Flags().StringVar(&ctl.flagTree.PGPVCSize, "postgres-size", DefaultFlagTree.PGPVCSize, "Persistent volument claim size for PostgreSQL")
-	cmd.Flags().StringVar(&ctl.flagTree.PGExistingClaim, "postgres-existing-claim", ctl.flagTree.PGExistingClaim, "Existing claim to use for PostgreSQL")
-	cmd.Flags().StringVar(&ctl.flagTree.MinioStorageClass, "minio-storage-class", DefaultFlagTree.MinioStorageClass, "Storage class for minio")
-	cmd.Flags().StringVar(&ctl.flagTree.MinioPVCSize, "minio-size", DefaultFlagTree.MinioPVCSize, "Persistent volume claim size of minio")
-	cmd.Flags().StringVar(&ctl.flagTree.MinioExistingClaim, "minio-existing-claim", ctl.flagTree.MinioExistingClaim, "Existing claim to use for minio")
-	cmd.Flags().StringVar(&ctl.flagTree.RabbitMQStorageClass, "rabbitmq-storage-class", DefaultFlagTree.RabbitMQStorageClass, "Storage class for RabbitMQ")
-	cmd.Flags().StringVar(&ctl.flagTree.RabbitMQPVCSize, "rabbitmq-size", DefaultFlagTree.RabbitMQPVCSize, "Persistent volument claim size for RabbitMQ")
-	cmd.Flags().StringVar(&ctl.flagTree.RabbitMQExistingClaim, "rabbitmq-existing-claim", ctl.flagTree.RabbitMQExistingClaim, "Existing claim to use for RabbitMQ\n")
+	cmd.Flags().StringVar(&ctl.flagTree.PGStorageClass, "postgres-storage-class", defaults.PGStorageClass, "Storage class for PostgreSQL")
+	cmd.Flags().StringVar(&ctl.flagTree.PGPVCSize, "postgres-size", defaults.PGPVCSize, "Persistent volument claim size for PostgreSQL")
+	cmd.Flags().StringVar(&ctl.flagTree.PGExistingClaim, "postgres-existing-claim", defaults.PGExistingClaim, "Existing claim to use for PostgreSQL")
+	cmd.Flags().StringVar(&ctl.flagTree.MinioStorageClass, "minio-storage-class", defaults.MinioStorageClass, "Storage class for minio")
+	cmd.Flags().StringVar(&ctl.flagTree.MinioPVCSize, "minio-size", defaults.MinioPVCSize, "Persistent volume claim size of minio")
+	cmd.Flags().StringVar(&ctl.flagTree.MinioExistingClaim, "minio-existing-claim", defaults.MinioExistingClaim, "Existing claim to use for minio")
+	cmd.Flags().StringVar(&ctl.flagTree.RabbitMQStorageClass, "rabbitmq-storage-class", defaults.RabbitMQStorageClass, "Storage class for RabbitMQ")
+	cmd.Flags().StringVar(&ctl.flagTree.RabbitMQPVCSize, "rabbitmq-size", defaults.RabbitMQPVCSize, "Persistent volument claim size for RabbitMQ")
+	cmd.Flags().StringVar(&ctl.flagTree.RabbitMQExistingClaim, "rabbitmq-existing-claim", defaults.RabbitMQExistingClaim, "Existing claim to use for RabbitMQ\n")
 
 	// Licensing
-	cmd.Flags().StringVar(&ctl.flagTree.LicensingUsername, "license-username", ctl.flagTree.LicensingUsername, "Username for licensing")
-	cmd.Flags().StringVar(&ctl.flagTree.LicensingPassword, "license-password", ctl.flagTree.LicensingPassword, "Username for password")
-	cmd.Flags().StringVar(&ctl.flagTree.LicensingUpstream, "license-upstream", DefaultFlagTree.LicensingUpstream, "Upstream server for data updates\n")
+	cmd.Flags().StringVar(&ctl.flagTree.LicensingUsername, "license-username", defaults.LicensingUsername, "Username for licensing")
+	cmd.Flags().StringVar(&ctl.flagTree.LicensingPassword, "license-password", defaults.LicensingPassword, "Username for password")
+	cmd.Flags().StringVar(&ctl.flagTree.LicensingUpstream, "license-upstream", defaults.LicensingUpstream, "Upstream server for data updates\n")
 
 	// Web frontend configuration
-	cmd.Flags().IntVar(&ctl.flagTree.SessionCookieAge, "session-cookie-age", DefaultFlagTree.SessionCookieAge, "Session cookie expiration time")
-	cmd.Flags().IntVar(&ctl.flagTree.FrontendReplicas, "frontend-replicas", DefaultFlagTree.FrontendReplicas, "Number of web application replicas")
-	cmd.Flags().BoolVar(&ctl.flagTree.HideLicenses, "hide-licenses", DefaultFlagTree.HideLicenses, "Hide licensing information")
-	cmd.Flags().BoolVar(&ctl.flagTree.OfflineMode, "enable-offline-mode", DefaultFlagTree.OfflineMode, "Run in airgapped mode")
-	cmd.Flags().StringVar(&ctl.flagTree.AdminEmail, "admin-email", DefaultFlagTree.AdminEmail, "Administrator email address")
-	cmd.Flags().StringVar(&ctl.flagTree.RootURL, "root-url", DefaultFlagTree.RootURL, "Root URL of application to be used in tempates\n")
+	cmd.Flags().IntVar(&ctl.flagTree.SessionCookieAge, "session-cookie-age", defaults.SessionCookieAge, "Session cookie expiration time")
+	cmd.Flags().IntVar(&ctl.flagTree.FrontendReplicas, "frontend-replicas", defaults.FrontendReplicas, "Number of web application replicas")
+	cmd.Flags().BoolVar(&ctl.flagTree.HideLicenses, "hide-licenses", defaults.HideLicenses, "Hide licensing information")
+	cmd.Flags().BoolVar(&ctl.flagTree.OfflineMode, "enable-offline-mode", defaults.OfflineMode, "Run in airgapped mode")
+	cmd.Flags().StringVar(&ctl.flagTree.AdminEmail, "admin-email", defaults.AdminEmail, "Administrator email address")
+	cmd.Flags().StringVar(&ctl.flagTree.RootURL, "root-url", defaults.RootURL, "Root URL of application to be used in tempates\n")
 
 	// SMTP configuration
-	cmd.Flags().BoolVar(&ctl.flagTree.EmailEnabled, "enable-email", DefaultFlagTree.EmailEnabled, "Enable STMP to send emails")
-	cmd.Flags().StringVar(&ctl.flagTree.EmailSMTPHost, "email-smtp-host", ctl.flagTree.EmailSMTPHost, "SMTP server address")
-	cmd.Flags().IntVar(&ctl.flagTree.EmailSMTPPort, "email-smtp-port", DefaultFlagTree.EmailSMTPPort, "SMTP server port")
-	cmd.Flags().StringVar(&ctl.flagTree.EmailSMTPUser, "email-smtp-user", ctl.flagTree.EmailSMTPUser, "SMTP user")
-	cmd.Flags().StringVar(&ctl.flagTree.EmailSMTPPassword, "email-smtp-password", ctl.flagTree.EmailSMTPPassword, "SMTP password")
-	cmd.Flags().StringVar(&ctl.flagTree.EmailFrom, "email-from", DefaultFlagTree.EmailFrom, "Email sender address")
-	cmd.Flags().StringVar(&ctl.flagTree.EmailSecurity, "email-security", DefaultFlagTree.EmailSecurity, "Email security mode [none|ssl|starttls]")
-	cmd.Flags().BoolVar(&ctl.flagTree.EmailVerify, "verify-email", DefaultFlagTree.EmailVerify, "Verify SMTP server certificate\n")
+	cmd.Flags().BoolVar(&ctl.flagTree.EmailEnabled, "enable-email", defaults.EmailEnabled, "Enable STMP to send emails")
+	cmd.Flags().StringVar(&ctl.flagTree.EmailSMTPHost, "email-smtp-host", defaults.EmailSMTPHost, "SMTP server address")
+	cmd.Flags().IntVar(&ctl.flagTree.EmailSMTPPort, "email-smtp-port", defaults.EmailSMTPPort, "SMTP server port")
+	cmd.Flags().StringVar(&ctl.flagTree.EmailSMTPUser, "email-smtp-user", defaults.EmailSMTPUser, "SMTP user")
+	cmd.Flags().StringVar(&ctl.flagTree.EmailSMTPPassword, "email-smtp-password", defaults.EmailSMTPPassword, "SMTP password")
+	cmd.Flags().StringVar(&ctl.flagTree.EmailFrom, "email-from", defaults.EmailFrom, "Email sender address")
+	cmd.Flags().StringVar(&ctl.flagTree.EmailSecurity, "email-security", defaults.EmailSecurity, "Email security mode [none|ssl|starttls]")
+	cmd.Flags().BoolVar(&ctl.flagTree.EmailVerify, "verify-email", defaults.EmailVerify, "Verify SMTP server certificate\n")
 
 	// LDAP Authentication
-	cmd.Flags().BoolVar(&ctl.flagTree.LDAPEnabled, "enable-ldap", DefaultFlagTree.LDAPEnabled, "Enable LDAP for authentication")
-	cmd.Flags().StringVar(&ctl.flagTree.LDAPServerURI, "ldap-server-uri", ctl.flagTree.LDAPServerURI, "LDAP server URI")
-	cmd.Flags().StringVar(&ctl.flagTree.LDAPUserDNTemplate, "ldap-user-dn-template", ctl.flagTree.LDAPUserDNTemplate, "LDAP user DN template")
+	cmd.Flags().BoolVar(&ctl.flagTree.LDAPEnabled, "enable-ldap", defaults.LDAPEnabled, "Enable LDAP for authentication")
+	cmd.Flags().StringVar(&ctl.flagTree.LDAPServerURI, "ldap-server-uri", defaults.LDAPServerURI, "LDAP server URI")
+	cmd.Flags().StringVar(&ctl.flagTree.LDAPUserDNTemplate, "ldap-user-dn-template", defaults.LDAPUserDNTemplate, "LDAP user DN template")
 	cmd.Flags().BoolVar(&ctl.flagTree.LDAPBindAsAuthenticating, "enable-ldap-bind-as-authenticating", DefaultFlagTree.LDAPBindAsAuthenticating, "Bind as authenticating user")
-	cmd.Flags().StringVar(&ctl.flagTree.LDAPBindDN, "ldap-bind-dn", ctl.flagTree.LDAPBindDN, "Generic LDAP bind username (optional)")
-	cmd.Flags().StringVar(&ctl.flagTree.LDAPBindPassword, "ldap-bind-password", ctl.flagTree.LDAPBindPassword, "Generic LDAP bind password (optional)")
-	cmd.Flags().BoolVar(&ctl.flagTree.LDAPStartTLS, "ldap-start-tls", DefaultFlagTree.LDAPStartTLS, "Enable start TLS for LDAP")
-	cmd.Flags().BoolVar(&ctl.flagTree.LDAPVerify, "verify-ldap", DefaultFlagTree.LDAPVerify, "Verify LDAP server certificate")
-	cmd.Flags().StringVar(&ctl.flagTree.LDAPRootCASecret, "ldap-root-ca-secret", ctl.flagTree.LDAPRootCASecret, "Secret to use for LDAP root certificate")
-	cmd.Flags().StringVar(&ctl.flagTree.LDAPRequireGroup, "ldap-require-group", ctl.flagTree.LDAPRequireGroup, "LDAP group required to allow login")
-	cmd.Flags().StringVar(&ctl.flagTree.LDAPUserSearch, "ldap-user-search", ctl.flagTree.LDAPUserSearch, "Base DN for user branch")
-	cmd.Flags().StringVar(&ctl.flagTree.LDAPUserSearchScope, "ldap-user-search-scope", ctl.flagTree.LDAPUserSearchScope, "LDAP search filter for users")
-	cmd.Flags().StringVar(&ctl.flagTree.LDAPGroupSearch, "ldap-group-search", ctl.flagTree.LDAPGroupSearch, "Base DN for groups branch")
-	cmd.Flags().StringVar(&ctl.flagTree.LDAPGroupSearchScope, "ldap-group-search-scope", ctl.flagTree.LDAPGroupSearchScope, "LDAP search filter for groups")
-	cmd.Flags().BoolVar(&ctl.flagTree.LDAPNestedSearch, "enable-ldap-nested-search", DefaultFlagTree.LDAPNestedSearch, "Enable nested search\n")
+	cmd.Flags().StringVar(&ctl.flagTree.LDAPBindDN, "ldap-bind-dn", defaults.LDAPBindDN, "Generic LDAP bind username (optional)")
+	cmd.Flags().StringVar(&ctl.flagTree.LDAPBindPassword, "ldap-bind-password", defaults.LDAPBindPassword, "Generic LDAP bind password (optional)")
+	cmd.Flags().BoolVar(&ctl.flagTree.LDAPStartTLS, "ldap-start-tls", defaults.LDAPStartTLS, "Enable start TLS for LDAP")
+	cmd.Flags().BoolVar(&ctl.flagTree.LDAPVerify, "verify-ldap", defaults.LDAPVerify, "Verify LDAP server certificate")
+	cmd.Flags().StringVar(&ctl.flagTree.LDAPRootCASecret, "ldap-root-ca-secret", defaults.LDAPRootCASecret, "Secret to use for LDAP root certificate")
+	cmd.Flags().StringVar(&ctl.flagTree.LDAPRequireGroup, "ldap-require-group", defaults.LDAPRequireGroup, "LDAP group required to allow login")
+	cmd.Flags().StringVar(&ctl.flagTree.LDAPUserSearch, "ldap-user-search", defaults.LDAPUserSearch, "Base DN for user branch")
+	cmd.Flags().StringVar(&ctl.flagTree.LDAPUserSearchScope, "ldap-user-search-scope", defaults.LDAPUserSearchScope, "LDAP search filter for users")
+	cmd.Flags().StringVar(&ctl.flagTree.LDAPGroupSearch, "ldap-group-search", defaults.LDAPGroupSearch, "Base DN for groups branch")
+	cmd.Flags().StringVar(&ctl.flagTree.LDAPGroupSearchScope, "ldap-group-search-scope", defaults.LDAPGroupSearchScope, "LDAP search filter for groups")
+	cmd.Flags().BoolVar(&ctl.flagTree.LDAPNestedSearch, "enable-ldap-nested-search", defaults.LDAPNestedSearch, "Enable nested search\n")
 
 	// Logging
-	cmd.Flags().BoolVar(&ctl.flagTree.DisableFrontendLogging, "disable-frontend-logging", DefaultFlagTree.DisableFrontendLogging, "Disable log collection in web application pods")
-	cmd.Flags().BoolVar(&ctl.flagTree.DisableWorkerLogging, "disable-worker-logging", DefaultFlagTree.DisableWorkerLogging, "Disable log collection in scanner pods\n")
+	cmd.Flags().BoolVar(&ctl.flagTree.DisableFrontendLogging, "disable-frontend-logging", defaults.DisableFrontendLogging, "Disable log collection in web application pods")
+	cmd.Flags().BoolVar(&ctl.flagTree.DisableWorkerLogging, "disable-worker-logging", defaults.DisableWorkerLogging, "Disable log collection in scanner pods")
+	cmd.Flags().IntVar(&ctl.flagTree.LogRetention, "log-retention", defaults.LogRetention, "Retain logs for number of days\n")
 
 	// Worker scaling
-	cmd.Flags().IntVar(&ctl.flagTree.WorkerReplicas, "worker-replicas", DefaultFlagTree.WorkerReplicas, "Number of worker replicas")
-	cmd.Flags().IntVar(&ctl.flagTree.WorkerConcurrency, "worker-concurrency", DefaultFlagTree.WorkerConcurrency, "Amount of concurrent workers per pod\n")
+	cmd.Flags().IntVar(&ctl.flagTree.WorkerReplicas, "worker-replicas", defaults.WorkerReplicas, "Number of worker replicas")
+	cmd.Flags().IntVar(&ctl.flagTree.WorkerConcurrency, "worker-concurrency", defaults.WorkerConcurrency, "Amount of concurrent workers per pod\n")
 
 	// Minio
-	cmd.Flags().StringVar(&ctl.flagTree.MinioMode, "minio-mode", DefaultFlagTree.MinioMode, "Minio mode [standalone|distributed]\n")
+	cmd.Flags().StringVar(&ctl.flagTree.MinioMode, "minio-mode", defaults.MinioMode, "Minio mode [standalone|distributed]\n")
 
 	// Networking and security
-	cmd.Flags().StringVar(&ctl.flagTree.RootCASecret, "root-ca-secret", ctl.flagTree.RootCASecret, "Additional root certificate")
-	cmd.Flags().StringVar(&ctl.flagTree.HTTPProxy, "http-proxy", ctl.flagTree.HTTPProxy, "HTTP Proxy to use")
-	cmd.Flags().StringVar(&ctl.flagTree.HTTPNoProxy, "http-no-proxy", ctl.flagTree.HTTPNoProxy, "Comma-separated list of domain extensions to omit proxy\n")
+	cmd.Flags().StringVar(&ctl.flagTree.RootCASecret, "root-ca-secret", defaults.RootCASecret, "Additional root certificate")
+	cmd.Flags().StringVar(&ctl.flagTree.HTTPProxy, "http-proxy", defaults.HTTPProxy, "HTTP Proxy to use")
+	cmd.Flags().StringVar(&ctl.flagTree.HTTPNoProxy, "http-no-proxy", defaults.HTTPNoProxy, "Comma-separated list of domain extensions to omit proxy\n")
 
 	// Ingress
-	cmd.Flags().BoolVar(&ctl.flagTree.IngressEnabled, "enable-ingress", DefaultFlagTree.IngressEnabled, "Enable ingress")
-	cmd.Flags().StringVar(&ctl.flagTree.IngressHost, "ingress-host", ctl.flagTree.IngressHost, "Hostname for ingress")
-	cmd.Flags().BoolVar(&ctl.flagTree.IngressTLSEnabled, "enable-ingress-tls", DefaultFlagTree.IngressTLSEnabled, "Enable TLS for ingress")
-	cmd.Flags().StringVar(&ctl.flagTree.IngressTLSSecretName, "ingress-tls-secret", ctl.flagTree.IngressTLSSecretName, "TLS Secret to use for ingress\n")
+	cmd.Flags().BoolVar(&ctl.flagTree.IngressEnabled, "enable-ingress", defaults.IngressEnabled, "Enable ingress")
+	cmd.Flags().StringVar(&ctl.flagTree.IngressHost, "ingress-host", defaults.IngressHost, "Hostname for ingress")
+	cmd.Flags().BoolVar(&ctl.flagTree.IngressTLSEnabled, "enable-ingress-tls", defaults.IngressTLSEnabled, "Enable TLS for ingress")
+	cmd.Flags().StringVar(&ctl.flagTree.IngressTLSSecretName, "ingress-tls-secret", defaults.IngressTLSSecretName, "TLS Secret to use for ingress\n")
 
 	// External PG
-	cmd.Flags().BoolVar(&ctl.flagTree.ExternalPG, "external-postgres", DefaultFlagTree.ExternalPG, "Use external PostgreSQL")
-	cmd.Flags().StringVar(&ctl.flagTree.ExternalPGHost, "external-postgres-host", ctl.flagTree.ExternalPGHost, "Hostname for external postgresql database")
-	cmd.Flags().IntVar(&ctl.flagTree.ExternalPGPort, "external-postgres-port", DefaultFlagTree.ExternalPGPort, "Port for external PostgreSQL database")
-	cmd.Flags().StringVar(&ctl.flagTree.ExternalPGDataBase, "external-postgres-database", ctl.flagTree.ExternalPGDataBase, "Database for external PostgreSQL database")
-	cmd.Flags().StringVar(&ctl.flagTree.ExternalPGUser, "external-postgres-user", ctl.flagTree.ExternalPGUser, "User for external PostgreSQL database")
-	cmd.Flags().StringVar(&ctl.flagTree.ExternalPGPassword, "external-postgres-password", ctl.flagTree.ExternalPGPassword, "Password for external PostgreSQL database")
-	cmd.Flags().StringVar(&ctl.flagTree.ExternalPGSSLMode, "external-postgres-ssl-mode", DefaultFlagTree.ExternalPGSSLMode, "PostgreSQL SSL mode [disable|allow|prefer|require|verify-ca|verify-full]")
-	cmd.Flags().StringVar(&ctl.flagTree.ExternalPGClientSecret, "external-postgres-client-secret", ctl.flagTree.ExternalPGClientSecret, "Secret name for external PostgreSQL client certificate (TLS Secret)")
-	cmd.Flags().StringVar(&ctl.flagTree.ExternalPGRootCASecret, "external-postgres-rootca-secret", ctl.flagTree.ExternalPGRootCASecret, "Secret name for external PostgreSQL root certificate\n")
+	cmd.Flags().BoolVar(&ctl.flagTree.ExternalPG, "external-postgres", defaults.ExternalPG, "Use external PostgreSQL")
+	cmd.Flags().StringVar(&ctl.flagTree.ExternalPGHost, "external-postgres-host", defaults.ExternalPGHost, "Hostname for external postgresql database")
+	cmd.Flags().IntVar(&ctl.flagTree.ExternalPGPort, "external-postgres-port", defaults.ExternalPGPort, "Port for external PostgreSQL database")
+	cmd.Flags().StringVar(&ctl.flagTree.ExternalPGDataBase, "external-postgres-database", defaults.ExternalPGDataBase, "Database for external PostgreSQL database")
+	cmd.Flags().StringVar(&ctl.flagTree.ExternalPGUser, "external-postgres-user", defaults.ExternalPGUser, "User for external PostgreSQL database")
+	cmd.Flags().StringVar(&ctl.flagTree.ExternalPGPassword, "external-postgres-password", defaults.ExternalPGPassword, "Password for external PostgreSQL database")
+	cmd.Flags().StringVar(&ctl.flagTree.ExternalPGSSLMode, "external-postgres-ssl-mode", defaults.ExternalPGSSLMode, "PostgreSQL SSL mode [disable|allow|prefer|require|verify-ca|verify-full]")
+	cmd.Flags().StringVar(&ctl.flagTree.ExternalPGClientSecret, "external-postgres-client-secret", defaults.ExternalPGClientSecret, "Secret name for external PostgreSQL client certificate (TLS Secret)")
+	cmd.Flags().StringVar(&ctl.flagTree.ExternalPGRootCASecret, "external-postgres-rootca-secret", defaults.ExternalPGRootCASecret, "Secret name for external PostgreSQL root certificate\n")
 
 	// Secrets
-	cmd.Flags().StringVar(&ctl.flagTree.PGPassword, "postgres-password", DefaultFlagTree.PGPassword, "PostgreSQL password")
-	cmd.Flags().StringVar(&ctl.flagTree.PGExistingSecret, "postgres-secret", ctl.flagTree.PGExistingSecret, "Existing secret for PostgreSQL")
+	cmd.Flags().StringVar(&ctl.flagTree.PGPassword, "postgres-password", defaults.PGPassword, "PostgreSQL password")
+	cmd.Flags().StringVar(&ctl.flagTree.PGExistingSecret, "postgres-secret", defaults.PGExistingSecret, "Existing secret for PostgreSQL")
 }
 
 // CheckValuesFromFlags returns an error if a value set by a flag is invalid
@@ -515,6 +523,8 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 			util.SetHelmValueInMap(ctl.args, []string{"frontend", "applicationLogging", "enabled"}, !ctl.flagTree.DisableFrontendLogging)
 		case "disable-worker-logging":
 			util.SetHelmValueInMap(ctl.args, []string{"worker", "applicationLogging", "enabled"}, !ctl.flagTree.DisableWorkerLogging)
+		case "log-retention":
+			util.SetHelmValueInMap(ctl.args, []string{"logRetention"}, ctl.flagTree.LogRetention)
 		case "worker-replicas":
 			util.SetHelmValueInMap(ctl.args, []string{"worker", "replicas"}, ctl.flagTree.WorkerReplicas)
 		case "worker-concurrency":

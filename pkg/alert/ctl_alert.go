@@ -76,6 +76,11 @@ var DefaultFlagTree = FlagTree{
 	Port:              8443,
 }
 
+// GetDefaultFlagTree ...
+func GetDefaultFlagTree() *FlagTree {
+	return &DefaultFlagTree
+}
+
 // NewHelmValuesFromCobraFlags returns an initialized HelmValuesFromCobraFlags
 func NewHelmValuesFromCobraFlags() *HelmValuesFromCobraFlags {
 	return &HelmValuesFromCobraFlags{
@@ -97,55 +102,54 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 }
 
 // AddCobraFlagsToCommand adds flags for the Polaris-Reporting helm chart to the cmd
-// master=true is used to add all flags for creating an instance
-// master=false is used to add a subset of flags for updating an instance
-func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, master bool) {
+func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, isCreateCmd bool) {
 	// [DEV NOTE:] please organize flags in order of importance
 	cmd.Flags().SortFlags = false
 
+	defaults := &FlagTree{}
+	if isCreateCmd {
+		defaults = GetDefaultFlagTree()
+	}
+
 	// Application Version and Image Tag
-	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", DefaultFlagTree.Version, "Version of Alert\n")
-	if master {
+	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", defaults.Version, "Version of Alert\n")
+	if isCreateCmd {
 		cobra.MarkFlagRequired(cmd.Flags(), "version")
 	}
 
 	// Storage
-	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", ctl.flagTree.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs")
-	if master {
-		cmd.Flags().StringVar(&ctl.flagTree.PVCStorageClass, "pvc-storage-class", ctl.flagTree.PVCStorageClass, "Storage class for the persistent volume claim")
-		cmd.Flags().StringVar(&ctl.flagTree.PersistentStorage, "persistent-storage", "true", "If true, Alert has persistent storage [true|false]")
+	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", defaults.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs")
+	if isCreateCmd {
+		cmd.Flags().StringVar(&ctl.flagTree.PVCStorageClass, "pvc-storage-class", defaults.PVCStorageClass, "Storage class for the persistent volume claim")
+		cmd.Flags().StringVar(&ctl.flagTree.PersistentStorage, "persistent-storage", defaults.PersistentStorage, "If true, Alert has persistent storage [true|false]")
 	}
-	cmd.Flags().StringVar(&ctl.flagTree.PVCFilePath, "pvc-file-path", ctl.flagTree.PVCFilePath, "Absolute path to a file containing a list of PVC json structs\n")
+	cmd.Flags().StringVar(&ctl.flagTree.PVCFilePath, "pvc-file-path", defaults.PVCFilePath, "Absolute path to a file containing a list of PVC json structs\n")
 
 	// Pulling images values
-	cmd.Flags().StringVar(&ctl.flagTree.Registry, "registry", DefaultFlagTree.Registry, "Name of the registry to use for images")
-	cmd.Flags().StringSliceVar(&ctl.flagTree.PullSecrets, "pull-secret-name", ctl.flagTree.PullSecrets, "Only if the registry requires authentication\n")
+	cmd.Flags().StringVar(&ctl.flagTree.Registry, "registry", defaults.Registry, "Name of the registry to use for images")
+	cmd.Flags().StringSliceVar(&ctl.flagTree.PullSecrets, "pull-secret-name", defaults.PullSecrets, "Only if the registry requires authentication\n")
 
 	// Standalone (uses it's own cfssl)
-	cmd.Flags().StringVar(&ctl.flagTree.StandAlone, "standalone", DefaultFlagTree.StandAlone, "If true, Alert runs in standalone mode [true|false]\n")
+	cmd.Flags().StringVar(&ctl.flagTree.StandAlone, "standalone", defaults.StandAlone, "If true, Alert runs in standalone mode [true|false]\n")
 
 	// Exposing the UI
-	if master {
-		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", DefaultFlagTree.ExposeService, "Service type to expose Alert's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
-	} else {
-		cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", ctl.flagTree.ExposeService, "Service type to expose Alert's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
-	}
+	cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", defaults.ExposeService, "Service type to expose Alert's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
 
 	// Secrets Values
-	cmd.Flags().StringVar(&ctl.flagTree.EncryptionPassword, "encryption-password", ctl.flagTree.EncryptionPassword, "Encryption Password for Alert")
-	cmd.Flags().StringVar(&ctl.flagTree.EncryptionGlobalSalt, "encryption-global-salt", ctl.flagTree.EncryptionGlobalSalt, "Encryption Global Salt for Alert")
-	cmd.Flags().StringVar(&ctl.flagTree.CertificateFilePath, "certificate-file-path", ctl.flagTree.CertificateFilePath, "Absolute path to the PEM certificate to use for Alert")
-	cmd.Flags().StringVar(&ctl.flagTree.CertificateKeyFilePath, "certificate-key-file-path", ctl.flagTree.CertificateKeyFilePath, "Absolute path to the PEM certificate key for Alert")
-	cmd.Flags().StringVar(&ctl.flagTree.JavaKeyStoreFilePath, "java-keystore-file-path", ctl.flagTree.JavaKeyStoreFilePath, "Absolute path to the Java Keystore to use for Alert\n")
+	cmd.Flags().StringVar(&ctl.flagTree.EncryptionPassword, "encryption-password", defaults.EncryptionPassword, "Encryption Password for Alert")
+	cmd.Flags().StringVar(&ctl.flagTree.EncryptionGlobalSalt, "encryption-global-salt", defaults.EncryptionGlobalSalt, "Encryption Global Salt for Alert")
+	cmd.Flags().StringVar(&ctl.flagTree.CertificateFilePath, "certificate-file-path", defaults.CertificateFilePath, "Absolute path to the PEM certificate to use for Alert")
+	cmd.Flags().StringVar(&ctl.flagTree.CertificateKeyFilePath, "certificate-key-file-path", defaults.CertificateKeyFilePath, "Absolute path to the PEM certificate key for Alert")
+	cmd.Flags().StringVar(&ctl.flagTree.JavaKeyStoreFilePath, "java-keystore-file-path", defaults.JavaKeyStoreFilePath, "Absolute path to the Java Keystore to use for Alert\n")
 
 	// Environs
-	cmd.Flags().StringSliceVar(&ctl.flagTree.Environs, "environs", ctl.flagTree.Environs, "Environment variables of Alert\n")
+	cmd.Flags().StringSliceVar(&ctl.flagTree.Environs, "environs", defaults.Environs, "Environment variables of Alert\n")
 
 	// Security Contexts
-	cmd.Flags().StringVar(&ctl.flagTree.SecurityContextFilePath, "security-context-file-path", ctl.flagTree.SecurityContextFilePath, "Absolute path to a file containing a map of pod names to security contexts runAsUser, fsGroup, and runAsGroup\n")
+	cmd.Flags().StringVar(&ctl.flagTree.SecurityContextFilePath, "security-context-file-path", defaults.SecurityContextFilePath, "Absolute path to a file containing a map of pod names to security contexts runAsUser, fsGroup, and runAsGroup\n")
 
 	// Port
-	cmd.Flags().Int32Var(&ctl.flagTree.Port, "port", DefaultFlagTree.Port, "Port of Alert") // only for devs
+	cmd.Flags().Int32Var(&ctl.flagTree.Port, "port", defaults.Port, "Port of Alert") // only for devs
 	cmd.Flags().MarkHidden("port")
 }
 

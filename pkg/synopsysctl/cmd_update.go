@@ -873,8 +873,7 @@ var updateOpsSightCmd = &cobra.Command{
 		if cmd.Flags().Lookup("version").Changed {
 			globals.OpsSightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		chartVersion := globals.OpsSightVersionToChartVersion[globals.OpsSightVersion]
-		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, chartVersion, &globals.OpsSightChartRepository)
+		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, globals.OpsSightVersion, &globals.OpsSightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -944,8 +943,7 @@ var updateOpsSightExternalHostCmd = &cobra.Command{
 		if cmd.Flags().Lookup("version").Changed {
 			globals.OpsSightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		chartVersion := globals.OpsSightVersionToChartVersion[globals.OpsSightVersion]
-		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, chartVersion, &globals.OpsSightChartRepository)
+		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, globals.OpsSightVersion, &globals.OpsSightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -1030,8 +1028,7 @@ var updateOpsSightExternalHostNativeCmd = &cobra.Command{
 		if cmd.Flags().Lookup("version").Changed {
 			globals.OpsSightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		chartVersion := globals.OpsSightVersionToChartVersion[globals.OpsSightVersion]
-		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, chartVersion, &globals.OpsSightChartRepository)
+		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, globals.OpsSightVersion, &globals.OpsSightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -1103,8 +1100,7 @@ var updateOpsSightAddRegistryCmd = &cobra.Command{
 		if cmd.Flags().Lookup("version").Changed {
 			globals.OpsSightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		chartVersion := globals.OpsSightVersionToChartVersion[globals.OpsSightVersion]
-		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, chartVersion, &globals.OpsSightChartRepository)
+		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, globals.OpsSightVersion, &globals.OpsSightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -1165,8 +1161,7 @@ var updateOpsSightAddRegistryNativeCmd = &cobra.Command{
 		if cmd.Flags().Lookup("version").Changed {
 			globals.OpsSightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		chartVersion := globals.OpsSightVersionToChartVersion[globals.OpsSightVersion]
-		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, chartVersion, &globals.OpsSightChartRepository)
+		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, globals.OpsSightVersion, &globals.OpsSightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -1391,7 +1386,7 @@ func init() {
 	cobra.MarkFlagRequired(updateBlackDuckCmd.PersistentFlags(), "namespace")
 	addChartLocationPathFlag(updateBlackDuckCmd)
 	updateBlackDuckCmd.Flags().StringVar(&globals.DefaultBusyBoxImage, "busy-box-image", globals.DefaultBusyBoxImage, "Busy box image override for an air gapped customer (only use in case of updating security contexts)")
-	updateBlackDuckCobraHelper.AddCRSpecFlagsToCommand(updateBlackDuckCmd, false)
+	updateBlackDuckCobraHelper.AddCobraFlagsToCommand(updateBlackDuckCmd, false)
 	updateCmd.AddCommand(updateBlackDuckCmd)
 
 	// updateBlackDuckMasterKeyCmd

@@ -106,10 +106,12 @@ var createAlertCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
+		newChartVersion := "" // pass empty to SetHelmChartLocation if the default version should be used
 		if cmd.Flags().Lookup("version").Changed {
 			globals.AlertVersion = cmd.Flags().Lookup("version").Value.String()
+			newChartVersion = globals.AlertVersion
 		}
-		err = SetHelmChartLocation(cmd.Flags(), globals.AlertChartName, globals.AlertVersion, &globals.AlertChartRepository)
+		err = SetHelmChartLocation(cmd.Flags(), globals.AlertChartName, newChartVersion, &globals.AlertChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -208,10 +210,12 @@ var createAlertNativeCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
+		newChartVersion := "" // pass empty to SetHelmChartLocation if the default version should be used
 		if cmd.Flags().Lookup("version").Changed {
 			globals.AlertVersion = cmd.Flags().Lookup("version").Value.String()
+			newChartVersion = globals.AlertVersion
 		}
-		err = SetHelmChartLocation(cmd.Flags(), globals.AlertChartName, globals.AlertVersion, &globals.AlertChartRepository)
+		err = SetHelmChartLocation(cmd.Flags(), globals.AlertChartName, newChartVersion, &globals.AlertChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -268,28 +272,6 @@ var createAlertNativeCmd = &cobra.Command{
 Create Black Duck Commands
 */
 
-func checkPasswords(flagset *pflag.FlagSet) {
-	if flagset.Lookup("admin-password").Changed ||
-		flagset.Lookup("user-password").Changed {
-		// user is explicitly required to set the postgres passwords for: 'admin', 'postgres', and 'user'
-		cobra.MarkFlagRequired(flagset, "admin-password")
-		cobra.MarkFlagRequired(flagset, "user-password")
-	} else {
-		// require all external-postgres parameters
-		cobra.MarkFlagRequired(flagset, "external-postgres-host")
-		cobra.MarkFlagRequired(flagset, "external-postgres-port")
-		cobra.MarkFlagRequired(flagset, "external-postgres-admin")
-		cobra.MarkFlagRequired(flagset, "external-postgres-user")
-		cobra.MarkFlagRequired(flagset, "external-postgres-ssl")
-		cobra.MarkFlagRequired(flagset, "external-postgres-admin-password")
-		cobra.MarkFlagRequired(flagset, "external-postgres-user-password")
-	}
-}
-
-func checkSealKey(flagset *pflag.FlagSet) {
-	cobra.MarkFlagRequired(flagset, "seal-key")
-}
-
 // createBlackDuckCmd creates a Black Duck instance
 var createBlackDuckCmd = &cobra.Command{
 	Use:           "blackduck NAME -n NAMESPACE",
@@ -303,45 +285,71 @@ var createBlackDuckCmd = &cobra.Command{
 			cmd.Help()
 			return fmt.Errorf("this command takes 1 argument, but got %+v", args)
 		}
-		checkPasswords(cmd.Flags())
-		cobra.MarkFlagRequired(cmd.Flags(), "certificate-file-path")
-		cobra.MarkFlagRequired(cmd.Flags(), "certificate-key-file-path")
-		checkSealKey(cmd.Flags())
 		return nil
 	},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		ok, err := util.IsVersionGreaterThanOrEqualTo(cmd.Flag("version").Value.String(), 2020, time.April, 0)
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		// Set the Global BlackDuckVersion
+		if cmd.Flags().Lookup("version").Changed {
+			globals.BlackDuckVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+
+		// Verify synopsysctl supports the version
+		ok, err := util.IsVersionGreaterThanOrEqualTo(globals.BlackDuckVersion, 2020, time.April, 0)
 		if err != nil {
 			return err
 		}
 		if !ok {
 			return fmt.Errorf("creation of Black Duck instance is only suported for version 2020.4.0 and above")
 		}
+		// Check the flags
+		err = createBlackDuckCobraHelper.MarkRequiredFlags(cmd.Flags(), globals.BlackDuckVersion, true)
+		if err != nil {
+			return err
+		}
+		err = createBlackDuckCobraHelper.VerifyChartVersionSupportsChangedFlags(cmd.Flags(), globals.BlackDuckVersion)
+		if err != nil {
+			return err
+		}
+		return nil
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Set the Helm Chart Location
+		newChartVersion := "" // pass empty to SetHelmChartLocation if the default version should be used
+		if cmd.Flags().Lookup("version").Changed {
+			newChartVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err := SetHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, newChartVersion, &globals.BlackDuckChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
 
+		// Create Helm Chart Values
 		helmValuesMap, err := createBlackDuckCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
 		if err != nil {
 			return err
 		}
 
-		// set isKubernetes to false in case of OpenShift
+		// Set HelmChart Value - isKubernetes to false in case of OpenShift
 		if util.IsOpenshift(kubeClient) {
 			util.SetHelmValueInMap(helmValuesMap, []string{"isKubernetes"}, false)
 		}
 
-		// Set Persistent Storage to true by default (TODO: remove after changed in Helm Chart)
+		// Set Helm Chart Value - Persistent Storage to true by default (TODO: remove after changed in Helm Chart)
 		if !cmd.Flag("persistent-storage").Changed {
 			util.SetHelmValueInMap(helmValuesMap, []string{"enablePersistentStorage"}, true)
 		}
 
-		// Update the Helm Chart Location
-		if cmd.Flags().Lookup("version").Changed {
-			globals.BlackDuckVersion = cmd.Flags().Lookup("version").Value.String()
+		// Set Helm Chart Value - size
+		var extraFiles []string
+		if !cmd.Flags().Lookup("size").Changed {
+			helmValuesMap["size"] = "small"
 		}
-		err = SetHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, globals.BlackDuckVersion, &globals.BlackDuckChartRepository)
-		if err != nil {
-			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		size, found := helmValuesMap["size"]
+		if found && len(size.(string)) > 0 {
+			extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", strings.ToLower(size.(string))))
 		}
 
+		// Create initial resources
 		secrets, err := blackduck.GetCertsFromFlagsAndSetHelmValue(args[0], namespace, cmd.Flags(), helmValuesMap)
 		if err != nil {
 			return err
@@ -350,12 +358,6 @@ var createBlackDuckCmd = &cobra.Command{
 			if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&v); err != nil && !k8serrors.IsAlreadyExists(err) {
 				return fmt.Errorf("failed to create certifacte secret: %+v", err)
 			}
-		}
-
-		var extraFiles []string
-		size, found := helmValuesMap["size"]
-		if found {
-			extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", strings.ToLower(size.(string))))
 		}
 
 		// Check Dry Run before deploying any resources
@@ -393,27 +395,51 @@ var createBlackDuckNativeCmd = &cobra.Command{
 			cmd.Help()
 			return fmt.Errorf("this command takes 1 argument, but got %+v", args)
 		}
-		checkPasswords(cmd.Flags())
-		cobra.MarkFlagRequired(cmd.Flags(), "certificate-file-path")
-		cobra.MarkFlagRequired(cmd.Flags(), "certificate-key-file-path")
-		checkSealKey(cmd.Flags())
 		return nil
 	},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		ok, err := util.IsVersionGreaterThanOrEqualTo(cmd.Flag("version").Value.String(), 2020, time.April, 0)
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		// Set the Global BlackDuckVersion
+		if cmd.Flags().Lookup("version").Changed {
+			globals.BlackDuckVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+
+		// Verify synopsysctl supports the version
+		ok, err := util.IsVersionGreaterThanOrEqualTo(globals.BlackDuckVersion, 2020, time.April, 0)
 		if err != nil {
 			return err
 		}
 		if !ok {
 			return fmt.Errorf("creation of Black Duck instance is only suported for version 2020.4.0 and above")
 		}
+		// Check the flags
+		err = createBlackDuckCobraHelper.MarkRequiredFlags(cmd.Flags(), globals.BlackDuckVersion, true)
+		if err != nil {
+			return err
+		}
+		err = createBlackDuckCobraHelper.VerifyChartVersionSupportsChangedFlags(cmd.Flags(), globals.BlackDuckVersion)
+		if err != nil {
+			return err
+		}
+		return nil
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Set the Helm Chart Location
+		newChartVersion := "" // pass empty to SetHelmChartLocation if the default version should be used
+		if cmd.Flags().Lookup("version").Changed {
+			newChartVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		err := SetHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, newChartVersion, &globals.BlackDuckChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
 
+		// Create Helm Chart Values
 		helmValuesMap, err := createBlackDuckCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
 		if err != nil {
 			return err
 		}
 
-		// Check if the configuration is for Openshift
+		// Set Helm Chart Value - Check if the configuration is for Openshift
 		err = verifyClusterType(globals.NativeClusterType)
 		if err != nil {
 			return fmt.Errorf("invalid cluster type '%s'", globals.NativeClusterType)
@@ -424,20 +450,22 @@ var createBlackDuckNativeCmd = &cobra.Command{
 			util.SetHelmValueInMap(helmValuesMap, []string{"isKubernetes"}, true)
 		}
 
-		// Set Persistent Storage to true by default (TODO: remove after changed in Helm Chart)
+		// Set Helm Chart Value - Persistent Storage to true by default (TODO: remove after changed in Helm Chart)
 		if !cmd.Flag("persistent-storage").Changed {
 			util.SetHelmValueInMap(helmValuesMap, []string{"enablePersistentStorage"}, true)
 		}
 
-		// Update the Helm Chart Location
-		if cmd.Flags().Lookup("version").Changed {
-			globals.BlackDuckVersion = cmd.Flags().Lookup("version").Value.String()
+		// Set Helm Chart Value - size
+		var extraFiles []string
+		if !cmd.Flags().Lookup("size").Changed {
+			helmValuesMap["size"] = "small"
 		}
-		err = SetHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, globals.BlackDuckVersion, &globals.BlackDuckChartRepository)
-		if err != nil {
-			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		size, found := helmValuesMap["size"]
+		if found && len(size.(string)) > 0 {
+			extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", strings.ToLower(size.(string))))
 		}
 
+		// Create initial resources
 		secrets, err := blackduck.GetCertsFromFlagsAndSetHelmValue(args[0], namespace, cmd.Flags(), helmValuesMap)
 		if err != nil {
 			return err
@@ -447,13 +475,7 @@ var createBlackDuckNativeCmd = &cobra.Command{
 			PrintComponent(v, "YAML") // helm only supports yaml
 		}
 
-		var extraFiles []string
-		size, found := helmValuesMap["size"]
-		if found {
-			extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", strings.ToLower(size.(string))))
-		}
-
-		// Check Dry Run before deploying any resources
+		// Print the resources
 		err = util.TemplateWithHelm3(args[0], namespace, globals.BlackDuckChartRepository, helmValuesMap, extraFiles...)
 		if err != nil {
 			return fmt.Errorf("failed to create Blackduck resources: %+v", err)
@@ -492,11 +514,12 @@ var createOpsSightCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
+		newChartVersion := "" // pass empty to SetHelmChartLocation if the default version should be used
 		if cmd.Flags().Lookup("version").Changed {
 			globals.OpsSightVersion = cmd.Flags().Lookup("version").Value.String()
+			newChartVersion = globals.OpsSightVersion
 		}
-		chartVersion := globals.OpsSightVersionToChartVersion[globals.OpsSightVersion]
-		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, chartVersion, &globals.OpsSightChartRepository)
+		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, newChartVersion, &globals.OpsSightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -509,8 +532,6 @@ var createOpsSightCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to create OpsSight resources: %+v", err)
 		}
-
-		// TODO Create any initial opssight resources ...
 
 		// Deploy OpsSight Resources
 		err = util.CreateWithHelm3(opssightName, namespace, globals.OpsSightChartRepository, helmValuesMap, kubeConfigPath, false)
@@ -548,11 +569,12 @@ var createOpsSightNativeCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
+		newChartVersion := "" // pass empty to SetHelmChartLocation if the default version should be used
 		if cmd.Flags().Lookup("version").Changed {
 			globals.OpsSightVersion = cmd.Flags().Lookup("version").Value.String()
+			newChartVersion = globals.OpsSightVersion
 		}
-		chartVersion := globals.OpsSightVersionToChartVersion[globals.OpsSightVersion]
-		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, chartVersion, &globals.OpsSightChartRepository)
+		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, newChartVersion, &globals.OpsSightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -593,10 +615,12 @@ var createPolarisCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
+		newChartVersion := "" // pass empty to SetHelmChartLocation if the default version should be used
 		if cmd.Flags().Lookup("version").Changed {
 			globals.PolarisVersion = cmd.Flags().Lookup("version").Value.String()
+			newChartVersion = globals.PolarisVersion
 		}
-		err = SetHelmChartLocation(cmd.Flags(), globals.PolarisChartName, globals.PolarisVersion, &globals.PolarisChartRepository)
+		err = SetHelmChartLocation(cmd.Flags(), globals.PolarisChartName, newChartVersion, &globals.PolarisChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -644,10 +668,12 @@ var createPolarisNativeCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
+		newChartVersion := "" // pass empty to SetHelmChartLocation if the default version should be used
 		if cmd.Flags().Lookup("version").Changed {
 			globals.PolarisVersion = cmd.Flags().Lookup("version").Value.String()
+			newChartVersion = globals.PolarisVersion
 		}
-		err = SetHelmChartLocation(cmd.Flags(), globals.PolarisChartName, globals.PolarisVersion, &globals.PolarisChartRepository)
+		err = SetHelmChartLocation(cmd.Flags(), globals.PolarisChartName, newChartVersion, &globals.PolarisChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -710,10 +736,12 @@ var createPolarisReportingCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
+		newChartVersion := "" // pass empty to SetHelmChartLocation if the default version should be used
 		if cmd.Flags().Lookup("version").Changed {
 			globals.PolarisReportingVersion = cmd.Flags().Lookup("version").Value.String()
+			newChartVersion = globals.PolarisReportingVersion
 		}
-		err = SetHelmChartLocation(cmd.Flags(), globals.PolarisReportingChartName, globals.PolarisReportingVersion, &globals.PolarisReportingChartRepository)
+		err = SetHelmChartLocation(cmd.Flags(), globals.PolarisReportingChartName, newChartVersion, &globals.PolarisReportingChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -761,10 +789,12 @@ var createPolarisReportingNativeCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
+		newChartVersion := "" // pass empty to SetHelmChartLocation if the default version should be used
 		if cmd.Flags().Lookup("version").Changed {
 			globals.PolarisReportingVersion = cmd.Flags().Lookup("version").Value.String()
+			newChartVersion = globals.PolarisReportingVersion
 		}
-		err = SetHelmChartLocation(cmd.Flags(), globals.PolarisReportingChartName, globals.PolarisReportingVersion, &globals.PolarisReportingChartRepository)
+		err = SetHelmChartLocation(cmd.Flags(), globals.PolarisReportingChartName, newChartVersion, &globals.PolarisReportingChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -805,13 +835,22 @@ var createBDBACmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
+		newChartVersion := "" // pass empty to SetHelmChartLocation if the default version should be used
 		if cmd.Flags().Lookup("version").Changed {
 			globals.BDBAVersion = cmd.Flags().Lookup("version").Value.String()
+			newChartVersion = globals.BDBAVersion
+		}
+		err = SetHelmChartLocation(cmd.Flags(), globals.BDBAChartName, newChartVersion, &globals.BDBAChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 		err = SetHelmChartLocation(cmd.Flags(), globals.BDBAChartName, globals.BDBAVersion, &globals.BDBAChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
+
+		// Set the version in the Values
+		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, globals.BDBAVersion)
 
 		// Set the version in the Values
 		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, globals.BDBAVersion)
@@ -856,13 +895,22 @@ var createBDBANativeCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
+		newChartVersion := "" // pass empty to SetHelmChartLocation if the default version should be used
 		if cmd.Flags().Lookup("version").Changed {
 			globals.BDBAVersion = cmd.Flags().Lookup("version").Value.String()
+			newChartVersion = globals.BDBAVersion
+		}
+		err = SetHelmChartLocation(cmd.Flags(), globals.BDBAChartName, newChartVersion, &globals.BDBAChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
 		err = SetHelmChartLocation(cmd.Flags(), globals.BDBAChartName, globals.BDBAVersion, &globals.BDBAChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
+
+		// Set the version in the Values
+		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, globals.BDBAVersion)
 
 		// Set the version in the Values
 		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, globals.BDBAVersion)
@@ -903,10 +951,10 @@ func init() {
 	createBlackDuckCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
 	cobra.MarkFlagRequired(createBlackDuckCmd.PersistentFlags(), "namespace")
 	addChartLocationPathFlag(createBlackDuckCmd)
-	createBlackDuckCobraHelper.AddCRSpecFlagsToCommand(createBlackDuckCmd, true)
+	createBlackDuckCobraHelper.AddCobraFlagsToCommand(createBlackDuckCmd, true)
 	createCmd.AddCommand(createBlackDuckCmd)
 
-	createBlackDuckCobraHelper.AddCRSpecFlagsToCommand(createBlackDuckNativeCmd, true)
+	createBlackDuckCobraHelper.AddCobraFlagsToCommand(createBlackDuckNativeCmd, true)
 	addNativeFlags(createBlackDuckNativeCmd)
 	addChartLocationPathFlag(createBlackDuckNativeCmd)
 	createBlackDuckCmd.AddCommand(createBlackDuckNativeCmd)

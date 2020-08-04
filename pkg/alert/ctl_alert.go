@@ -28,6 +28,7 @@ import (
 
 	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
 	"github.com/blackducksoftware/synopsysctl/pkg/blackduck"
+	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -67,7 +68,7 @@ type FlagTree struct {
 // DefaultFlagTree ...
 // [Dev Note]: These should match the Helm Chart's Values.yaml
 var DefaultFlagTree = FlagTree{
-	// Version:           globals.AlertVersion, [Dev Note: Leave commented out. --version is required so it's confusing to display a default value]
+	Version:           globals.AlertVersion,
 	Registry:          "docker.io/blackducksoftware",
 	StandAlone:        "true",
 	ExposeService:     util.NODEPORT,
@@ -112,9 +113,6 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 
 	// Application Version and Image Tag
 	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", defaults.Version, "Version of Alert\n")
-	if isCreateCmd {
-		cobra.MarkFlagRequired(cmd.Flags(), "version")
-	}
 
 	// Storage
 	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", defaults.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs")

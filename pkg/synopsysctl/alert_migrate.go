@@ -112,7 +112,7 @@ func migrateAlert(alert *v1.Alert, helmReleaseName string, operatorNamespace str
 	// Update the Helm Chart Location
 	helmValuesMapAlertData := helmValuesMap["alert"].(map[string]interface{})
 	alertVersion := helmValuesMapAlertData["imageTag"].(string)
-	err = SetHelmChartLocation(flags, globals.AlertChartName, alertVersion, &globals.AlertChartRepository)
+	err = UpdateHelmChartLocation(flags, globals.AlertChartName, alertVersion, &globals.AlertChartRepository)
 	if err != nil {
 		return fmt.Errorf("failed to set the app resources location due to %+v", err)
 	}

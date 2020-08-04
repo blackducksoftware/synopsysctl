@@ -117,7 +117,7 @@ var updateAlertCmd = &cobra.Command{
 			if cmd.Flags().Lookup("version").Changed {
 				globals.AlertVersion = cmd.Flags().Lookup("version").Value.String()
 			}
-			err = SetHelmChartLocation(cmd.Flags(), globals.AlertChartName, globals.AlertVersion, &globals.AlertChartRepository)
+			err = UpdateHelmChartLocation(cmd.Flags(), globals.AlertChartName, globals.AlertVersion, &globals.AlertChartRepository)
 			if err != nil {
 				return fmt.Errorf("failed to set the app resources location due to %+v", err)
 			}
@@ -317,7 +317,7 @@ var updateBlackDuckCmd = &cobra.Command{
 			if cmd.Flags().Lookup("version").Changed {
 				globals.BlackDuckVersion = cmd.Flags().Lookup("version").Value.String()
 			}
-			err = SetHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, globals.BlackDuckVersion, &globals.BlackDuckChartRepository)
+			err = UpdateHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, globals.BlackDuckVersion, &globals.BlackDuckChartRepository)
 			if err != nil {
 				return fmt.Errorf("failed to set the app resources location due to %+v", err)
 			}
@@ -768,7 +768,7 @@ func updateMasterKey(namespace string, name string, oldMasterKeyFilePath string,
 
 		// Update the Helm Chart Location
 		globals.BlackDuckVersion = util.GetValueFromRelease(release, []string{"imageTag"}).(string)
-		err = SetHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, globals.BlackDuckVersion, &globals.BlackDuckChartRepository)
+		err = UpdateHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, globals.BlackDuckVersion, &globals.BlackDuckChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -818,7 +818,7 @@ var updateBlackDuckAddEnvironCmd = &cobra.Command{
 		if cmd.Flags().Lookup("version").Changed {
 			globals.BlackDuckVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		err = SetHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, globals.BlackDuckVersion, &globals.BlackDuckChartRepository)
+		err = UpdateHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, globals.BlackDuckVersion, &globals.BlackDuckChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -873,7 +873,7 @@ var updateOpsSightCmd = &cobra.Command{
 		if cmd.Flags().Lookup("version").Changed {
 			globals.OpsSightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, globals.OpsSightVersion, &globals.OpsSightChartRepository)
+		err = UpdateHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, globals.OpsSightVersion, &globals.OpsSightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -943,7 +943,7 @@ var updateOpsSightExternalHostCmd = &cobra.Command{
 		if cmd.Flags().Lookup("version").Changed {
 			globals.OpsSightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, globals.OpsSightVersion, &globals.OpsSightChartRepository)
+		err = UpdateHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, globals.OpsSightVersion, &globals.OpsSightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -1028,7 +1028,7 @@ var updateOpsSightExternalHostNativeCmd = &cobra.Command{
 		if cmd.Flags().Lookup("version").Changed {
 			globals.OpsSightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, globals.OpsSightVersion, &globals.OpsSightChartRepository)
+		err = UpdateHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, globals.OpsSightVersion, &globals.OpsSightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -1100,7 +1100,7 @@ var updateOpsSightAddRegistryCmd = &cobra.Command{
 		if cmd.Flags().Lookup("version").Changed {
 			globals.OpsSightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, globals.OpsSightVersion, &globals.OpsSightChartRepository)
+		err = UpdateHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, globals.OpsSightVersion, &globals.OpsSightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -1161,7 +1161,7 @@ var updateOpsSightAddRegistryNativeCmd = &cobra.Command{
 		if cmd.Flags().Lookup("version").Changed {
 			globals.OpsSightVersion = cmd.Flags().Lookup("version").Value.String()
 		}
-		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, globals.OpsSightVersion, &globals.OpsSightChartRepository)
+		err = UpdateHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, globals.OpsSightVersion, &globals.OpsSightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -1230,7 +1230,7 @@ var updatePolarisCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		err = SetHelmChartLocation(cmd.Flags(), globals.PolarisChartName, globals.PolarisVersion, &globals.PolarisChartRepository)
+		err = UpdateHelmChartLocation(cmd.Flags(), globals.PolarisChartName, globals.PolarisVersion, &globals.PolarisChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -1287,7 +1287,7 @@ var updatePolarisReportingCmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		err = SetHelmChartLocation(cmd.Flags(), globals.PolarisReportingChartName, globals.PolarisReportingVersion, &globals.PolarisReportingChartRepository)
+		err = UpdateHelmChartLocation(cmd.Flags(), globals.PolarisReportingChartName, globals.PolarisReportingVersion, &globals.PolarisReportingChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -1344,7 +1344,7 @@ var updateBDBACmd = &cobra.Command{
 		}
 
 		// Update the Helm Chart Location
-		err = SetHelmChartLocation(cmd.Flags(), globals.BDBAChartName, globals.BDBAVersion, &globals.BDBAChartRepository)
+		err = UpdateHelmChartLocation(cmd.Flags(), globals.BDBAChartName, globals.BDBAVersion, &globals.BDBAChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}

@@ -28,7 +28,6 @@ import (
 
 	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
 	"github.com/blackducksoftware/synopsysctl/pkg/blackduck"
-	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -68,7 +67,7 @@ type FlagTree struct {
 // DefaultFlagTree ...
 // [Dev Note]: These should match the Helm Chart's Values.yaml
 var DefaultFlagTree = FlagTree{
-	Version:           globals.AlertVersion,
+	// Version:           globals.AlertVersion, [Dev Note: Leave commented out. --version is required so it's confusing to display a default value]
 	Registry:          "docker.io/blackducksoftware",
 	StandAlone:        "true",
 	ExposeService:     util.NODEPORT,

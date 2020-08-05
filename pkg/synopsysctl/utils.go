@@ -380,8 +380,9 @@ func getInstanceInfo(crdName string, appName string, namespace string, name stri
 	return namespace, crdNamespace, crdScope, nil
 }
 
-// SetHelmChartLocation uses --app-resources-path and chartVersion to set the value at *chartVariable
-func SetHelmChartLocation(flags *pflag.FlagSet, chartName, appVersion string, chartVariable *string) error {
+// UpdateHelmChartLocation uses --app-resources-path and chartVersion to update the value at *chartVariable. This value is originally set
+// when synopsysctl starts (see file pkg/globals/helmglobalvalues.go)
+func UpdateHelmChartLocation(flags *pflag.FlagSet, chartName, appVersion string, chartVariable *string) error {
 	chartLocationFlag := flags.Lookup("app-resources-path")
 	if chartLocationFlag.Changed {
 		*chartVariable = chartLocationFlag.Value.String()

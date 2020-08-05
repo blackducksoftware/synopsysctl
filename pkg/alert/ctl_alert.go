@@ -113,9 +113,6 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 
 	// Application Version and Image Tag
 	cmd.Flags().StringVar(&ctl.flagTree.Version, "version", defaults.Version, "Version of Alert\n")
-	if isCreateCmd {
-		cobra.MarkFlagRequired(cmd.Flags(), "version")
-	}
 
 	// Storage
 	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", defaults.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs")

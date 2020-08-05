@@ -67,7 +67,7 @@ var startAlertCmd = &cobra.Command{
 
 		// Update the Helm Chart Location
 		alertVersionFromRelease := util.GetValueFromRelease(instance, []string{"alert", "imageTag"}).(string)
-		err = SetHelmChartLocation(cmd.Flags(), globals.AlertChartName, alertVersionFromRelease, &globals.AlertChartRepository)
+		err = UpdateHelmChartLocation(cmd.Flags(), globals.AlertChartName, alertVersionFromRelease, &globals.AlertChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -110,7 +110,7 @@ var startBlackDuckCmd = &cobra.Command{
 
 		// Update the Helm Chart Location
 		blackDuckVersionFromRelease := util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
-		err = SetHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, blackDuckVersionFromRelease, &globals.BlackDuckChartRepository)
+		err = UpdateHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, blackDuckVersionFromRelease, &globals.BlackDuckChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}
@@ -149,7 +149,7 @@ var startOpsSightCmd = &cobra.Command{
 
 		// Update the Helm Chart Location
 		opsSightVersionFromRelease := util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
-		err = SetHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, opsSightVersionFromRelease, &globals.OpsSightChartRepository)
+		err = UpdateHelmChartLocation(cmd.Flags(), globals.OpsSightChartName, opsSightVersionFromRelease, &globals.OpsSightChartRepository)
 		if err != nil {
 			return fmt.Errorf("failed to set the app resources location due to %+v", err)
 		}

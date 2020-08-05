@@ -85,7 +85,7 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 
 	// Update the Helm Chart Location
 	bdVersion := helmValuesMap["imageTag"].(string)
-	err = SetHelmChartLocation(flags, globals.BlackDuckChartName, bdVersion, &globals.BlackDuckChartRepository)
+	err = UpdateHelmChartLocation(flags, globals.BlackDuckChartName, bdVersion, &globals.BlackDuckChartRepository)
 	if err != nil {
 		return fmt.Errorf("failed to set the app resources location due to %+v", err)
 	}

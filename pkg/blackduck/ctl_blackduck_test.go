@@ -292,6 +292,18 @@ func TestSetCRSpecFieldByFlag(t *testing.T) {
 				"enablePersistentStorage": true,
 			},
 		},
+		// case
+		{
+			flagName: "enable-init-container",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					EnableInitContainer: "true",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"enableInitContainer": true,
+			},
+		},
 		// // case TODO
 		// {
 		// 	flagName: "pvc-file-path",

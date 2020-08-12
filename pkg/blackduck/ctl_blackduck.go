@@ -84,6 +84,7 @@ type FlagTree struct {
 	LivenessProbes         string
 	EnableBinaryAnalysis   bool
 	EnableSourceCodeUpload bool
+	EnableInitContainer    string
 
 	NodeAffinityFilePath    string
 	SecurityContextFilePath string
@@ -112,6 +113,8 @@ var DefaultFlagTree = FlagTree{
 	// Enable Features
 	EnableBinaryAnalysis:   false,
 	EnableSourceCodeUpload: false,
+	// Enable init containers to verify the Postgres database is initialized
+	EnableInitContainer: "true",
 	// Extra Config Settings
 }
 
@@ -203,6 +206,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringVar(&ctl.flagTree.LivenessProbes, "liveness-probes", defaults.LivenessProbes, "If true, Black Duck uses liveness probes [true|false]")
 	cmd.Flags().BoolVar(&ctl.flagTree.EnableBinaryAnalysis, "enable-binary-analysis", defaults.EnableBinaryAnalysis, "If true, enable binary analysis by setting the environment variable (this takes priority over environs flag values)")
 	cmd.Flags().BoolVar(&ctl.flagTree.EnableSourceCodeUpload, "enable-source-code-upload", defaults.EnableSourceCodeUpload, "If true, enable source code upload by setting the environment variable (this takes priority over environs flag values)\n")
+	cmd.Flags().StringVar(&ctl.flagTree.EnableInitContainer, "enable-init-container", defaults.EnableInitContainer, "If true, Black Duck adds init container to each service to check whether the Postgres is initialized with the databases [true|false]. This flag is supported from Black Duck version 2020.6.1 and above")
 
 	// Extra Config Settings
 	cmd.Flags().StringVar(&ctl.flagTree.NodeAffinityFilePath, "node-affinity-file-path", defaults.NodeAffinityFilePath, "Absolute path to a file containing a list of node affinities")
@@ -355,6 +359,8 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 				util.SetHelmValueInMap(ctl.args, []string{"storageClass"}, ctl.flagTree.PvcStorageClass)
 			case "liveness-probes":
 				util.SetHelmValueInMap(ctl.args, []string{"enableLivenessProbe"}, strings.ToUpper(ctl.flagTree.LivenessProbes) == "TRUE")
+			case "enable-init-container":
+				util.SetHelmValueInMap(ctl.args, []string{"enableInitContainer"}, strings.ToUpper(ctl.flagTree.EnableInitContainer) == "TRUE")
 			case "persistent-storage":
 				util.SetHelmValueInMap(ctl.args, []string{"enablePersistentStorage"}, strings.ToUpper(ctl.flagTree.PersistentStorage) == "TRUE")
 			case "pvc-file-path":

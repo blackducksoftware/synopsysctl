@@ -32,13 +32,20 @@ USER_PASSWORD=qrstuv
 
 go run main.go create blackduck $NS \
   --namespace $NS \
-  --expose-ui nodeport \
+  --expose-ui loadbalancer \
   --admin-password $ADMIN_PASSWORD \
   --user-password $USER_PASSWORD \
   --seal-key $SEAL_KEY \
   --certificate-file-path tls.crt \
   --certificate-key-file-path tls.key \
   --verbose-level trace
+  --size small
+  
+# kubectl get pods -n bd
+# choose the webserver pod
+kubectl -n bd port-forward bd-blackduck-webserver-7fdd87854c-chqjv 1111:8443
+
+# go to https://localhost:1111 in your web browser
 ```
 
 This will take a few minutes, so please be patient and watch `kubectl get pods -A`!

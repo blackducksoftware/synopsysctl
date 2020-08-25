@@ -187,7 +187,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringVar(&ctl.flagTree.PostgresClaimSize, "postgres-claim-size", defaults.PostgresClaimSize, "Size of the blackduck-postgres PVC")
 	cmd.Flags().StringVar(&ctl.flagTree.AdminPassword, "admin-password", defaults.AdminPassword, "'admin' password of Postgres database")
 	cmd.Flags().StringVar(&ctl.flagTree.UserPassword, "user-password", defaults.UserPassword, "'user' password of Postgres database")
-	cmd.Flags().StringVar(&ctl.flagTree.PostgresInitPostCommand, "postgres-init-post-command", defaults.PostgresInitPostCommand, "Postgres initialization post command. Supported. This flag is supported from Black Duck version 2020.8.0 and above ")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresInitPostCommand, "postgres-init-post-command", defaults.PostgresInitPostCommand, "Postgres initialization post command. Supported. This flag is supported from Black Duck version 2020.8.0 and above\n")
 
 	// Certificates
 	cmd.Flags().StringVar(&ctl.flagTree.CertificateName, "certificate-name", defaults.CertificateName, "Name of Black Duck nginx certificate")

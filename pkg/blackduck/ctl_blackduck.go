@@ -70,6 +70,7 @@ type FlagTree struct {
 	PostgresClaimSize             string
 	AdminPassword                 string
 	UserPassword                  string
+	PostgresInitPostCommand       string
 
 	CertificateName          string
 	CertificateFilePath      string
@@ -185,7 +186,8 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringVar(&ctl.flagTree.ExternalPostgresUserPassword, "external-postgres-user-password", defaults.ExternalPostgresUserPassword, "'user' password of external Postgres database")
 	cmd.Flags().StringVar(&ctl.flagTree.PostgresClaimSize, "postgres-claim-size", defaults.PostgresClaimSize, "Size of the blackduck-postgres PVC")
 	cmd.Flags().StringVar(&ctl.flagTree.AdminPassword, "admin-password", defaults.AdminPassword, "'admin' password of Postgres database")
-	cmd.Flags().StringVar(&ctl.flagTree.UserPassword, "user-password", defaults.UserPassword, "'user' password of Postgres database\n")
+	cmd.Flags().StringVar(&ctl.flagTree.UserPassword, "user-password", defaults.UserPassword, "'user' password of Postgres database")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresInitPostCommand, "postgres-init-post-command", defaults.PostgresInitPostCommand, "Postgres initialization post command. Supported. This flag is supported from Black Duck version 2020.8.0 and above ")
 
 	// Certificates
 	cmd.Flags().StringVar(&ctl.flagTree.CertificateName, "certificate-name", defaults.CertificateName, "Name of Black Duck nginx certificate")
@@ -355,6 +357,8 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 				util.SetHelmValueInMap(ctl.args, []string{"postgres", "adminPassword"}, ctl.flagTree.ExternalPostgresAdminPassword)
 			case "external-postgres-user-password":
 				util.SetHelmValueInMap(ctl.args, []string{"postgres", "userPassword"}, ctl.flagTree.ExternalPostgresUserPassword)
+			case "postgres-init-post-command":
+				util.SetHelmValueInMap(ctl.args, []string{"init", "postCommand"}, ctl.flagTree.PostgresInitPostCommand)
 			case "pvc-storage-class":
 				util.SetHelmValueInMap(ctl.args, []string{"storageClass"}, ctl.flagTree.PvcStorageClass)
 			case "liveness-probes":

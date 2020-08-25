@@ -316,17 +316,8 @@ var updateBlackDuckCmd = &cobra.Command{
 			globals.BlackDuckVersion = util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
 			if cmd.Flags().Lookup("version").Changed {
 				globals.BlackDuckVersion = cmd.Flags().Lookup("version").Value.String()
-			}
-			err = UpdateHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, globals.BlackDuckVersion, &globals.BlackDuckChartRepository)
-			if err != nil {
-				return fmt.Errorf("failed to set the app resources location due to %+v", err)
-			}
 
-			oldVersion := util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
-			log.Debugf("old version: %+v", oldVersion)
-
-			if cmd.Flag("version").Changed {
-				ok, err := util.IsVersionGreaterThanOrEqualTo(cmd.Flag("version").Value.String(), 2020, time.April, 0)
+				ok, err := util.IsVersionGreaterThanOrEqualTo(globals.BlackDuckVersion, 2020, time.April, 0)
 				if err != nil {
 					return err
 				}
@@ -335,6 +326,13 @@ var updateBlackDuckCmd = &cobra.Command{
 					return fmt.Errorf("upgrade of Black Duck instance is only suported for version 2020.4.0 and above")
 				}
 			}
+			err = UpdateHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, globals.BlackDuckVersion, &globals.BlackDuckChartRepository)
+			if err != nil {
+				return fmt.Errorf("failed to set the app resources location due to %+v", err)
+			}
+
+			oldVersion := util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
+			log.Debugf("old version: %+v", oldVersion)
 
 			var sizeYAMLFileNameInChart string
 			if cmd.Flag("size").Changed {
@@ -384,6 +382,12 @@ var updateBlackDuckCmd = &cobra.Command{
 			err = runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion, newVals, cmd.Flags())
 			if err != nil {
 				return fmt.Errorf("failed to update File Ownerships in PVs: %+v", err)
+			}
+
+			// validations
+			err = createBlackDuckCobraHelper.VerifyChartVersionSupportsChangedFlags(cmd.Flags(), globals.BlackDuckVersion)
+			if err != nil {
+				return err
 			}
 
 			// Deploy resources

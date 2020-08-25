@@ -261,12 +261,12 @@ func TestSetCRSpecFieldByFlag(t *testing.T) {
 			flagName: "postgres-init-post-command",
 			changedCtl: &HelmValuesFromCobraFlags{
 				flagTree: FlagTree{
-					PostCommand: "",
+					PostgresInitPostCommand: "curl -X POST http://localhost:15020/quitquitquit",
 				},
 			},
 			changedArgs: map[string]interface{}{
 				"init": map[string]interface{}{
-					"postCommand": "",
+					"postCommand": "curl -X POST http://localhost:15020/quitquitquit",
 				},
 			},
 		},

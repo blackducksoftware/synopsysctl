@@ -187,7 +187,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringVar(&ctl.flagTree.PostgresClaimSize, "postgres-claim-size", defaults.PostgresClaimSize, "Size of the blackduck-postgres PVC")
 	cmd.Flags().StringVar(&ctl.flagTree.AdminPassword, "admin-password", defaults.AdminPassword, "'admin' password of Postgres database")
 	cmd.Flags().StringVar(&ctl.flagTree.UserPassword, "user-password", defaults.UserPassword, "'user' password of Postgres database")
-	cmd.Flags().StringVar(&ctl.flagTree.PostgresInitPostCommand, "postgres-init-post-command", defaults.PostgresInitPostCommand, "Postgres initialization post command. Supported. This flag is supported from Black Duck version 2020.8.0 and above\n")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresInitPostCommand, "postgres-init-post-command", defaults.PostgresInitPostCommand, "Postgres initialization post command. This flag is supported from Black Duck version 2020.8.0 and above\n")
 
 	// Certificates
 	cmd.Flags().StringVar(&ctl.flagTree.CertificateName, "certificate-name", defaults.CertificateName, "Name of Black Duck nginx certificate")
@@ -290,6 +290,9 @@ func (ctl *HelmValuesFromCobraFlags) VerifyChartVersionSupportsChangedFlags(flag
 		return fmt.Errorf("--node-port is not supported in Black Duck versions before 2020.6.0")
 	}
 
+	if flagset.Lookup("postgres-init-post-command").Changed && (util.CompareVersions(version, "2020.8.0") < 0) {
+		return fmt.Errorf("--postgres-init-post-command is not supported in Black Duck versions before 2020.8.0")
+	}
 	return nil
 }
 

@@ -133,6 +133,12 @@ func migrate(bd *v1.Blackduck, operatorNamespace string, crdNamespace string, fl
 		return err
 	}
 
+	// validations
+	err = createBlackDuckCobraHelper.VerifyChartVersionSupportsChangedFlags(flags, bdVersion)
+	if err != nil {
+		return err
+	}
+
 	err = util.CreateWithHelm3(bd.Name, bd.Spec.Namespace, globals.BlackDuckChartRepository, helmValuesMap, kubeConfigPath, true, extraFiles...)
 	if err != nil {
 		return fmt.Errorf("failed to create Blackduck resources: %+v", err)

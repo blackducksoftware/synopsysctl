@@ -38,7 +38,7 @@ go run main.go create blackduck $NS \
   --seal-key $SEAL_KEY \
   --certificate-file-path tls.crt \
   --certificate-key-file-path tls.key \
-  --verbose-level trace
+  --verbose-level trace \
   --size small
   
 # kubectl get pods -n bd

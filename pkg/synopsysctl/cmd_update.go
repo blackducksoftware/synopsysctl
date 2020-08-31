@@ -40,8 +40,6 @@ import (
 	blackduck "github.com/blackducksoftware/synopsysctl/pkg/blackduck"
 	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	opssight "github.com/blackducksoftware/synopsysctl/pkg/opssight"
-	"github.com/blackducksoftware/synopsysctl/pkg/polaris"
-	polarisreporting "github.com/blackducksoftware/synopsysctl/pkg/polaris-reporting"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -58,8 +56,6 @@ import (
 var updateAlertCobraHelper alert.HelmValuesFromCobraFlags
 var updateBlackDuckCobraHelper blackduck.HelmValuesFromCobraFlags
 var updateOpsSightCobraHelper opssight.HelmValuesFromCobraFlags
-var updatePolarisCobraHelper polaris.HelmValuesFromCobraFlags
-var updatePolarisReportingCobraHelper polarisreporting.HelmValuesFromCobraFlags
 var updateBDBACobraHelper bdba.HelmValuesFromCobraFlags
 
 // updateCmd provides functionality to update/upgrade features of
@@ -1190,119 +1186,6 @@ var updateOpsSightAddRegistryNativeCmd = &cobra.Command{
 	},
 }
 
-// updatePolarisCmd updates a Polaris instance
-var updatePolarisCmd = &cobra.Command{
-	Use:           "polaris -n NAMESPACE",
-	Example:       "synopsyctl update polaris -n <namespace>",
-	Short:         "Update a Polaris instance. (Please make sure you have read and understand prerequisites before installing Polaris: https://sig-confluence.internal.synopsys.com/display/DD/Polaris+on-premises])",
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	Args: func(cmd *cobra.Command, args []string) error {
-		// Check the Number of Arguments
-		if len(args) != 0 {
-			cmd.Help()
-			return fmt.Errorf("this command takes 0 arguments, but got %+v", args)
-		}
-		return nil
-	},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		helmRelease, err := util.GetWithHelm3(globals.PolarisName, namespace, kubeConfigPath)
-		if err != nil {
-			return fmt.Errorf("failed to get previous user defined values: %+v", err)
-		}
-		updatePolarisCobraHelper.SetArgs(helmRelease.Config)
-		// Get the flags to set Helm values
-		helmValuesMap, err := updatePolarisCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
-		if err != nil {
-			return err
-		}
-
-		// Set the Version from the Release
-		if cmd.Flags().Lookup("version").Changed {
-			globals.PolarisVersion = cmd.Flags().Lookup("version").Value.String()
-			util.SetHelmValueInMap(helmValuesMap, []string{"version"}, globals.PolarisVersion)
-		} else {
-			if versionFromRelease := util.GetValueFromRelease(helmRelease, []string{"version"}); versionFromRelease != nil {
-				globals.PolarisVersion = versionFromRelease.(string)
-			} else {
-				return fmt.Errorf("please set --version for this update")
-			}
-		}
-
-		// Update the Helm Chart Location
-		err = UpdateHelmChartLocation(cmd.Flags(), globals.PolarisChartName, globals.PolarisVersion, &globals.PolarisChartRepository)
-		if err != nil {
-			return fmt.Errorf("failed to set the app resources location due to %+v", err)
-		}
-
-		// Deploy Polaris Resources
-		err = util.UpdateWithHelm3(globals.PolarisName, namespace, globals.PolarisChartRepository, helmValuesMap, kubeConfigPath)
-		if err != nil {
-			return fmt.Errorf("failed to update Polaris resources due to %+v", err)
-		}
-
-		log.Infof("Polaris has been successfully Updated in namespace '%s'!", namespace)
-		return nil
-	},
-}
-
-// updatePolarisReportingCmd updates a Polaris-Reporting instance
-var updatePolarisReportingCmd = &cobra.Command{
-	Use:           "polaris-reporting -n NAMESPACE",
-	Example:       "synopsysctl update polaris-reporting -n <namespace>",
-	Short:         "Update a Polaris-Reporting instance",
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	Args: func(cmd *cobra.Command, args []string) error {
-		// Check the Number of Arguments
-		if len(args) != 0 {
-			cmd.Help()
-			return fmt.Errorf("this command takes 0 argument, but got %+v", args)
-		}
-		return nil
-	},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		helmRelease, err := util.GetWithHelm3(globals.PolarisReportingName, namespace, kubeConfigPath)
-		if err != nil {
-			return fmt.Errorf("failed to get previous user defined values: %+v", err)
-		}
-		updatePolarisReportingCobraHelper.SetArgs(helmRelease.Config)
-
-		// Get the flags to set Helm values
-		helmValuesMap, err := updatePolarisReportingCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
-		if err != nil {
-			return err
-		}
-
-		// Set the Version from the Release
-		if cmd.Flags().Lookup("version").Changed {
-			globals.PolarisReportingVersion = cmd.Flags().Lookup("version").Value.String()
-			util.SetHelmValueInMap(helmValuesMap, []string{"version"}, globals.PolarisReportingVersion)
-		} else {
-			if versionFromRelease := util.GetValueFromRelease(helmRelease, []string{"version"}); versionFromRelease != nil {
-				globals.PolarisReportingVersion = versionFromRelease.(string)
-			} else {
-				return fmt.Errorf("please set --version for this update")
-			}
-		}
-
-		// Update the Helm Chart Location
-		err = UpdateHelmChartLocation(cmd.Flags(), globals.PolarisReportingChartName, globals.PolarisReportingVersion, &globals.PolarisReportingChartRepository)
-		if err != nil {
-			return fmt.Errorf("failed to set the app resources location due to %+v", err)
-		}
-
-		// Update Polaris-Reporting Resources
-		err = util.UpdateWithHelm3(globals.PolarisReportingName, namespace, globals.PolarisReportingChartRepository, helmValuesMap, kubeConfigPath)
-		if err != nil {
-			return fmt.Errorf("failed to update Polaris-Reporting resources due to %+v", err)
-		}
-
-		log.Infof("Polaris-Reporting has been successfully Updated in namespace '%s'!", namespace)
-		return nil
-	},
-}
-
 // updateBDBACmd updates a BDBA instance
 var updateBDBACmd = &cobra.Command{
 	Use:           "bdba -n NAMESPACE",
@@ -1366,8 +1249,6 @@ func init() {
 	updateAlertCobraHelper = *alertctl.NewHelmValuesFromCobraFlags()
 	updateOpsSightCobraHelper = *opssight.NewHelmValuesFromCobraFlags()
 	updateBlackDuckCobraHelper = *blackduck.NewHelmValuesFromCobraFlags()
-	updatePolarisCobraHelper = *polaris.NewHelmValuesFromCobraFlags()
-	updatePolarisReportingCobraHelper = *polarisreporting.NewHelmValuesFromCobraFlags()
 	updateBDBACobraHelper = *bdba.NewHelmValuesFromCobraFlags()
 
 	rootCmd.AddCommand(updateCmd)
@@ -1419,20 +1300,6 @@ func init() {
 	updateOpsSightCmd.AddCommand(updateOpsSightAddRegistryCmd)
 
 	updateOpsSightAddRegistryCmd.AddCommand(updateOpsSightAddRegistryNativeCmd)
-
-	// Polaris
-	updatePolarisCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
-	cobra.MarkFlagRequired(updatePolarisCmd.PersistentFlags(), "namespace")
-	updatePolarisCobraHelper.AddCobraFlagsToCommand(updatePolarisCmd, false)
-	addChartLocationPathFlag(updatePolarisCmd)
-	updateCmd.AddCommand(updatePolarisCmd)
-
-	// Polaris-Reporting
-	updatePolarisReportingCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
-	cobra.MarkFlagRequired(updatePolarisReportingCmd.PersistentFlags(), "namespace")
-	updatePolarisReportingCobraHelper.AddCobraFlagsToCommand(updatePolarisReportingCmd, false)
-	addChartLocationPathFlag(updatePolarisReportingCmd)
-	updateCmd.AddCommand(updatePolarisReportingCmd)
 
 	// BDBA
 	updateBDBACmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")

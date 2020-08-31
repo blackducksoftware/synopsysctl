@@ -44,7 +44,7 @@ type HelmValuesFromCobraFlags struct {
 	flagTree FlagTree
 }
 
-// FlagTree is a set of fields needed to configure the Polaris Reporting Helm Chart
+// FlagTree is a set of fields needed to configure the Alert Helm Chart
 type FlagTree struct {
 	Version                     string
 	DeploymentResourcesFilePath string
@@ -101,7 +101,7 @@ func (ctl *HelmValuesFromCobraFlags) SetArgs(args map[string]interface{}) {
 	}
 }
 
-// AddCobraFlagsToCommand adds flags for the Polaris-Reporting helm chart to the cmd
+// AddCobraFlagsToCommand adds flags for the Alert Helm Chart to the cmd
 func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, isCreateCmd bool) {
 	// [DEV NOTE:] please organize flags in order of importance
 	cmd.Flags().SortFlags = false

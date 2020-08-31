@@ -40,11 +40,3 @@ echo ""
 echo "SANITY OPSSIGHT"
 go test synopsysctl-tests/sanity/sanityOpsSight_test.go -v -count=1 -run ".*"
 echo ""
-
-# echo "SANITY POLARIS"
-# go test synopsysctl-tests/sanity/sanityPolaris_test.go -v -count=1 -run ".*"
-# echo ""
-
-# echo "SANITY POLARIS REPORTING"
-# go test synopsysctl-tests/sanity/sanityPolarisReporting_test.go -v -count=1 -run ".*"
-# echo ""

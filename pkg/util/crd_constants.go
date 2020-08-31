@@ -28,8 +28,6 @@ const (
 	BlackDuckCRDName = "blackducks.synopsys.com"
 	// OpsSightCRDName is the name of an OpsSight CRD
 	OpsSightCRDName = "opssights.synopsys.com"
-	// PrmCRDName is the name of the Polaris Reporting Module CRD
-	PrmCRDName = "prms.synopsys.com"
 
 	// OperatorName is the name of an Operator
 	OperatorName = "synopsys-operator"
@@ -39,6 +37,4 @@ const (
 	BlackDuckName = "blackduck"
 	// OpsSightName is the name of an OpsSight app
 	OpsSightName = "opssight"
-	// PrmName is the name of the Prm app
-	PrmName = "prm"
 )

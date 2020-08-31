@@ -208,54 +208,6 @@ var getOpsSightCmd = &cobra.Command{
 	},
 }
 
-// getPolarisCmd display the Polaris  instance
-var getPolarisCmd = &cobra.Command{
-	Use:           "polaris -n NAMESPACE",
-	Example:       "synopsysctl get polaris -n <namespace>",
-	Short:         "Display the polaris instance",
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	Args: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 0 {
-			return fmt.Errorf("this command takes 0 arguments, but got %+v", args)
-		}
-		return nil
-	},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		helmRelease, err := util.GetWithHelm3(globals.PolarisName, namespace, kubeConfigPath)
-		if err != nil {
-			return fmt.Errorf("failed to get Polaris values: %+v", err)
-		}
-		helmSetValues := helmRelease.Config
-		PrintComponent(helmSetValues, "YAML")
-		return nil
-	},
-}
-
-// getPolarisReportingCmd display the Polaris Reporting instance
-var getPolarisReportingCmd = &cobra.Command{
-	Use:           "polaris-reporting -n NAMESPACE",
-	Example:       "synopsysctl get polaris-reporting -n <namespace>",
-	Short:         "Display the polaris-reporting instance",
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	Args: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 0 {
-			return fmt.Errorf("this command takes 0 arguments, but got %+v", args)
-		}
-		return nil
-	},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		helmRelease, err := util.GetWithHelm3(globals.PolarisReportingName, namespace, kubeConfigPath)
-		if err != nil {
-			return fmt.Errorf("failed to get Polaris-Reporting values: %+v", err)
-		}
-		helmSetValues := helmRelease.Config
-		PrintComponent(helmSetValues, "YAML")
-		return nil
-	},
-}
-
 // getBDBACmd display the BDBA instance
 var getBDBACmd = &cobra.Command{
 	Use:           "bdba -n NAMESPACE",
@@ -300,16 +252,6 @@ func init() {
 	getOpsSightCmd.Flags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
 	cobra.MarkFlagRequired(getOpsSightCmd.PersistentFlags(), "namespace")
 	getCmd.AddCommand(getOpsSightCmd)
-
-	// Polaris
-	getPolarisCmd.Flags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
-	cobra.MarkFlagRequired(getPolarisCmd.Flags(), "namespace")
-	getCmd.AddCommand(getPolarisCmd)
-
-	// Polaris Reporting
-	getPolarisReportingCmd.Flags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
-	cobra.MarkFlagRequired(getPolarisReportingCmd.Flags(), "namespace")
-	getCmd.AddCommand(getPolarisReportingCmd)
 
 	// BDBA
 	getBDBACmd.Flags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")

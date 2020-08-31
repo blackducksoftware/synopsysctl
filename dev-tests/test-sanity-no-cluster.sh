@@ -36,7 +36,3 @@ echo "CREATE BLACKDUCK NATIVE"
 synopsysctl create blackduck native bd -n bd --admin-password pass --user-password pass --persistent-storage=true -n mybd --seal-key abcdefghijklmnopqrstuvwxyz123456 --certificate-file-path mock-files/mock-tls.crt --certificate-key-file-path mock-files/mock-tls.key > /dev/null
 echo "CREATE OPSSIGHT NATIVE"
 synopsysctl create opssight native ops -n ops --version 2.2.5 > /dev/null
-# echo "CREATE POLARIS NATIVE"
-# synopsysctl create polaris native -n polaris --smtp-host host --smtp-port 1234 --smtp-username user --smtp-password pass --smtp-sender-email my@email.com > /dev/null
-# echo "CREATE POLARIS REPORTING NATIVE"
-# synopsysctl create polaris-reporting native -n reporting --fqdn domain --gcp-service-account-path mock-files/mock-sa.json --storage-class sc --smtp-host host --smtp-port 1234 --smtp-username user --smtp-password pass --smtp-sender-email my@email.com --postgres-password pass > /dev/null

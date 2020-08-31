@@ -40,19 +40,6 @@ type OpsSightTestConfig struct {
 	AppResourcesPath string `json:"appResourcesPath"`
 }
 
-// PolarisTestConfig ...
-type PolarisTestConfig struct {
-	Version          string `json:"version"`
-	AppResourcesPath string `json:"appResourcesPath"`
-}
-
-// PolarisReportingTestConfig ...
-type PolarisReportingTestConfig struct {
-	Version            string `json:"version"`
-	AppResourcesPath   string `json:"appResourcesPath"`
-	ServiceAccountPath string `json:"serviceAccountPath"`
-}
-
 // TestConfigStruct ...
 type TestConfigStruct struct {
 	// Config
@@ -63,12 +50,10 @@ type TestConfigStruct struct {
 	SynopsysctlOperatorPath string `json:"synopsyctlOperatorPath"`
 
 	// App Configs
-	Alert            AlertTestConfig            `json:"alert"`
-	BDBA             BDBATestConfig             `json:"bdba"`
-	BlackDuck        BlackDuckTestConfig        `json:"blackDuck"`
-	OpsSight         OpsSightTestConfig         `json:"opsSight"`
-	Polaris          PolarisTestConfig          `json:"polaris"`
-	PolarisReporting PolarisReportingTestConfig `json:"polarisReporting"`
+	Alert     AlertTestConfig     `json:"alert"`
+	BDBA      BDBATestConfig      `json:"bdba"`
+	BlackDuck BlackDuckTestConfig `json:"blackDuck"`
+	OpsSight  OpsSightTestConfig  `json:"opsSight"`
 }
 
 // LoadTestConfig ...

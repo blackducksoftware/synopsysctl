@@ -39,10 +39,6 @@ func SetAppResourcesPath(flagArgs []string) []string {
 				resourcesPath = TestConfig.BlackDuck.AppResourcesPath
 			case "OPSSIGHT":
 				resourcesPath = TestConfig.OpsSight.AppResourcesPath
-			case "POLARIS":
-				resourcesPath = TestConfig.Polaris.AppResourcesPath
-			case "POLARIS_REPORTING":
-				resourcesPath = TestConfig.PolarisReporting.AppResourcesPath
 			}
 			if resourcesPath != "" && !FlagWasSet(flagArgs, "--app-resources-path") {
 				flagArgs = append(flagArgs, fmt.Sprintf("--app-resources-path=%s", resourcesPath))

@@ -202,90 +202,6 @@ var deleteOpsSightCmd = &cobra.Command{
 	},
 }
 
-// deletePolarisCmd deletes a Polaris instance
-var deletePolarisCmd = &cobra.Command{
-	Use:           "polaris -n NAMESPACE",
-	Example:       "synopsysctl delete polaris -n <namespace>",
-	Short:         "Delete a Polaris instance",
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	Args: func(cmd *cobra.Command, args []string) error {
-		// Check the Number of Arguments
-		if len(args) != 0 {
-			cmd.Help()
-			return fmt.Errorf("this command takes 0 arguments, but got %+v", args)
-		}
-		return nil
-	},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// Delete Polaris Resources
-		err := util.DeleteWithHelm3(globals.PolarisName, namespace, kubeConfigPath)
-		if err != nil {
-			return fmt.Errorf("failed to delete Polaris resources: %+v", err)
-		}
-
-		if err = deletePolarisSecrets(namespace); err != nil {
-			return err
-		}
-
-		if err = deletePVCs(namespace, "app.kubernetes.io/name=eventstore"); err != nil {
-			return err
-		}
-
-		log.Infof("Polaris has been successfully Deleted!")
-		return nil
-	},
-}
-
-// deletePolarisReportingCmd deletes a Polaris-Reporting instance
-var deletePolarisReportingCmd = &cobra.Command{
-	Use:           "polaris-reporting -n NAMESPACE",
-	Example:       "synopsysctl delete polaris-reportinng -n <namespace>",
-	Short:         "Delete a Polaris-Reporting instance",
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	Args: func(cmd *cobra.Command, args []string) error {
-		// Check the Number of Arguments
-		if len(args) != 0 {
-			cmd.Help()
-			return fmt.Errorf("this command takes 0 arguments, but got %+v", args)
-		}
-		return nil
-	},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// Delete Polaris-Reporting Resources
-		err := util.DeleteWithHelm3(globals.PolarisReportingName, namespace, kubeConfigPath)
-		if err != nil {
-			return fmt.Errorf("failed to delete Polaris-Reporting resources: %+v", err)
-		}
-
-		if err = deletePolarisSecrets(namespace); err != nil {
-			return err
-		}
-
-		if err = deletePVCs(namespace, "app.kubernetes.io/name=eventstore"); err != nil {
-			return err
-		}
-
-		log.Infof("Polaris-Reporting has been successfully Deleted!")
-		return nil
-	},
-}
-
-func deletePolarisSecrets(namespace string) error {
-	// delete secret
-	secretNames := []string{"auth-client-tls-certificate", "auth-server-tls-certificate", "polaris-webhook-client-certs",
-		"swip-eventstore-admin-creds", "swip-eventstore-creds", "swip-eventstore-reader-creds", "swip-eventstore-writer-creds",
-		"swip-tools-minio", "tds-code-analysis-tls-certificate", "vault-ca-cert", "vault-read-only", "vault-read-write-auth",
-		"vault-read-write-configs", "vault-read-write-tds", "vault-tls-certificate-new", "vault-tokens"}
-	for _, secretName := range secretNames {
-		if err := util.DeleteSecret(kubeClient, namespace, secretName); err != nil && !k8serrors.IsNotFound(err) {
-			return fmt.Errorf("couldn't delete secret '%s' in namespace '%s' due to %+v", secretName, namespace, err)
-		}
-	}
-	return nil
-}
-
 func deletePVCs(namespace string, labelSelector string) error {
 	// delete PVC's
 	pvcs, err := util.ListPVCs(kubeClient, namespace, labelSelector)
@@ -328,7 +244,6 @@ var deleteBDBACmd = &cobra.Command{
 }
 
 func init() {
-	// deletePolarisReportingCobraHelper = *polarisreporting.NewArgsFromCobraFlags()
 
 	//(PassCmd) deleteCmd.DisableFlagParsing = true // lets deleteCmd pass flags to kube/oc
 	rootCmd.AddCommand(deleteCmd)
@@ -347,16 +262,6 @@ func init() {
 	deleteOpsSightCmd.Flags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
 	cobra.MarkFlagRequired(deleteOpsSightCmd.Flags(), "namespace")
 	deleteCmd.AddCommand(deleteOpsSightCmd)
-
-	// Add Delete Polaris Command
-	deletePolarisCmd.Flags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
-	cobra.MarkFlagRequired(deletePolarisCmd.Flags(), "namespace")
-	deleteCmd.AddCommand(deletePolarisCmd)
-
-	// Add Delete Polaris-Reporting Command
-	deletePolarisReportingCmd.Flags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
-	cobra.MarkFlagRequired(deletePolarisReportingCmd.Flags(), "namespace")
-	deleteCmd.AddCommand(deletePolarisReportingCmd)
 
 	// Add Delete BDBA Command
 	deleteBDBACmd.Flags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")

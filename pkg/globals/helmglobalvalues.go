@@ -22,8 +22,6 @@ under the License.
 package globals
 
 import (
-	"fmt"
-
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 
 	// get auth clients for gcp
@@ -69,34 +67,6 @@ var BlackDuckChartName = "blackduck"
 // BlackDuckChartRepository ...
 var BlackDuckChartRepository = ""
 
-/* Polaris Helm Chart Constants */
-
-// PolarisName ...
-var PolarisName = "polaris"
-
-// PolarisVersion ...
-var PolarisVersion = "2020.03"
-
-// PolarisChartName ...
-var PolarisChartName = "polaris-helmchart"
-
-// PolarisChartRepository ...
-var PolarisChartRepository = fmt.Sprintf("%s/%s-%s.tgz", BaseChartRepository, PolarisChartName, PolarisVersion)
-
-/* Polaris Reporting Helm Chart Constants */
-
-// PolarisReportingName ...
-var PolarisReportingName = "polaris-reporting"
-
-// PolarisReportingVersion ...
-var PolarisReportingVersion = ""
-
-// PolarisReportingChartName ...
-var PolarisReportingChartName = "polaris-helmchart-reporting"
-
-// PolarisReportingChartRepository ...
-var PolarisReportingChartRepository = ""
-
 /* BDBA Helm Chart Constants */
 
 // BDBAName ...
@@ -133,13 +103,5 @@ func init() {
 	OpsSightChartRepository, _ = util.GetLatestChartURLForApp(IndexChartURLs, OpsSightChartName)
 	OpsSightPackageNameSlice := util.ParsePackageName(OpsSightChartRepository)
 	OpsSightVersion = OpsSightPackageNameSlice[1]
-
-	// Polaris
-	// TODO ...
-
-	// Polaris Reporting
-	PolarisReportingChartRepository, _ = util.GetLatestChartURLForApp(IndexChartURLs, PolarisReportingChartName)
-	PolarisReportingPackageNameSlice := util.ParsePackageName(PolarisReportingChartRepository)
-	PolarisReportingVersion = PolarisReportingPackageNameSlice[1]
 
 }

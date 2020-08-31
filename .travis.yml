@@ -50,11 +50,6 @@ before_install:
   # Download and install kubeval
   # - wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz && tar xf kubeval-linux-amd64.tar.gz && sudo mv kubeval /usr/local/bin/
 
-  # set up env variables for polaris
-  # - pwd
-  # - touch gcp_service_acount_path_file.json
-  # - touch covery_license_path_file.xml
-  # - export NAMESPACE="onprem" && export POLARIS_VERSION="2019.11" && export GCP_SERVICE_ACCOUNT_PATH="/home/travis/gopath/src/github.com/blackducksoftware/synopsysctl/gcp_service_acount_path_file.json" && export POLARIS_LICENSE_PATH="/home/travis/gopath/src/github.com/blackducksoftware/synopsysctl/hack/polaris_platform_license_path.json" && export COVERITY_LICENSE_PATH="/home/travis/gopath/src/github.com/blackducksoftware/synopsysctl/covery_license_path_file.xml"
   # build synopsysctl and move it into path
   - cd cmd/synopsysctl && go build -v .
   - sudo mv /home/travis/gopath/src/github.com/blackducksoftware/synopsysctl/cmd/synopsysctl/synopsysctl /usr/local/bin/

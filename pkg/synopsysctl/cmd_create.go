@@ -32,13 +32,10 @@ import (
 	"github.com/blackducksoftware/synopsysctl/pkg/blackduck"
 	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/opssight"
-	"github.com/blackducksoftware/synopsysctl/pkg/polaris"
-	polarisreporting "github.com/blackducksoftware/synopsysctl/pkg/polaris-reporting"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -46,8 +43,6 @@ import (
 var createAlertCobraHelper alert.HelmValuesFromCobraFlags
 var createBlackDuckCobraHelper blackduck.HelmValuesFromCobraFlags
 var createOpsSightCobraHelper opssight.HelmValuesFromCobraFlags
-var createPolarisCobraHelper polaris.HelmValuesFromCobraFlags
-var createPolarisReportingCobraHelper polarisreporting.HelmValuesFromCobraFlags
 var createBDBACobraHelper bdba.HelmValuesFromCobraFlags
 
 // Default Base Specs for Create
@@ -604,226 +599,6 @@ var createOpsSightNativeCmd = &cobra.Command{
 	},
 }
 
-// createPolarisCmd creates a Polaris instance
-var createPolarisCmd = &cobra.Command{
-	Use:           "polaris -n NAMESPACE",
-	Short:         "Create a Polaris instance. (Please make sure you have read and understand prerequisites before installing Polaris: https://sig-confluence.internal.synopsys.com/display/DD/Polaris+on-premises])",
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	Example: "\nRequried flags for setup with external database:\n\n 	synopsysctl create polaris --namespace 'onprem' --version '2020.03' --gcp-service-account-path '<PATH>/gcp-service-account-file.json' --coverity-license-path '<PATH>/coverity-license-file.xml' --fqdn 'example.polaris.com' --smtp-host 'example.smtp.com' --smtp-port 25 --smtp-username 'example' --smtp-password 'example' --smtp-sender-email 'example.email.com' --postgres-host 'example.postgres.com' --postgres-port 5432 --postgres-username 'example' --postgres-password 'example' ",
-	Args: func(cmd *cobra.Command, args []string) error {
-		// Check the Number of Arguments
-		if len(args) != 0 {
-			cmd.Help()
-			return fmt.Errorf("this command takes 0 arguments, but got %+v", args)
-		}
-		return nil
-	},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// Get the flags to set Helm values
-		helmValuesMap, err := createPolarisCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
-		if err != nil {
-			return err
-		}
-
-		// Update the Helm Chart Location
-		newChartVersion := "" // pass empty to UpdateHelmChartLocation if the default version should be used
-		if cmd.Flags().Lookup("version").Changed {
-			globals.PolarisVersion = cmd.Flags().Lookup("version").Value.String()
-			newChartVersion = globals.PolarisVersion
-		}
-		err = UpdateHelmChartLocation(cmd.Flags(), globals.PolarisChartName, newChartVersion, &globals.PolarisChartRepository)
-		if err != nil {
-			return fmt.Errorf("failed to set the app resources location due to %+v", err)
-		}
-
-		// Set the version in the Values
-		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, globals.PolarisVersion)
-
-		// Check Dry Run before deploying any resources
-		err = util.CreateWithHelm3(globals.PolarisName, namespace, globals.PolarisChartRepository, helmValuesMap, kubeConfigPath, true)
-		if err != nil {
-			return fmt.Errorf("failed to create Polaris resources: %+v", err)
-		}
-
-		// Deploy Polaris Resources
-		err = util.CreateWithHelm3(globals.PolarisName, namespace, globals.PolarisChartRepository, helmValuesMap, kubeConfigPath, false)
-		if err != nil {
-			return fmt.Errorf("failed to create Polaris resources: %+v", err)
-		}
-
-		log.Infof("Polaris has been successfully Created!")
-		return nil
-	},
-}
-
-// createPolarisNativeCmd prints the Kubernetes resources for creating a Polaris instance
-var createPolarisNativeCmd = &cobra.Command{
-	Use:           "native -n NAMESPACE",
-	Short:         "Print Kubernetes resources for creating a Polaris instance (Please make sure you have read and understand prerequisites before installing Polaris: https://sig-confluence.internal.synopsys.com/display/DD/Polaris+on-premises])",
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	Example: "\nRequried flags for setup with external database:\n\n 	synopsysctl create polaris native --namespace 'onprem' --version '2020.04' --gcp-service-account-path '<PATH>/gcp-service-account-file.json' --coverity-license-path '<PATH>/coverity-license-file.xml' --fqdn 'example.polaris.com' --smtp-host 'example.smtp.com' --smtp-port 25 --smtp-username 'example' --smtp-password 'example' --smtp-sender-email 'example.email.com' --postgres-host 'example.postgres.com' --postgres-port 5432 --postgres-username 'example' --postgres-password 'example' ",
-	Args: func(cmd *cobra.Command, args []string) error {
-		// Check the Number of Arguments
-		if len(args) != 0 {
-			cmd.Help()
-			return fmt.Errorf("this command takes 0 arguments, but got %+v", args)
-		}
-		return nil
-	},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// Get the flags to set Helm values
-		helmValuesMap, err := createPolarisCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
-		if err != nil {
-			return err
-		}
-
-		// Update the Helm Chart Location
-		newChartVersion := "" // pass empty to UpdateHelmChartLocation if the default version should be used
-		if cmd.Flags().Lookup("version").Changed {
-			globals.PolarisVersion = cmd.Flags().Lookup("version").Value.String()
-			newChartVersion = globals.PolarisVersion
-		}
-		err = UpdateHelmChartLocation(cmd.Flags(), globals.PolarisChartName, newChartVersion, &globals.PolarisChartRepository)
-		if err != nil {
-			return fmt.Errorf("failed to set the app resources location due to %+v", err)
-		}
-
-		// Set the version in the Values
-		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, globals.PolarisVersion)
-
-		// Print Polaris Resources
-		err = util.TemplateWithHelm3(globals.PolarisName, namespace, globals.PolarisChartRepository, helmValuesMap)
-		if err != nil {
-			return fmt.Errorf("failed to generate Polaris resources: %+v", err)
-		}
-
-		return nil
-	},
-}
-
-func polarisPostgresCheck(flagset *pflag.FlagSet) error {
-	usingPostgresContainer, _ := flagset.GetBool("enable-postgres-container")
-	if usingPostgresContainer {
-		if flagset.Lookup("postgres-host").Changed || flagset.Lookup("postgres-port").Changed || flagset.Lookup("postgres-username").Changed {
-			return fmt.Errorf("cannot change the host, port and username when using the postgres container")
-		}
-		if flagset.Lookup("postgres-ssl-mode").Changed {
-			return fmt.Errorf("cannot enable SSL when using postgres container")
-		}
-	} else {
-		if flagset.Lookup("postgres-size").Changed {
-			return fmt.Errorf("cannot configure the postgresql size when using an external database")
-		}
-		// External DB. Host, port and username are mandatory
-		cobra.MarkFlagRequired(flagset, "postgres-host")
-		cobra.MarkFlagRequired(flagset, "postgres-port")
-		cobra.MarkFlagRequired(flagset, "postgres-username")
-	}
-
-	return nil
-}
-
-// createPolarisReportingCmd creates a Polaris-Reporting instance
-var createPolarisReportingCmd = &cobra.Command{
-	Use:           "polaris-reporting -n NAMESPACE",
-	Example:       "synopsysctl create polaris-reporting -n <namespace>",
-	Short:         "Create a Polaris-Reporting instance",
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	Args: func(cmd *cobra.Command, args []string) error {
-		// Check the Number of Arguments
-		if len(args) != 0 {
-			cmd.Help()
-			return fmt.Errorf("this command takes 0 arguments, but got %+v", args)
-		}
-		return nil
-	},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// Get the flags to set Helm values
-		helmValuesMap, err := createPolarisReportingCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
-		if err != nil {
-			return err
-		}
-
-		// Update the Helm Chart Location
-		newChartVersion := "" // pass empty to UpdateHelmChartLocation if the default version should be used
-		if cmd.Flags().Lookup("version").Changed {
-			globals.PolarisReportingVersion = cmd.Flags().Lookup("version").Value.String()
-			newChartVersion = globals.PolarisReportingVersion
-		}
-		err = UpdateHelmChartLocation(cmd.Flags(), globals.PolarisReportingChartName, newChartVersion, &globals.PolarisReportingChartRepository)
-		if err != nil {
-			return fmt.Errorf("failed to set the app resources location due to %+v", err)
-		}
-
-		// Set the version in the Values
-		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, globals.PolarisReportingVersion)
-
-		// Check Dry Run before deploying any resources
-		err = util.CreateWithHelm3(globals.PolarisReportingName, namespace, globals.PolarisReportingChartRepository, helmValuesMap, kubeConfigPath, true)
-		if err != nil {
-			return fmt.Errorf("failed to create Polaris-Reporting resources: %+v", err)
-		}
-
-		// Deploy Polaris-Reporting Resources
-		err = util.CreateWithHelm3(globals.PolarisReportingName, namespace, globals.PolarisReportingChartRepository, helmValuesMap, kubeConfigPath, false)
-		if err != nil {
-			return fmt.Errorf("failed to create Polaris-Reporting resources: %+v", err)
-		}
-
-		log.Infof("Polaris-Reporting has been successfully Created!")
-		return nil
-	},
-}
-
-// createPolarisReportingNativeCmd prints Polaris-Reporting resources
-var createPolarisReportingNativeCmd = &cobra.Command{
-	Use:           "native -n NAMESPACE",
-	Example:       "synopsysctl create polaris-reporting native -n <namespace>",
-	Short:         "Print Kubernetes resources for creating a Polaris-Reporting instance",
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	Args: func(cmd *cobra.Command, args []string) error {
-		// Check the Number of Arguments
-		if len(args) != 0 {
-			cmd.Help()
-			return fmt.Errorf("this command takes 0 arguments, but got %+v", args)
-		}
-		return nil
-	},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// Get the flags to set Helm values
-		helmValuesMap, err := createPolarisReportingCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
-		if err != nil {
-			return err
-		}
-
-		// Update the Helm Chart Location
-		newChartVersion := "" // pass empty to UpdateHelmChartLocation if the default version should be used
-		if cmd.Flags().Lookup("version").Changed {
-			globals.PolarisReportingVersion = cmd.Flags().Lookup("version").Value.String()
-			newChartVersion = globals.PolarisReportingVersion
-		}
-		err = UpdateHelmChartLocation(cmd.Flags(), globals.PolarisReportingChartName, newChartVersion, &globals.PolarisReportingChartRepository)
-		if err != nil {
-			return fmt.Errorf("failed to set the app resources location due to %+v", err)
-		}
-
-		// Set the version in the Values
-		util.SetHelmValueInMap(helmValuesMap, []string{"version"}, globals.PolarisReportingVersion)
-
-		// Print Polaris-Reporting Resources
-		err = util.TemplateWithHelm3(globals.PolarisReportingName, namespace, globals.PolarisReportingChartRepository, helmValuesMap)
-		if err != nil {
-			return fmt.Errorf("failed to generate Polaris-Reporting resources: %+v", err)
-		}
-
-		return nil
-	},
-}
-
 // createBDBACmd creates a BDBA instance
 var createBDBACmd = &cobra.Command{
 	Use:           "bdba -n NAMESPACE",
@@ -928,8 +703,6 @@ func init() {
 	createBlackDuckCobraHelper = *blackduck.NewHelmValuesFromCobraFlags()
 	createAlertCobraHelper = *alertctl.NewHelmValuesFromCobraFlags()
 	createOpsSightCobraHelper = *opssight.NewHelmValuesFromCobraFlags()
-	createPolarisCobraHelper = *polaris.NewHelmValuesFromCobraFlags()
-	createPolarisReportingCobraHelper = *polarisreporting.NewHelmValuesFromCobraFlags()
 	createBDBACobraHelper = *bdba.NewHelmValuesFromCobraFlags()
 
 	rootCmd.AddCommand(createCmd)
@@ -967,28 +740,6 @@ func init() {
 	createOpsSightCobraHelper.AddCobraFlagsToCommand(createOpsSightNativeCmd, true)
 	addChartLocationPathFlag(createOpsSightNativeCmd)
 	createOpsSightCmd.AddCommand(createOpsSightNativeCmd)
-
-	// Add Polaris commands
-	createPolarisCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
-	cobra.MarkFlagRequired(createPolarisCmd.PersistentFlags(), "namespace")
-	createPolarisCobraHelper.AddCobraFlagsToCommand(createPolarisCmd, true)
-	addChartLocationPathFlag(createPolarisCmd)
-	createCmd.AddCommand(createPolarisCmd)
-
-	createPolarisCobraHelper.AddCobraFlagsToCommand(createPolarisNativeCmd, true)
-	addChartLocationPathFlag(createPolarisNativeCmd)
-	createPolarisCmd.AddCommand(createPolarisNativeCmd)
-
-	// Add Polaris-Reporting commands
-	createPolarisReportingCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")
-	cobra.MarkFlagRequired(createPolarisReportingCmd.PersistentFlags(), "namespace")
-	createPolarisReportingCobraHelper.AddCobraFlagsToCommand(createPolarisReportingCmd, true)
-	addChartLocationPathFlag(createPolarisReportingCmd)
-	createCmd.AddCommand(createPolarisReportingCmd)
-
-	createPolarisReportingCobraHelper.AddCobraFlagsToCommand(createPolarisReportingNativeCmd, true)
-	addChartLocationPathFlag(createPolarisReportingNativeCmd)
-	createPolarisReportingCmd.AddCommand(createPolarisReportingNativeCmd)
 
 	// Add BDBA commands
 	createBDBACmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")

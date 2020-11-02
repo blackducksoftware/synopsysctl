@@ -430,6 +430,48 @@ func TestSetCRSpecFieldByFlag(t *testing.T) {
 				"sealKey": "abcdefghijklmnopqrstuvwxyz123456",
 			},
 		},
+		// case
+		{
+			flagName: "redis-tls-enabled",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					RedisTLSEnabled: false,
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"redis": map[string]interface{}{
+					"tlsEnabled": false,
+				},
+			},
+		},
+		// case
+		{
+			flagName: "redis-max-total",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					RedisMaxTotalConnection: 128,
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"redis": map[string]interface{}{
+					"maxTotal": 128,
+				},
+			},
+		},
+		// case
+		{
+			flagName: "redis-max-idle",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					RedisMaxIdleConnection: 128,
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"redis": map[string]interface{}{
+					"maxIdle": 128,
+				},
+			},
+		},
 	}
 
 	// get the flagset

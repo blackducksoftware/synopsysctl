@@ -29,7 +29,7 @@ import (
 )
 
 // BaseChartRepository ...
-var BaseChartRepository = "https://sig-repo.synopsys.com/sig-cloudnative"
+var BaseChartRepository = "https://sig-repo.synopsys.com/artifactory/sig-cloudnative"
 
 // IndexChartURLs ...
 var IndexChartURLs = []string{}

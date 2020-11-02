@@ -72,6 +72,10 @@ type FlagTree struct {
 	UserPassword                  string
 	PostgresInitPostCommand       string
 
+	RedisTLSEnabled         bool
+	RedisMaxTotalConnection int
+	RedisMaxIdleConnection  int
+
 	CertificateName          string
 	CertificateFilePath      string
 	CertificateKeyFilePath   string
@@ -108,6 +112,10 @@ var DefaultFlagTree = FlagTree{
 	ExternalPostgresUser: "blackduck_user",
 	ExternalPostgresSsl:  "true",
 	PostgresClaimSize:    "150Gi",
+	// Redis
+	RedisTLSEnabled:         false,
+	RedisMaxTotalConnection: 128,
+	RedisMaxIdleConnection:  128,
 	// Certificates
 	// Seal Key
 	// Environs
@@ -188,6 +196,11 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringVar(&ctl.flagTree.AdminPassword, "admin-password", defaults.AdminPassword, "'admin' password of Postgres database")
 	cmd.Flags().StringVar(&ctl.flagTree.UserPassword, "user-password", defaults.UserPassword, "'user' password of Postgres database")
 	cmd.Flags().StringVar(&ctl.flagTree.PostgresInitPostCommand, "postgres-init-post-command", defaults.PostgresInitPostCommand, "Postgres initialization post command. This flag is supported from Black Duck version 2020.8.0 and above\n")
+
+	// Redis
+	cmd.Flags().BoolVar(&ctl.flagTree.RedisTLSEnabled, "redis-tls-enabled", defaults.RedisTLSEnabled, "Enable TLS connections between client and Redis")
+	cmd.Flags().IntVar(&ctl.flagTree.RedisMaxTotalConnection, "redis-max-total", defaults.RedisMaxTotalConnection, "Maximum number of concurrent client connections that can be connected to Redis")
+	cmd.Flags().IntVar(&ctl.flagTree.RedisMaxIdleConnection, "redis-max-idle", defaults.RedisMaxIdleConnection, "Maximum number of concurrent client connections that can remain idle in the pool, without extra ones being released\n")
 
 	// Certificates
 	cmd.Flags().StringVar(&ctl.flagTree.CertificateName, "certificate-name", defaults.CertificateName, "Name of Black Duck nginx certificate")
@@ -292,6 +305,14 @@ func (ctl *HelmValuesFromCobraFlags) VerifyChartVersionSupportsChangedFlags(flag
 
 	if flagset.Lookup("postgres-init-post-command").Changed && (util.CompareVersions(version, "2020.8.0") < 0) {
 		return fmt.Errorf("--postgres-init-post-command is not supported in Black Duck versions before 2020.8.0")
+	}
+
+	if flagset.Lookup("redis-tls-enabled").Changed && (util.CompareVersions(version, "2020.8.0") < 0) {
+		return fmt.Errorf("--redis-tls-enabled is not supported in Black Duck versions before 2020.8.0")
+	}
+
+	if (flagset.Lookup("redis-max-total").Changed || flagset.Lookup("redis-max-idle").Changed) && (util.CompareVersions(version, "2020.10.0") < 0) {
+		return fmt.Errorf("--redis-max-total or --redis-max-idle is not supported in Black Duck versions before 2020.10.0")
 	}
 	return nil
 }
@@ -493,6 +514,12 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 				util.SetHelmValueInMap(ctl.args, []string{"imagePullSecrets"}, pullSecrets)
 			case "seal-key":
 				util.SetHelmValueInMap(ctl.args, []string{"sealKey"}, ctl.flagTree.SealKey)
+			case "redis-tls-enabled":
+				util.SetHelmValueInMap(ctl.args, []string{"redis", "tlsEnabled"}, ctl.flagTree.RedisTLSEnabled)
+			case "redis-max-total":
+				util.SetHelmValueInMap(ctl.args, []string{"redis", "maxTotal"}, ctl.flagTree.RedisMaxTotalConnection)
+			case "redis-max-idle":
+				util.SetHelmValueInMap(ctl.args, []string{"redis", "maxIdle"}, ctl.flagTree.RedisMaxIdleConnection)
 			default:
 				log.Debugf("flag '%s': NOT FOUND", f.Name)
 			}

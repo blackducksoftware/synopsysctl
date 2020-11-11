@@ -287,6 +287,90 @@ func TestSetCRSpecFieldByFlag(t *testing.T) {
 				},
 			},
 		},
+		// case
+		{
+			flagName: "postgres-external",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PostgresIsExternal: "true",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"postgres": map[string]interface{}{
+					"isExternal": true,
+				},
+			},
+		},
+		// case
+		{
+			flagName: "postgres-host",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PostgresHost: "host",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"postgres": map[string]interface{}{
+					"host": "host",
+				},
+			},
+		},
+		// case
+		{
+			flagName: "postgres-port",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PostgresPort: int32(1234),
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"postgres": map[string]interface{}{
+					"port": int32(1234),
+				},
+			},
+		},
+		// case
+		{
+			flagName: "postgres-user",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PostgresUsername: "admin",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"postgres": map[string]interface{}{
+					"userUserName": "admin",
+				},
+			},
+		},
+		// case
+		{
+			flagName: "postgres-ssl",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PostgresSsl: "true",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"postgres": map[string]interface{}{
+					"ssl": true,
+				},
+			},
+		},
+		// case
+		{
+			flagName: "postgres-password",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					PostgresPassword: "password",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"postgres": map[string]interface{}{
+					"userPassword": "password",
+				},
+			},
+		},
 	}
 
 	// get the flagset

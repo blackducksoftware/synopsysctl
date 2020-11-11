@@ -82,6 +82,19 @@ var createAlertCmd = &cobra.Command{
 		}
 		return nil
 	},
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		// Set the Global Alert Version
+		if cmd.Flags().Lookup("version").Changed {
+			globals.AlertVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+
+		// Check the flags
+		err := createAlertCobraHelper.MarkRequiredFlags(cmd.Flags(), globals.AlertVersion)
+		if err != nil {
+			return err
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		alertName := args[0]
 		helmReleaseName := fmt.Sprintf("%s%s", alertName, globals.AlertPostSuffix)
@@ -95,8 +108,7 @@ var createAlertCmd = &cobra.Command{
 		// Update the Helm Chart Location
 		newChartVersion := "" // pass empty to UpdateHelmChartLocation if the default version should be used
 		if cmd.Flags().Lookup("version").Changed {
-			globals.AlertVersion = cmd.Flags().Lookup("version").Value.String()
-			newChartVersion = globals.AlertVersion
+			newChartVersion = cmd.Flags().Lookup("version").Value.String()
 		}
 		err = UpdateHelmChartLocation(cmd.Flags(), globals.AlertChartName, newChartVersion, &globals.AlertChartRepository)
 		if err != nil {
@@ -189,6 +201,18 @@ var createAlertNativeCmd = &cobra.Command{
 		}
 		return nil
 	},
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		// Set the Global Alert Version
+		if cmd.Flags().Lookup("version").Changed {
+			globals.AlertVersion = cmd.Flags().Lookup("version").Value.String()
+		}
+		// Check the flags
+		err := createAlertCobraHelper.MarkRequiredFlags(cmd.Flags(), globals.AlertVersion)
+		if err != nil {
+			return err
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		alertName := args[0]
 		helmReleaseName := fmt.Sprintf("%s%s", alertName, globals.AlertPostSuffix)
@@ -202,8 +226,7 @@ var createAlertNativeCmd = &cobra.Command{
 		// Update the Helm Chart Location
 		newChartVersion := "" // pass empty to UpdateHelmChartLocation if the default version should be used
 		if cmd.Flags().Lookup("version").Changed {
-			globals.AlertVersion = cmd.Flags().Lookup("version").Value.String()
-			newChartVersion = globals.AlertVersion
+			newChartVersion = cmd.Flags().Lookup("version").Value.String()
 		}
 		err = UpdateHelmChartLocation(cmd.Flags(), globals.AlertChartName, newChartVersion, &globals.AlertChartRepository)
 		if err != nil {

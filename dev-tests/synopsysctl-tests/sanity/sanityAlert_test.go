@@ -20,14 +20,14 @@ func TestSanityAlert(t *testing.T) {
 	}
 
 	fmt.Printf("Creating Alert\n")
-	_, err = tu.Synospysctl("create alert %s -n %s --version %s", alertTester.Name, alertTester.Namespace, alertTester.Version)
+	_, err = tu.Synospysctl("create alert %s -n %s --version %s --postgres-password pass", alertTester.Name, alertTester.Namespace, alertTester.Version)
 	if err != nil {
 		t.Errorf("%s", err)
 		return
 	}
 
 	fmt.Printf("Creating Alert Native\n")
-	_, err = tu.Synospysctl("create alert native %s -n %s --version %s", alertTester.Name, alertTester.Namespace, alertTester.Version)
+	_, err = tu.Synospysctl("create alert native %s -n %s --version %s --postgres-password pass", alertTester.Name, alertTester.Namespace, alertTester.Version)
 	if err != nil {
 		t.Errorf("%s", err)
 		return

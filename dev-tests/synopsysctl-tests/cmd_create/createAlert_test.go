@@ -21,7 +21,7 @@ func TestCreateAlert_Default(t *testing.T) {
 
 	// Test
 	fmt.Printf("Creating Alert\n")
-	_, err = tu.Synospysctl("create alert %s -n %s --version %s", alertTester.Name, alertTester.Namespace, alertTester.Version)
+	_, err = tu.Synospysctl("create alert %s -n %s --version %s --postgres-password pass", alertTester.Name, alertTester.Namespace, alertTester.Version)
 	if err != nil {
 		t.Errorf("%s", err)
 		return
@@ -67,7 +67,7 @@ func TestCreateAlert_NotStadnalone_NoPersistentStorage_LoadBalancer(t *testing.T
 
 	// Test
 	fmt.Printf("Creating Alert\n")
-	_, err = tu.Synospysctl("create alert %s -n %s --version %s --standalone=false --persistent-storage=false --expose-ui=LOADBALANCER", alertTester.Name, alertTester.Namespace, alertTester.Version)
+	_, err = tu.Synospysctl("create alert %s -n %s --version %s --postgres-password pass --standalone=false --persistent-storage=false --expose-ui=LOADBALANCER", alertTester.Name, alertTester.Namespace, alertTester.Version)
 	if err != nil {
 		t.Errorf("%s", err)
 		return
@@ -111,7 +111,7 @@ func TestCreateAlert_SecurityContexts(t *testing.T) {
 
 	// Test
 	fmt.Printf("Creating Alert\n")
-	_, err = tu.Synospysctl("create alert %s -n %s --version %s --security-context-file-path %s", alertTester.Name, alertTester.Namespace, alertTester.Version, alertTester.FlagTree.SecurityContextFilePath)
+	_, err = tu.Synospysctl("create alert %s -n %s --version %s --postgres-password pass --security-context-file-path %s", alertTester.Name, alertTester.Namespace, alertTester.Version, alertTester.FlagTree.SecurityContextFilePath)
 	if err != nil {
 		t.Errorf("%s", err)
 		return

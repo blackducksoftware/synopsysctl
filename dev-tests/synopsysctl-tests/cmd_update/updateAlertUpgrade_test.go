@@ -20,7 +20,7 @@ func TestUpgradeAlert(t *testing.T) {
 	}
 
 	fmt.Printf("Creating Alert v5.3.1\n")
-	_, err = tu.Synospysctl("create alert %s -n %s --version 5.3.1", alertTester.Name, alertTester.Namespace)
+	_, err = tu.Synospysctl("create alert %s -n %s --version 5.3.1 --postgres-password pass", alertTester.Name, alertTester.Namespace)
 	if err != nil {
 		t.Errorf("%s", err)
 		return

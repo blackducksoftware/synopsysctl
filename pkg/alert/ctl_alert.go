@@ -63,6 +63,15 @@ type FlagTree struct {
 	PVCFilePath                 string
 	SecurityContextFilePath     string
 	Port                        int32
+
+	// Postgres
+	PostgresIsExternal   string
+	PostgresHost         string
+	PostgresPort         int32
+	PostgresUsername     string
+	PostgresPassword     string
+	PostgresDatabaseName string
+	PostgresSsl          string
 }
 
 // DefaultFlagTree ...
@@ -74,6 +83,12 @@ var DefaultFlagTree = FlagTree{
 	ExposeService:     util.NODEPORT,
 	PersistentStorage: "true",
 	Port:              8443,
+	// Postgres
+	PostgresIsExternal:   "false",
+	PostgresPort:         5432,
+	PostgresUsername:     "sa",
+	PostgresDatabaseName: "alertdb",
+	PostgresSsl:          "false",
 }
 
 // GetDefaultFlagTree ...
@@ -148,6 +163,15 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	// Port
 	cmd.Flags().Int32Var(&ctl.flagTree.Port, "port", defaults.Port, "Port of Alert") // only for devs
 	cmd.Flags().MarkHidden("port")
+
+	// Postgres
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresIsExternal, "postgres-external", defaults.PostgresIsExternal, "If true, Synopsys Alert uses external database [true|false]")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresHost, "postgres-host", defaults.PostgresHost, "Host of Postgres")
+	cmd.Flags().Int32Var(&ctl.flagTree.PostgresPort, "postgres-port", defaults.PostgresPort, "Port of Postgres")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresUsername, "postgres-user", defaults.PostgresUsername, "Name of 'user' of Postgres database")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresPassword, "postgres-password", defaults.PostgresPassword, "'user' password of Postgres database")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresDatabaseName, "postgres-database", defaults.PostgresDatabaseName, "Name of Postgres database")
+	cmd.Flags().StringVar(&ctl.flagTree.PostgresSsl, "postgres-ssl", defaults.PostgresSsl, "If true, Synopsys Alert uses SSL for external Postgres connection [true|false]")
 }
 
 // CheckValuesFromFlags returns an error if a value stored in the struct will not be able to be
@@ -173,6 +197,24 @@ func (ctl *HelmValuesFromCobraFlags) CheckValuesFromFlags(flagset *pflag.FlagSet
 	}
 	if (FlagWasSet(flagset, "certificate-file-path") || FlagWasSet(flagset, "certificate-key-file-path")) && !(FlagWasSet(flagset, "certificate-file-path") && FlagWasSet(flagset, "certificate-key-file-path")) {
 		return fmt.Errorf("must set both certificate-file-path and certificate-key-file-path")
+	}
+	return nil
+}
+
+// MarkRequiredFlags ...
+func (ctl *HelmValuesFromCobraFlags) MarkRequiredFlags(flagset *pflag.FlagSet, alertVersion string) error {
+	// check whether the update Alert version is greater than or equal to 5.0.0
+	isGreaterThanOrEqualTo, err := util.IsNotDefaultVersionGreaterThanOrEqualTo(alertVersion, 5, 0, 0)
+	if err != nil {
+		return fmt.Errorf("failed to check Alert version: %+v", err)
+	}
+
+	if isGreaterThanOrEqualTo {
+		if strings.ToUpper(flagset.Lookup("postgres-external").Value.String()) == "TRUE" {
+			cobra.MarkFlagRequired(flagset, "postgres-host")
+		}
+
+		cobra.MarkFlagRequired(flagset, "postgres-password")
 	}
 	return nil
 }
@@ -293,6 +335,21 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 			for k, v := range securityContexts {
 				util.SetHelmValueInMap(ctl.args, []string{k, "podSecurityContext"}, blackduck.CorePodSecurityContextToHelm(v))
 			}
+			// Postgres
+		case "postgres-external":
+			util.SetHelmValueInMap(ctl.args, []string{"postgres", "isExternal"}, strings.ToUpper(ctl.flagTree.PostgresIsExternal) == "TRUE")
+		case "postgres-host":
+			util.SetHelmValueInMap(ctl.args, []string{"postgres", "host"}, ctl.flagTree.PostgresHost)
+		case "postgres-port":
+			util.SetHelmValueInMap(ctl.args, []string{"postgres", "port"}, ctl.flagTree.PostgresPort)
+		case "postgres-user":
+			util.SetHelmValueInMap(ctl.args, []string{"postgres", "userUserName"}, ctl.flagTree.PostgresUsername)
+		case "postgres-password":
+			util.SetHelmValueInMap(ctl.args, []string{"postgres", "userPassword"}, ctl.flagTree.PostgresPassword)
+		case "postgres-database":
+			util.SetHelmValueInMap(ctl.args, []string{"postgres", "databaseName"}, ctl.flagTree.PostgresDatabaseName)
+		case "postgres-ssl":
+			util.SetHelmValueInMap(ctl.args, []string{"postgres", "ssl"}, strings.ToUpper(ctl.flagTree.PostgresSsl) == "TRUE")
 		default:
 			log.Debugf("flag '%s': NOT FOUND", f.Name)
 		}

@@ -480,6 +480,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 					"blackduck-nginx":          {"webserver", "podSecurityContext"},
 					"appcheck-worker":          {"binaryscanner", "podSecurityContext"},
 					"blackduck-redis":          {"redis", "podSecurityContext"},
+					"blackduck-bomengine":      {"bomengine", "podSecurityContext"},
 				}
 				for k, v := range securityContexts {
 					pathToHelmValue := []string{k, "podSecurityContext"}                  // default path for new pods
@@ -554,6 +555,7 @@ func SetBlackDuckImageRegistriesInHelmValuesMap(helmValues map[string]interface{
 		"blackduck-logstash":       {"logstash"},
 		"blackduck-nginx":          {"webserver"},
 		"blackduck-redis":          {"redis"},
+		"blackduck-bomengine":      {"bomengine"},
 	}
 
 	for _, image := range imageRegistries {

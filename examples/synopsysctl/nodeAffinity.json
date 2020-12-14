@@ -39,6 +39,26 @@
             ]
         }
     ],
+    "bomengine": [
+        {
+            "affinityType": "hard",
+            "key": "key1",
+            "op": "op1",
+            "values": [
+                "val1.1",
+                "val1.2"
+            ]
+        },
+        {
+            "affinityType": "soft",
+            "key": "key2",
+            "op": "op2",
+            "values": [
+                "val2.1",
+                "val2.2"
+            ]
+        }
+    ],
     "cfssl": [
         {
             "affinityType": "hard",
@@ -120,6 +140,26 @@
         }
     ],
     "rabbitmq": [
+        {
+            "affinityType": "hard",
+            "key": "key1",
+            "op": "op1",
+            "values": [
+                "val1.1",
+                "val1.2"
+            ]
+        },
+        {
+            "affinityType": "soft",
+            "key": "key2",
+            "op": "op2",
+            "values": [
+                "val2.1",
+                "val2.2"
+            ]
+        }
+    ],
+    "redis": [
         {
             "affinityType": "hard",
             "key": "key1",

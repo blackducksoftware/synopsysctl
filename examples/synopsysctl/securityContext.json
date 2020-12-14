@@ -18,6 +18,11 @@
         "runAsUser": 1000,
         "runAsGroup": 1000
     },
+    "blackduck-bomengine": {
+        "fsGroup": 1000,
+        "runAsUser": 1000,
+        "runAsGroup": 1000
+    },
     "blackduck-cfssl": {
         "fsGroup": 1000,
         "runAsUser": 1000,
@@ -34,6 +39,11 @@
         "runAsGroup": 1000
     },
     "blackduck-rabbitmq": {
+        "fsGroup": 1000,
+        "runAsUser": 1000,
+        "runAsGroup": 1000
+    },
+    "blackduck-redis": {
         "fsGroup": 1000,
         "runAsUser": 1000,
         "runAsGroup": 1000

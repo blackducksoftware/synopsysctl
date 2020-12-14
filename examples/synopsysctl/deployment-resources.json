@@ -23,6 +23,18 @@
             }
         }
     },
+    "bomengine": {
+        "replicas": 1,
+        "heapMaxMemory": "4096m",
+        "resources": {
+            "requests": {
+                "memory": "1536Mi"
+            },
+            "limits": {
+                "memory": "4608Mi"
+            }
+        }
+    },
     "cfssl": {
         "resources": {
             "limits": {
@@ -54,7 +66,15 @@
             }
         }
     },
+    "redis": {
+        "resources": {
+            "limits": {
+                "memory": "1024Mi"
+            }
+        }
+    },
     "registration": {
+        "heapMaxMemory": "640m",
         "resources": {
             "requests": {
                 "cpu": "1000m"

@@ -318,6 +318,10 @@ func (ctl *HelmValuesFromCobraFlags) VerifyChartVersionSupportsChangedFlags(flag
 	if (flagset.Lookup("redis-max-total").Changed || flagset.Lookup("redis-max-idle").Changed) && (util.CompareVersions(version, "2020.10.0") < 0) {
 		return fmt.Errorf("--redis-max-total or --redis-max-idle is not supported in Black Duck versions before 2020.10.0")
 	}
+
+	if (flagset.Lookup("proxy-password-file-path").Changed || flagset.Lookup("ldap-password-file-path").Changed) && (util.CompareVersions(version, "2020.12.0") < 0) {
+		return fmt.Errorf("--proxy-password-file-path or --ldap-password-file-path is not supported in Black Duck versions before 2020.12.0")
+	}
 	return nil
 }
 

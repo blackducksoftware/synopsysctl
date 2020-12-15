@@ -81,6 +81,8 @@ type FlagTree struct {
 	CertificateKeyFilePath   string
 	ProxyCertificateFilePath string
 	AuthCustomCAFilePath     string
+	ProxyPasswordFilePath    string
+	LdapPasswordFilePath     string
 
 	SealKey string
 
@@ -207,7 +209,9 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringVar(&ctl.flagTree.CertificateFilePath, "certificate-file-path", defaults.CertificateFilePath, "Absolute path to a file for the Black Duck nginx certificate")
 	cmd.Flags().StringVar(&ctl.flagTree.CertificateKeyFilePath, "certificate-key-file-path", defaults.CertificateKeyFilePath, "Absolute path to a file for the Black Duck nginx certificate key")
 	cmd.Flags().StringVar(&ctl.flagTree.ProxyCertificateFilePath, "proxy-certificate-file-path", defaults.ProxyCertificateFilePath, "Absolute path to a file for the Black Duck proxy server’s Certificate Authority (CA)")
-	cmd.Flags().StringVar(&ctl.flagTree.AuthCustomCAFilePath, "auth-custom-ca-file-path", defaults.AuthCustomCAFilePath, "Absolute path to a file for the Custom Auth CA for Black Duck\n")
+	cmd.Flags().StringVar(&ctl.flagTree.AuthCustomCAFilePath, "auth-custom-ca-file-path", defaults.AuthCustomCAFilePath, "Absolute path to a file for the Certificate authentication using custom CA for Black Duck")
+	cmd.Flags().StringVar(&ctl.flagTree.ProxyPasswordFilePath, "proxy-password-file-path", defaults.ProxyPasswordFilePath, "Absolute path to a file for the Proxy Password for Black Duck")
+	cmd.Flags().StringVar(&ctl.flagTree.LdapPasswordFilePath, "ldap-password-file-path", defaults.LdapPasswordFilePath, "Absolute path to a file for the LDAP Password for Black Duck\n")
 
 	// Seal Key
 	if isCreateCmd {

@@ -270,7 +270,7 @@ func blackDuckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 	// Auth CA
 	if len(bd.Spec.AuthCustomCA) > 0 {
 		authSecretName := util.GetResourceName(bd.Name, util.BlackDuckName, "auth-custom-ca")
-		authSecret, err := blackduck.GetAuthCertificateSecret(authSecretName, bd.Spec.Namespace, []byte(bd.Spec.AuthCustomCA))
+		authSecret, err := blackduck.GetSecret(authSecretName, bd.Spec.Namespace, []byte(bd.Spec.AuthCustomCA), "AUTH_CUSTOM_CA")
 		if err != nil {
 			return nil, err
 		}
@@ -284,7 +284,7 @@ func blackDuckV1ToHelm(bd *v1.Blackduck, operatorNamespace string) (map[string]i
 	// Proxy Cert
 	if len(bd.Spec.ProxyCertificate) > 0 {
 		proxySecretName := util.GetResourceName(bd.Name, util.BlackDuckName, "proxy-certificate")
-		proxySecret, err := blackduck.GetProxyCertificateSecret(proxySecretName, bd.Spec.Namespace, []byte(bd.Spec.ProxyCertificate))
+		proxySecret, err := blackduck.GetSecret(proxySecretName, bd.Spec.Namespace, []byte(bd.Spec.ProxyCertificate), "HUB_PROXY_CERT_FILE")
 		if err != nil {
 			return nil, err
 		}

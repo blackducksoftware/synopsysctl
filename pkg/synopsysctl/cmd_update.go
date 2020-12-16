@@ -359,6 +359,7 @@ var updateBlackDuckCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
+			// Create or update the secret based on the certificate/password file path is set
 			isSecretUpdated := false
 			for _, v := range secrets {
 				if secret, err := util.GetSecret(kubeClient, namespace, v.Name); err == nil {
@@ -375,6 +376,7 @@ var updateBlackDuckCmd = &cobra.Command{
 				isSecretUpdated = true
 			}
 
+			// Whenever the secrets are created/updated, delete the corresponding pods to input the created/updated secrets
 			if isSecretUpdated {
 				labelSelectors := []string{
 					"component=authentication",

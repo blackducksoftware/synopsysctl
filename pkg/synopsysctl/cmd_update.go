@@ -302,7 +302,7 @@ var updateBlackDuckCmd = &cobra.Command{
 		blackDuckNamespace := namespace
 
 		isOperatorBased := false
-		instance, err := util.GetWithHelm3(args[0], namespace, kubeConfigPath)
+		instance, err := util.GetWithHelm3(args[0], blackDuckNamespace, kubeConfigPath)
 		if err != nil {
 			isOperatorBased = true
 		}
@@ -342,7 +342,7 @@ var updateBlackDuckCmd = &cobra.Command{
 			sizeYAMLFileNameInChart = strings.ToLower(sizeYAMLFileNameInChart)
 
 			if len(sizeYAMLFileNameInChart) > 0 {
-				sizeValuesFromChart, err := util.ConvertFilesFromChartToMap(namespace, kubeConfigPath, globals.BlackDuckChartRepository, sizeYAMLFileNameInChart)
+				sizeValuesFromChart, err := util.ConvertFilesFromChartToMap(blackDuckNamespace, kubeConfigPath, globals.BlackDuckChartRepository, sizeYAMLFileNameInChart)
 				if err != nil {
 					return err
 				}
@@ -355,21 +355,23 @@ var updateBlackDuckCmd = &cobra.Command{
 				return err
 			}
 
-			secrets, err := blackduck.GetCertsFromFlagsAndSetHelmValue(args[0], namespace, cmd.Flags(), helmValuesMap)
+			secrets, err := blackduck.GetCertsFromFlagsAndSetHelmValue(args[0], blackDuckNamespace, cmd.Flags(), helmValuesMap)
 			if err != nil {
 				return err
 			}
+
 			// Create or update the secret based on the certificate/password file path is set
 			isSecretUpdated := false
 			for _, v := range secrets {
-				if secret, err := util.GetSecret(kubeClient, namespace, v.Name); err == nil {
+				if secret, err := util.GetSecret(kubeClient, blackDuckNamespace, v.Name); err == nil {
 					secret.Data = v.Data
 					secret.StringData = v.StringData
-					if _, err := util.UpdateSecret(kubeClient, namespace, secret); err != nil {
+					if _, err := util.UpdateSecret(kubeClient, blackDuckNamespace, secret); err != nil {
 						return fmt.Errorf("failed to update the %s secret due to %+v", v.Name, err)
 					}
+					log.Debugf("updated secret %s in namespace %s", secret.Name, blackDuckNamespace)
 				} else {
-					if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&v); err != nil {
+					if _, err := kubeClient.CoreV1().Secrets(blackDuckNamespace).Create(&v); err != nil {
 						return fmt.Errorf("failed to create the %s secret due to %+v", v.Name, err)
 					}
 				}
@@ -379,22 +381,23 @@ var updateBlackDuckCmd = &cobra.Command{
 			// Whenever the secrets are created/updated, delete the corresponding pods to input the created/updated secrets
 			if isSecretUpdated {
 				labelSelectors := []string{
-					"component=authentication",
-					"component=bomengine",
-					"component=jobrunner",
-					"component=registration",
-					"component=scan",
-					"component=webapp-logstash",
-					"component=webserver",
+					fmt.Sprintf("name=%s,component=authentication", blackDuckName),
+					fmt.Sprintf("name=%s,component=bomengine", blackDuckName),
+					fmt.Sprintf("name=%s,component=jobrunner", blackDuckName),
+					fmt.Sprintf("name=%s,component=registration", blackDuckName),
+					fmt.Sprintf("name=%s,component=scan", blackDuckName),
+					fmt.Sprintf("name=%s,component=webapp-logstash", blackDuckName),
+					fmt.Sprintf("name=%s,component=webserver", blackDuckName),
 				}
 
 				for _, labelSelector := range labelSelectors {
-					podList, err := util.ListPodsWithLabels(kubeClient, namespace, labelSelector)
+					podList, err := util.ListPodsWithLabels(kubeClient, blackDuckNamespace, labelSelector)
 					if err != nil {
-						return fmt.Errorf("unable to list pods using %s label selector due to %+v", labelSelector, err)
+						log.Warnf("unable to list pods using %s label selector due to %+v", labelSelector, err)
+						continue
 					}
 					for _, pod := range podList.Items {
-						err = util.DeletePod(kubeClient, namespace, pod.Name)
+						err = util.DeletePod(kubeClient, blackDuckNamespace, pod.Name)
 						if err != nil {
 							return fmt.Errorf("unable to delete %s pod due to %+v", pod.Name, err)
 						}
@@ -466,7 +469,7 @@ var updateBlackDuckCmd = &cobra.Command{
 			}
 		}
 
-		log.Infof("Black Duck has been successfully Updated in namespace '%s'!", namespace)
+		log.Infof("Black Duck has been successfully Updated in namespace '%s'!", blackDuckNamespace)
 		return nil
 	},
 }

@@ -160,8 +160,8 @@ func GetCertificateSecret(secretName string, namespace string, cert []byte, key 
 	}, nil
 }
 
-// GetProxyCertificateSecret get the proxy certificate secret from file bytes
-func GetProxyCertificateSecret(secretName string, namespace string, cert []byte) (*corev1.Secret, error) {
+// GetSecret get the secret from file bytes
+func GetSecret(secretName string, namespace string, cert []byte, certKey string) (*corev1.Secret, error) {
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
@@ -177,30 +177,7 @@ func GetProxyCertificateSecret(secretName string, namespace string, cert []byte)
 			},
 		},
 		Data: map[string][]byte{
-			"HUB_PROXY_CERT_FILE": cert,
-		},
-		Type: corev1.SecretTypeOpaque,
-	}, nil
-}
-
-// GetAuthCertificateSecret get the authentication CA certificate secret from file bytes
-func GetAuthCertificateSecret(secretName string, namespace string, cert []byte) (*corev1.Secret, error) {
-	return &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Secret",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: namespace,
-			Labels: map[string]string{
-				"app":       "blackduck",
-				"component": "secret",
-				"name":      secretName,
-			},
-		},
-		Data: map[string][]byte{
-			"AUTH_CUSTOM_CA": cert,
+			certKey: cert,
 		},
 		Type: corev1.SecretTypeOpaque,
 	}, nil

@@ -81,6 +81,8 @@ type FlagTree struct {
 	CertificateKeyFilePath   string
 	ProxyCertificateFilePath string
 	AuthCustomCAFilePath     string
+	ProxyPasswordFilePath    string
+	LdapPasswordFilePath     string
 
 	SealKey string
 
@@ -207,7 +209,9 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringVar(&ctl.flagTree.CertificateFilePath, "certificate-file-path", defaults.CertificateFilePath, "Absolute path to a file for the Black Duck nginx certificate")
 	cmd.Flags().StringVar(&ctl.flagTree.CertificateKeyFilePath, "certificate-key-file-path", defaults.CertificateKeyFilePath, "Absolute path to a file for the Black Duck nginx certificate key")
 	cmd.Flags().StringVar(&ctl.flagTree.ProxyCertificateFilePath, "proxy-certificate-file-path", defaults.ProxyCertificateFilePath, "Absolute path to a file for the Black Duck proxy server’s Certificate Authority (CA)")
-	cmd.Flags().StringVar(&ctl.flagTree.AuthCustomCAFilePath, "auth-custom-ca-file-path", defaults.AuthCustomCAFilePath, "Absolute path to a file for the Custom Auth CA for Black Duck\n")
+	cmd.Flags().StringVar(&ctl.flagTree.AuthCustomCAFilePath, "auth-custom-ca-file-path", defaults.AuthCustomCAFilePath, "Absolute path to a file for the Certificate authentication using custom CA for Black Duck")
+	cmd.Flags().StringVar(&ctl.flagTree.ProxyPasswordFilePath, "proxy-password-file-path", defaults.ProxyPasswordFilePath, "Absolute path to a file for the Proxy Password for Black Duck")
+	cmd.Flags().StringVar(&ctl.flagTree.LdapPasswordFilePath, "ldap-password-file-path", defaults.LdapPasswordFilePath, "Absolute path to a file for the LDAP Password for Black Duck\n")
 
 	// Seal Key
 	if isCreateCmd {
@@ -313,6 +317,10 @@ func (ctl *HelmValuesFromCobraFlags) VerifyChartVersionSupportsChangedFlags(flag
 
 	if (flagset.Lookup("redis-max-total").Changed || flagset.Lookup("redis-max-idle").Changed) && (util.CompareVersions(version, "2020.10.0") < 0) {
 		return fmt.Errorf("--redis-max-total or --redis-max-idle is not supported in Black Duck versions before 2020.10.0")
+	}
+
+	if (flagset.Lookup("proxy-password-file-path").Changed || flagset.Lookup("ldap-password-file-path").Changed) && (util.CompareVersions(version, "2020.12.0") < 0) {
+		return fmt.Errorf("--proxy-password-file-path or --ldap-password-file-path is not supported in Black Duck versions before 2020.12.0")
 	}
 	return nil
 }
@@ -480,6 +488,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 					"blackduck-nginx":          {"webserver", "podSecurityContext"},
 					"appcheck-worker":          {"binaryscanner", "podSecurityContext"},
 					"blackduck-redis":          {"redis", "podSecurityContext"},
+					"blackduck-bomengine":      {"bomengine", "podSecurityContext"},
 				}
 				for k, v := range securityContexts {
 					pathToHelmValue := []string{k, "podSecurityContext"}                  // default path for new pods
@@ -554,6 +563,7 @@ func SetBlackDuckImageRegistriesInHelmValuesMap(helmValues map[string]interface{
 		"blackduck-logstash":       {"logstash"},
 		"blackduck-nginx":          {"webserver"},
 		"blackduck-redis":          {"redis"},
+		"blackduck-bomengine":      {"bomengine"},
 	}
 
 	for _, image := range imageRegistries {

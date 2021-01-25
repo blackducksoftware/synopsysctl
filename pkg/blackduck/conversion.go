@@ -159,7 +159,7 @@ func GetCertsFromFlagsAndSetHelmValue(name string, namespace string, flagset *pf
 			return nil, err
 		}
 
-		secret, err := GetProxyCertificateSecret(secretName, namespace, cert)
+		secret, err := GetSecret(secretName, namespace, cert, "HUB_PROXY_CERT_FILE")
 		if err != nil {
 			return nil, err
 		}
@@ -176,11 +176,45 @@ func GetCertsFromFlagsAndSetHelmValue(name string, namespace string, flagset *pf
 			return nil, err
 		}
 
-		secret, err := GetAuthCertificateSecret(secretName, namespace, cert)
+		secret, err := GetSecret(secretName, namespace, cert, "AUTH_CUSTOM_CA")
 		if err != nil {
 			return nil, err
 		}
 		util.SetHelmValueInMap(helmVal, []string{"certAuthCACertSecretName"}, secretName)
+		objects = append(objects, *secret)
+	}
+
+	if flagset.Lookup("proxy-password-file-path").Changed {
+		certPath := flagset.Lookup("proxy-password-file-path").Value.String()
+		secretName := util.GetResourceName(name, util.BlackDuckName, "proxy-password")
+
+		cert, err := ioutil.ReadFile(certPath)
+		if err != nil {
+			return nil, err
+		}
+
+		secret, err := GetSecret(secretName, namespace, cert, "HUB_PROXY_PASSWORD_FILE")
+		if err != nil {
+			return nil, err
+		}
+		util.SetHelmValueInMap(helmVal, []string{"proxyPasswordSecretName"}, secretName)
+		objects = append(objects, *secret)
+	}
+
+	if flagset.Lookup("ldap-password-file-path").Changed {
+		certPath := flagset.Lookup("ldap-password-file-path").Value.String()
+		secretName := util.GetResourceName(name, util.BlackDuckName, "ldap-password")
+
+		cert, err := ioutil.ReadFile(certPath)
+		if err != nil {
+			return nil, err
+		}
+
+		secret, err := GetSecret(secretName, namespace, cert, "LDAP_TRUST_STORE_PASSWORD_FILE")
+		if err != nil {
+			return nil, err
+		}
+		util.SetHelmValueInMap(helmVal, []string{"ldapPasswordSecretName"}, secretName)
 		objects = append(objects, *secret)
 	}
 

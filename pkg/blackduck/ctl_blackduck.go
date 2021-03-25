@@ -233,7 +233,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	// Extra Config Settings
 	cmd.Flags().StringVar(&ctl.flagTree.NodeAffinityFilePath, "node-affinity-file-path", defaults.NodeAffinityFilePath, "Absolute path to a file containing a list of node affinities")
 	cmd.Flags().StringVar(&ctl.flagTree.SecurityContextFilePath, "security-context-file-path", defaults.SecurityContextFilePath, "Absolute path to a file containing a map of pod names to security contexts runAsUser, fsGroup, and runAsGroup")
-	cmd.Flags().BoolVar(&ctl.flagTree.IsAzure, "is-azure", defaults.IsAzure, "Whether to deploy in Azure")
+	cmd.Flags().BoolVar(&ctl.flagTree.IsAzure, "is-azure", defaults.IsAzure, "If true, deployment will be configured for Azure")
 }
 
 func isValidSize(size string) bool {

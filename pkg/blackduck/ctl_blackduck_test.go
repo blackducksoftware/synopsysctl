@@ -472,6 +472,18 @@ func TestSetCRSpecFieldByFlag(t *testing.T) {
 				},
 			},
 		},
+		// case
+		{
+			flagName: "is-azure",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					IsAzure: false,
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"isAzure": false,
+			},
+		},
 	}
 
 	// get the flagset

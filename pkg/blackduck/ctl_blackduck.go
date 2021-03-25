@@ -95,6 +95,8 @@ type FlagTree struct {
 
 	NodeAffinityFilePath    string
 	SecurityContextFilePath string
+
+	IsAzure	bool
 }
 
 // DefaultFlagTree ...
@@ -127,6 +129,7 @@ var DefaultFlagTree = FlagTree{
 	// Enable init containers to verify the Postgres database is initialized
 	EnableInitContainer: "true",
 	// Extra Config Settings
+	IsAzure: false,
 }
 
 // GetDefaultFlagTree ...
@@ -230,6 +233,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	// Extra Config Settings
 	cmd.Flags().StringVar(&ctl.flagTree.NodeAffinityFilePath, "node-affinity-file-path", defaults.NodeAffinityFilePath, "Absolute path to a file containing a list of node affinities")
 	cmd.Flags().StringVar(&ctl.flagTree.SecurityContextFilePath, "security-context-file-path", defaults.SecurityContextFilePath, "Absolute path to a file containing a map of pod names to security contexts runAsUser, fsGroup, and runAsGroup")
+	cmd.Flags().BoolVar(&ctl.flagTree.IsAzure, "is-azure", defaults.IsAzure, "Whether to deploy in Azure")
 }
 
 func isValidSize(size string) bool {
@@ -321,6 +325,10 @@ func (ctl *HelmValuesFromCobraFlags) VerifyChartVersionSupportsChangedFlags(flag
 
 	if (flagset.Lookup("proxy-password-file-path").Changed || flagset.Lookup("ldap-password-file-path").Changed) && (util.CompareVersions(version, "2020.12.0") < 0) {
 		return fmt.Errorf("--proxy-password-file-path or --ldap-password-file-path is not supported in Black Duck versions before 2020.12.0")
+	}
+
+	if flagset.Lookup("is-azure").Changed && (util.CompareVersions(version, "2021.2.1") < 0) {
+		return fmt.Errorf("--is-azure is not supported in Black Duck versions before 2021.2.1")
 	}
 	return nil
 }
@@ -529,6 +537,8 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 				util.SetHelmValueInMap(ctl.args, []string{"redis", "maxTotal"}, ctl.flagTree.RedisMaxTotalConnection)
 			case "redis-max-idle":
 				util.SetHelmValueInMap(ctl.args, []string{"redis", "maxIdle"}, ctl.flagTree.RedisMaxIdleConnection)
+			case "is-azure":
+				util.SetHelmValueInMap(ctl.args, []string{"isAzure"}, ctl.flagTree.IsAzure)
 			default:
 				log.Debugf("flag '%s': NOT FOUND", f.Name)
 			}

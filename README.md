@@ -65,8 +65,8 @@ kubectl expose svc -n bd bd-blackduck-webserver --type LoadBalancer --name webse
 kubectl get svc -n bd webserver-exposed-443-8443
 ```
 
-### Upgrade to 2021.8.1 and above
-When upgrading to Blackduck versions 2021.8.1 and above, need to run the following command to delete the webui service before performing helm upgrade.
+### Upgrade to 2021.8.1 and above using native command
+For customers using native command to deploy Black Duck, when upgrading to Black Duck versions 2021.8.1 and above, need to run the following command to delete the webui service before performing helm upgrade.
 ```
 kubectl -n <namespace> delete service <namespace>-blackduck-webui
 ```

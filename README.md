@@ -64,3 +64,9 @@ kubectl expose svc -n bd bd-blackduck-webserver --type LoadBalancer --name webse
 # access the external-ip at https://EXTERNAL_IP
 kubectl get svc -n bd webserver-exposed-443-8443
 ```
+
+### Upgrade to 2021.8.1 and above
+When upgrading to Blackduck versions 2021.8.1 and above, need to run the following command to delete the webui service before performing helm upgrade.
+```
+kubectl -n <namespace> delete service <namespace>-blackduck-webui
+```

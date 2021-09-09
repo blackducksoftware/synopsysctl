@@ -148,8 +148,8 @@ var deleteBlackDuckCmd = &cobra.Command{
 					return fmt.Errorf("couldn't delete service '%s' in namespace '%s' due to %+v", svc.Name, namespace, err)
 				}
 			}
-			// delete webui service for versions 2021.8.1 and above, as <name>-blackduck-webui is renamed to <name>-blackduck-ui
-			if strings.HasSuffix(svc.Name, "-blackduck-webui") && (util.CompareVersions(globals.BlackDuckVersion, "2021.8.1") >= 0) {
+			// delete webui service
+			if strings.HasSuffix(svc.Name, "-blackduck-webui") {
 				if err := util.DeleteService(kubeClient, namespace, svc.Name); err != nil && !k8serrors.IsNotFound(err) {
 					return fmt.Errorf("couldn't delete webui service '%s' in namespace '%s' due to %+v", svc.Name, namespace, err)
 				}

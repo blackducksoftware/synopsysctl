@@ -66,7 +66,8 @@ kubectl get svc -n bd webserver-exposed-443-8443
 ```
 
 ### Upgrade to 2021.8.1 and above using native command
-For customers using native command to deploy Black Duck, when upgrading to Black Duck versions 2021.8.1 and above, need to run the following command to delete the webui service before performing helm upgrade.
+For customers using native command to deploy Black Duck, when upgrading Black Duck from version 2021.6.x to version 2021.8.1 and above, you must delete the webui service before performing a helm upgrade. This can be done by running the following commands:
 ```
+kubectl -n <namespace> delete deployment <namespace>-blackduck-webui
 kubectl -n <namespace> delete service <namespace>-blackduck-webui
 ```

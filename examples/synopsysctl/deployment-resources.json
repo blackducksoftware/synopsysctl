@@ -124,5 +124,16 @@
                 "memory": "512Mi"
             }
         }
+    },
+    "webui": {
+        "resources": {
+            "requests": {
+                "cpu": "500m"
+            },
+            "limits": {
+                "cpu": "1000m",
+                "memory": "640Mi"
+            }
+        }
     }
 }

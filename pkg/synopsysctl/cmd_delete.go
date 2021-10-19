@@ -137,15 +137,21 @@ var deleteBlackDuckCmd = &cobra.Command{
 		}
 
 		labelSelector := fmt.Sprintf("app=%s, name=%s", util.BlackDuckName, args[0])
-		// delete exposed service
 		svcs, err := util.ListServices(kubeClient, namespace, labelSelector)
 		if err != nil {
 			return fmt.Errorf("couldn't list services in namespace '%s' due to %+v", namespace, err)
 		}
 		for _, svc := range svcs.Items {
+			// delete exposed service
 			if strings.HasSuffix(svc.Name, "-exposed") {
 				if err := util.DeleteService(kubeClient, namespace, svc.Name); err != nil && !k8serrors.IsNotFound(err) {
 					return fmt.Errorf("couldn't delete service '%s' in namespace '%s' due to %+v", svc.Name, namespace, err)
+				}
+			}
+			// delete webui service
+			if strings.HasSuffix(svc.Name, "-blackduck-webui") {
+				if err := util.DeleteService(kubeClient, namespace, svc.Name); err != nil && !k8serrors.IsNotFound(err) {
+					return fmt.Errorf("couldn't delete webui service '%s' in namespace '%s' due to %+v", svc.Name, namespace, err)
 				}
 			}
 		}

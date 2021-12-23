@@ -525,11 +525,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 			case "image-registries":
 				SetBlackDuckImageRegistriesInHelmValuesMap(ctl.args, ctl.flagTree.ImageRegistries)
 			case "pull-secret-name":
-				var pullSecrets []corev1.LocalObjectReference
-				for _, v := range ctl.flagTree.PullSecrets {
-					pullSecrets = append(pullSecrets, corev1.LocalObjectReference{Name: v})
-				}
-				util.SetHelmValueInMap(ctl.args, []string{"imagePullSecrets"}, pullSecrets)
+				util.SetHelmValueInMap(ctl.args, []string{"imagePullSecrets"}, ctl.flagTree.PullSecrets)
 			case "seal-key":
 				util.SetHelmValueInMap(ctl.args, []string{"sealKey"}, ctl.flagTree.SealKey)
 			case "redis-tls-enabled":

@@ -96,7 +96,7 @@ type FlagTree struct {
 	NodeAffinityFilePath    string
 	SecurityContextFilePath string
 
-	IsAzure	bool
+	IsAzure bool
 }
 
 // DefaultFlagTree ...
@@ -497,6 +497,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 					"appcheck-worker":          {"binaryscanner", "podSecurityContext"},
 					"blackduck-redis":          {"redis", "podSecurityContext"},
 					"blackduck-bomengine":      {"bomengine", "podSecurityContext"},
+					"blackduck-matchengine":    {"matchengine", "podSecurityContext"},
 					"blackduck-webui":          {"webui", "podSecurityContext"},
 				}
 				for k, v := range securityContexts {
@@ -571,6 +572,7 @@ func SetBlackDuckImageRegistriesInHelmValuesMap(helmValues map[string]interface{
 		"blackduck-nginx":          {"webserver"},
 		"blackduck-redis":          {"redis"},
 		"blackduck-bomengine":      {"bomengine"},
+		"blackduck-matchengine":    {"matchengine"},
 		"blackduck-webui":          {"webui"},
 	}
 

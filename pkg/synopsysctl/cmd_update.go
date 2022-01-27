@@ -383,6 +383,7 @@ var updateBlackDuckCmd = &cobra.Command{
 				labelSelectors := []string{
 					fmt.Sprintf("name=%s,component=authentication", blackDuckName),
 					fmt.Sprintf("name=%s,component=bomengine", blackDuckName),
+					fmt.Sprintf("name=%s,component=matchengine", blackDuckName),
 					fmt.Sprintf("name=%s,component=jobrunner", blackDuckName),
 					fmt.Sprintf("name=%s,component=registration", blackDuckName),
 					fmt.Sprintf("name=%s,component=scan", blackDuckName),

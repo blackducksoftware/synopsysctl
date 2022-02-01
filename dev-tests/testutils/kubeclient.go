@@ -24,8 +24,6 @@ var Restconfig *rest.Config
 // KubeClient ...
 var KubeClient *kubernetes.Clientset
 
-var topErr = SetUpClusterClients()
-
 // SetUpClusterClients ...
 func SetUpClusterClients() error {
 	var err error

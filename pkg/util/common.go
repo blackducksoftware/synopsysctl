@@ -51,8 +51,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/api/storage/v1beta1"
-	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -723,17 +721,6 @@ func UpdateBlackduck(blackduckClientset *hubclientset.Clientset, blackduck *blac
 	return result, err
 }
 
-// UpdateBlackducks will update a set of Blackducks in the cluster
-func UpdateBlackducks(clientSet *hubclientset.Clientset, blackduckCRDs []blackduckapi.Blackduck) error {
-	for _, crd := range blackduckCRDs {
-		_, err := UpdateBlackduck(clientSet, &crd)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // DeleteBlackduck will delete Blackduck in the cluster
 func DeleteBlackduck(blackduckClientset *hubclientset.Clientset, name string, namespace string, options *metav1.DeleteOptions) error {
 	req := blackduckClientset.SynopsysV1().RESTClient().Delete().Resource("blackducks").Name(name).Body(options)
@@ -803,17 +790,6 @@ func UpdateOpsSight(opssightClientset *opssightclientset.Clientset, namespace st
 
 	err := req.Do().Into(result)
 	return result, err
-}
-
-// UpdateOpsSights will update a set of OpsSights in the cluster
-func UpdateOpsSights(clientSet *opssightclientset.Clientset, opsSightCRDs []opssightapi.OpsSight) error {
-	for _, crd := range opsSightCRDs {
-		_, err := UpdateOpsSight(clientSet, crd.Spec.Namespace, &crd)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // DeleteOpsSight will delete OpsSight in the cluster
@@ -887,17 +863,6 @@ func UpdateAlert(clientSet *alertclientset.Clientset, namespace string, alert *a
 	return result, err
 }
 
-// UpdateAlerts will update a set of Alerts in the cluster
-func UpdateAlerts(clientSet *alertclientset.Clientset, alertCRDs []alertapi.Alert) error {
-	for _, crd := range alertCRDs {
-		_, err := UpdateAlert(clientSet, crd.Spec.Namespace, &crd)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // DeleteAlert will delete Alert in the cluster
 func DeleteAlert(clientSet *alertclientset.Clientset, name string, namespace string, options *metav1.DeleteOptions) error {
 	req := clientSet.SynopsysV1().RESTClient().Delete().Resource("alerts").Name(name).Body(options)
@@ -910,8 +875,7 @@ func DeleteAlert(clientSet *alertclientset.Clientset, name string, namespace str
 
 // ListHubPV will list all the persistent volumes attached to each hub in the cluster
 func ListHubPV(hubClientset *hubclientset.Clientset, namespace string) (map[string]string, error) {
-	var pvList map[string]string
-	pvList = make(map[string]string)
+	var pvList map[string]string = make(map[string]string)
 	hubs, err := ListBlackduck(hubClientset, namespace, metav1.ListOptions{})
 	if err != nil {
 		log.Errorf("unable to list the hubs due to %+v", err)
@@ -1018,10 +982,7 @@ func IsClusterRoleRefExistForOtherNamespace(roleRef rbacv1.RoleRef, roleName str
 
 // IsSubjectExistForOtherNamespace checks whether anyother namespace is exist in the subject of cluster role binding
 func IsSubjectExistForOtherNamespace(subject rbacv1.Subject, namespace string) bool {
-	if !strings.EqualFold(subject.Namespace, namespace) {
-		return true
-	}
-	return false
+	return !strings.EqualFold(subject.Namespace, namespace)
 }
 
 // IsSubjectExist checks whether the namespace is already exist in the subject of cluster role binding
@@ -1303,7 +1264,7 @@ func PatchReplicationController(clientset *kubernetes.Clientset, old corev1.Repl
 	}
 
 	if !isUpdateReplica {
-		newRc, err = PatchReplicationControllerForReplicas(clientset, newRc, IntToInt32(0))
+		_, err = PatchReplicationControllerForReplicas(clientset, newRc, IntToInt32(0))
 		if err != nil {
 			return err
 		}
@@ -1359,183 +1320,11 @@ func PatchDeployment(clientset *kubernetes.Clientset, old appsv1.Deployment, new
 		return err
 	}
 
-	newDeployment, err = PatchDeploymentForReplicas(clientset, newDeployment, new.Spec.Replicas)
+	_, err = PatchDeploymentForReplicas(clientset, newDeployment, new.Spec.Replicas)
 	if err != nil {
 		return err
 	}
 	return nil
-}
-
-// GetCustomResourceDefinition get the custom resource defintion
-func GetCustomResourceDefinition(apiExtensionClient *apiextensionsclient.Clientset, name string) (*apiextensions.CustomResourceDefinition, error) {
-	return apiExtensionClient.ApiextensionsV1beta1().CustomResourceDefinitions().Get(name, metav1.GetOptions{})
-}
-
-// ListCustomResourceDefinitions list the custom resource defintions
-func ListCustomResourceDefinitions(apiExtensionClient *apiextensionsclient.Clientset, labelSelector string) (*apiextensions.CustomResourceDefinitionList, error) {
-	return apiExtensionClient.ApiextensionsV1beta1().CustomResourceDefinitions().List(metav1.ListOptions{LabelSelector: labelSelector})
-}
-
-// UpdateCustomResourceDefinition updates the custom resource defintion
-func UpdateCustomResourceDefinition(apiExtensionClient *apiextensionsclient.Clientset, crd *apiextensions.CustomResourceDefinition) (*apiextensions.CustomResourceDefinition, error) {
-	return apiExtensionClient.ApiextensionsV1beta1().CustomResourceDefinitions().Update(crd)
-}
-
-// DeleteCustomResourceDefinition deletes the custom resource defintion
-func DeleteCustomResourceDefinition(apiExtensionClient *apiextensionsclient.Clientset, name string) error {
-	return apiExtensionClient.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(name, &metav1.DeleteOptions{})
-}
-
-// GetClusterScope returns whether any of the CRD is cluster scope
-func GetClusterScope(apiExtensionClient *apiextensionsclient.Clientset) bool {
-	crds := []string{AlertCRDName, BlackDuckCRDName, OpsSightCRDName}
-	for _, crd := range crds {
-		cr, err := GetCustomResourceDefinition(apiExtensionClient, crd)
-		if err == nil && strings.EqualFold("CLUSTER", string(cr.Spec.Scope)) {
-			return true
-		}
-	}
-	return false
-}
-
-// GetOperatorNamespace uses labels to return the namespace of the synopsys operator based on
-// the provided namespace. In cluster scoped mode it will return the namespaces of all operators if provided
-// namespace=NamespaceAll. In namespace scoped mode it will return nil if there is no operator in
-// the namespace
-func GetOperatorNamespace(clientset *kubernetes.Clientset, namespace string) ([]string, error) {
-	namespaces := make(map[string]string, 0)
-	// check if operator is already installed
-	rcs, err := ListReplicationControllers(clientset, namespace, "app=synopsys-operator,component=operator")
-	if err == nil && len(rcs.Items) > 0 {
-		for _, rc := range rcs.Items {
-			if metav1.NamespaceAll != namespace {
-				return []string{rc.Namespace}, nil
-			}
-			if _, ok := namespaces[rc.Namespace]; !ok {
-				namespaces[rc.Namespace] = rc.Namespace
-			}
-		}
-	}
-	deployments, err := ListDeployments(clientset, namespace, "app=synopsys-operator,component=operator")
-	if err == nil && len(deployments.Items) > 0 {
-		for _, deployment := range deployments.Items {
-			if metav1.NamespaceAll != namespace {
-				return []string{deployment.Namespace}, nil
-			}
-			if _, ok := namespaces[deployment.Namespace]; !ok {
-				namespaces[deployment.Namespace] = deployment.Namespace
-			}
-		}
-	}
-	pods, err := ListPodsWithLabels(clientset, namespace, "app=synopsys-operator,component=operator")
-	if err == nil && len(pods.Items) > 0 {
-		for _, pod := range pods.Items {
-			if metav1.NamespaceAll != namespace {
-				return []string{pod.Namespace}, nil
-			}
-			if _, ok := namespaces[pod.Namespace]; !ok {
-				namespaces[pod.Namespace] = pod.Namespace
-			}
-		}
-	}
-	if len(namespaces) > 0 {
-		return MapKeyToStringArray(namespaces), nil
-	}
-	return nil, fmt.Errorf("unable to find the synopsys operator namespace")
-}
-
-// GetOperatorRoles returns the roles or the cluster role of the synopsys operator based on the labels
-func GetOperatorRoles(clientset *kubernetes.Clientset, namespace string) ([]string, []string, error) {
-	clusterRoles := []string{}
-	roles := []string{}
-
-	// synopsysctl case
-	// list cluster roles with app=synopsys-operator
-	crs, err := ListClusterRoles(clientset, "app=synopsys-operator")
-	if err != nil {
-		return clusterRoles, roles, fmt.Errorf("unable to list the cluster roles due to %+v", err)
-	}
-	for _, cr := range crs.Items {
-		clusterRoles = append(clusterRoles, cr.Name)
-	}
-
-	// list roles with app=synopsys-operator
-	rs, err := ListRoles(clientset, namespace, "app=synopsys-operator")
-	if err != nil {
-		return clusterRoles, roles, fmt.Errorf("unable to list the roles due to %+v", err)
-	}
-	for _, r := range rs.Items {
-		roles = append(roles, r.Name)
-	}
-
-	// OLM case
-	if len(roles) == 0 {
-		// list cluster roles with app=synopsys-operator
-		crs, err := ListClusterRoles(clientset, fmt.Sprintf("olm.owner.namespace=%s,olm.owner.kind=ClusterServiceVersion", namespace))
-		if err != nil {
-			return clusterRoles, roles, fmt.Errorf("unable to list the cluster roles due to %+v", err)
-		}
-		for _, cr := range crs.Items {
-			clusterRoles = append(clusterRoles, cr.Name)
-		}
-
-		// list roles with app=synopsys-operator
-		rs, err := ListRoles(clientset, namespace, fmt.Sprintf("olm.owner.namespace=%s,olm.owner.kind=ClusterServiceVersion", namespace))
-		if err != nil {
-			return clusterRoles, roles, fmt.Errorf("unable to list the roles due to %+v", err)
-		}
-		for _, r := range rs.Items {
-			roles = append(roles, r.Name)
-		}
-	}
-	return UniqueStringSlice(clusterRoles), UniqueStringSlice(roles), nil
-}
-
-// GetOperatorRoleBindings returns the cluster role bindings of the synopsys operator based on the labels
-func GetOperatorRoleBindings(clientset *kubernetes.Clientset, namespace string) ([]string, []string, error) {
-	clusterRolebindings := []string{}
-	rolebindings := []string{}
-
-	// synopsysctl case
-	// list cluster role binding
-	crbs, err := ListClusterRoleBindings(clientset, "app=synopsys-operator,component=operator")
-	if err != nil {
-		return clusterRolebindings, rolebindings, fmt.Errorf("unable to list the cluster role bindings due to %+v", err)
-	}
-	for _, crb := range crbs.Items {
-		clusterRolebindings = append(clusterRolebindings, crb.Name)
-	}
-
-	// list role binding
-	rbs, err := ListRoleBindings(clientset, namespace, "app=synopsys-operator,component=operator")
-	if err != nil {
-		return clusterRolebindings, rolebindings, fmt.Errorf("unable to list the role bindings due to %+v", err)
-	}
-	for _, rb := range rbs.Items {
-		rolebindings = append(rolebindings, rb.Name)
-	}
-
-	// OLM case
-	if len(rolebindings) == 0 {
-		// list cluster role binding
-		crbs, err := ListClusterRoleBindings(clientset, fmt.Sprintf("olm.owner.namespace=%s,olm.owner.kind=ClusterServiceVersion", namespace))
-		if err != nil {
-			return clusterRolebindings, rolebindings, fmt.Errorf("unable to list the cluster role bindings due to %+v", err)
-		}
-		for _, crb := range crbs.Items {
-			clusterRolebindings = append(clusterRolebindings, crb.Name)
-		}
-
-		// list role binding
-		rbs, err := ListRoleBindings(clientset, namespace, fmt.Sprintf("olm.owner.namespace=%s,olm.owner.kind=ClusterServiceVersion", namespace))
-		if err != nil {
-			return clusterRolebindings, rolebindings, fmt.Errorf("unable to list the role bindings due to %+v", err)
-		}
-		for _, rb := range rbs.Items {
-			rolebindings = append(rolebindings, rb.Name)
-		}
-	}
-	return UniqueStringSlice(clusterRolebindings), UniqueStringSlice(rolebindings), nil
 }
 
 // GetKubernetesVersion will return the kubernetes version
@@ -1555,165 +1344,6 @@ func IsOpenshift(clientset *kubernetes.Clientset) bool {
 	}
 
 	return strings.Contains(string(body), "openshift")
-}
-
-// IsOperatorExist returns whether the operator exist or not
-func IsOperatorExist(clientset *kubernetes.Clientset, namespace string) bool {
-	rcs, err := ListReplicationControllers(clientset, namespace, "app=synopsys-operator")
-	if err == nil && len(rcs.Items) > 0 {
-		return true
-	}
-	deployments, err := ListDeployments(clientset, namespace, "app=synopsys-operator")
-	if err == nil && len(deployments.Items) > 0 {
-		return true
-	}
-	pods, err := ListPodsWithLabels(clientset, namespace, "app=synopsys-operator")
-	if err == nil && len(pods.Items) > 0 {
-		return true
-	}
-	return false
-}
-
-// isSynopsysResourceExist returns whether any Synopsys resources like Alert, Black Duck or OpsSight etc. exist in the namespace
-func isSynopsysResourceExist(namespace, label string) error {
-	crdNames := []string{AlertName, BlackDuckName, OpsSightName}
-	for _, crdName := range crdNames {
-		if strings.HasPrefix(label, fmt.Sprintf("synopsys.com/%s", crdName)) {
-			name := label[len(fmt.Sprintf("synopsys.com/%s", crdName))+1:]
-			return fmt.Errorf("%s %s instance is already running in %s namespace", name, crdName, namespace)
-		}
-	}
-	return nil
-}
-
-// CheckResourceNamespace checks whether namespace is having any resource types
-func CheckResourceNamespace(kubeClient *kubernetes.Clientset, namespace string, label string, isOperator bool) (bool, error) {
-	// verify whether the namespace exist
-	ns, err := GetNamespace(kubeClient, namespace)
-	if err != nil {
-		return false, fmt.Errorf("error getting namespace due to %+v", err)
-	}
-
-	var isExist bool
-	if !isOperator {
-		// check whether the operator already exist in the namespace
-		isExist = IsOperatorExist(kubeClient, namespace)
-		if isExist {
-			return true, fmt.Errorf("synopsys operator is already running in %s namespace... namespace cannot be deleted", namespace)
-		}
-	}
-
-	// iterate over each label and verify whether any Synopsys resources like Alert, Black Duck or OpsSight etc. exist in the namespace
-	for synopsysLabel := range ns.Labels {
-		if synopsysLabel != label {
-			err := isSynopsysResourceExist(namespace, synopsysLabel)
-			if err != nil {
-				return true, err
-			}
-		}
-	}
-
-	return true, nil
-}
-
-// CheckAndUpdateNamespace will check whether the namespace is exist and if exist, update the version label in namespace of the updated/deleted resource
-func CheckAndUpdateNamespace(kubeClient *kubernetes.Clientset, resourceName string, namespace string, name string, version string, isDelete bool) (bool, error) {
-	ns, err := GetNamespace(kubeClient, namespace)
-	if err == nil {
-		err = updateLabelsInNamespace(kubeClient, ns, resourceName, namespace, name, version, isDelete)
-		if err != nil {
-			return true, err
-		}
-		return true, nil
-	}
-	return false, fmt.Errorf("unable to get %s namespace due to %+v", namespace, err)
-}
-
-// updateLabelsInNamespace will update the labels in the namespace
-func updateLabelsInNamespace(kubeClient *kubernetes.Clientset, ns *corev1.Namespace, resourceName string, namespace string, name string, version string, isDelete bool) error {
-	isLabelUpdated := false
-	ns.Labels = InitLabels(ns.Labels)
-	if isDelete {
-		// delete from labels
-		delete(ns.Labels, fmt.Sprintf("synopsys.com/%s.%s", resourceName, name))
-		isLabelUpdated = true
-
-		// delete owner label
-		isDeleteOwnerLabel := true
-		for key := range ns.Labels {
-			if strings.Contains(key, "synopsys.com/") {
-				isDeleteOwnerLabel = false
-			}
-		}
-		if isDeleteOwnerLabel {
-			if val, ok := ns.Labels["owner"]; ok && strings.EqualFold(val, "synopsys-operator") {
-				delete(ns.Labels, "owner")
-			}
-		}
-	} else {
-		// add or update the label
-		if existingVersion, ok := ns.Labels[fmt.Sprintf("synopsys.com/%s.%s", resourceName, name)]; !ok || existingVersion != version {
-			ns.Labels = InitLabels(ns.Labels)
-			ns.Labels[fmt.Sprintf("synopsys.com/%s.%s", resourceName, name)] = version
-			isLabelUpdated = true
-		}
-	}
-	if isLabelUpdated {
-		// update the namespace with labels updated
-		_, err := UpdateNamespace(kubeClient, ns)
-		if err != nil {
-			return fmt.Errorf("unable to update the %s namespace labels due to %+v", namespace, err)
-		}
-	}
-	return nil
-}
-
-// GetOperatorNamespaceByCRDScope get the operator namespace by CRD scope
-func GetOperatorNamespaceByCRDScope(kubeClient *kubernetes.Clientset, crdName string, scope apiextensions.ResourceScope, namespace string) (string, error) {
-	operatorNamespace := namespace
-	if scope == apiextensions.ClusterScoped {
-		operatorNamespace = metav1.NamespaceAll
-	}
-
-	// Get all Synopsys Operator running namespaces
-	namespaces, err := GetOperatorNamespace(kubeClient, operatorNamespace)
-	if err != nil {
-		return "", err
-	}
-
-	// For each namespace, get the CRD names and see if the CRD name is belong to input CRD name
-	for _, namespace := range namespaces {
-		crdNames, err := GetCRDNamesFromConfigMap(kubeClient, namespace)
-		if err != nil {
-			continue
-		}
-		crds := StringToStringSlice(crdNames, ",")
-		for _, crd := range crds {
-			if crd == crdName {
-				return namespace, nil
-			}
-		}
-	}
-
-	return "", fmt.Errorf("%s is not enabled in any of the Synopsys Operator", crdName)
-}
-
-// GetCRDNamesFromConfigMap get CRD names from the Synopsys Operator config map
-func GetCRDNamesFromConfigMap(kubeClient *kubernetes.Clientset, namespace string) (string, error) {
-	cm, err := GetConfigMap(kubeClient, namespace, "synopsys-operator")
-	if err != nil {
-		return "", fmt.Errorf("error getting the Synopsys Operator config map due to %+v", err)
-	}
-	data := cm.Data["config.json"]
-	var cmData map[string]interface{}
-	err = json.Unmarshal([]byte(data), &cmData)
-	if err != nil {
-		log.Errorf("unable to unmarshal config map data due to %+v", err)
-	}
-	if crdNames, ok := cmData["CrdNames"]; ok {
-		return crdNames.(string), nil
-	}
-	return "", fmt.Errorf("unable to find CRD names in the Synopsys Operator config map")
 }
 
 // InitLabels initialize the label

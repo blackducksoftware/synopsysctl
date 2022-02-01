@@ -34,37 +34,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Get Command flag for -output functionality
-var getOutputFormat string
-
-// Get Command flag for -selector functionality
-var getSelector string
-
-// Get Command flag for --all-namespaces functionality
-var getAllNamespaces bool
-
-func generateKubectlGetCommand(resourceName string, args []string) []string {
-	kubectlCmd := []string{"get", resourceName}
-	if len(namespace) > 0 {
-		kubectlCmd = append(kubectlCmd, "-n", namespace)
-	}
-	if len(args) > 0 {
-		kubectlCmd = append(kubectlCmd, args...)
-	}
-	if getOutputFormat != "" {
-		kubectlCmd = append(kubectlCmd, "-o")
-		kubectlCmd = append(kubectlCmd, getOutputFormat)
-	}
-	if getSelector != "" {
-		kubectlCmd = append(kubectlCmd, "-l")
-		kubectlCmd = append(kubectlCmd, getSelector)
-	}
-	if getAllNamespaces {
-		kubectlCmd = append(kubectlCmd, globals.AllNamespacesFlag)
-	}
-	return kubectlCmd
-}
-
 // getCmd lists resources in the cluster
 var getCmd = &cobra.Command{
 	Use:   "get",

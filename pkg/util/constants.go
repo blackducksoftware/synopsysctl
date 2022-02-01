@@ -22,13 +22,6 @@ under the License.
 package util
 
 const (
-	// AlertCRDName is the name of an Alert CRD
-	AlertCRDName = "alerts.synopsys.com"
-	// BlackDuckCRDName is the name of the Black Duck CRD
-	BlackDuckCRDName = "blackducks.synopsys.com"
-	// OpsSightCRDName is the name of an OpsSight CRD
-	OpsSightCRDName = "opssights.synopsys.com"
-
 	// OperatorName is the name of an Operator
 	OperatorName = "synopsys-operator"
 	// AlertName is the name of an Alert app

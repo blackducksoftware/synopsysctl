@@ -24,14 +24,11 @@ package synopsysctl
 import (
 	"fmt"
 
-	alertctl "github.com/blackducksoftware/synopsysctl/pkg/alert"
 	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
-
-var stopAlertCobraHelper alertctl.HelmValuesFromCobraFlags
 
 // stopCmd stops a Synopsys resource in the cluster
 var stopCmd = &cobra.Command{
@@ -165,8 +162,6 @@ var stopOpsSightCmd = &cobra.Command{
 }
 
 func init() {
-	stopAlertCobraHelper = *alertctl.NewHelmValuesFromCobraFlags()
-
 	rootCmd.AddCommand(stopCmd)
 
 	stopAlertCmd.Flags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")

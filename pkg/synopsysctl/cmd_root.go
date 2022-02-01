@@ -41,9 +41,6 @@ var kubeConfigPath = ""
 var insecureSkipTLSVerify = false
 var logLevelCtl = "info"
 
-// synopsysctlVersion is the current version of the synopsysctl utility
-var synopsysctlVersion string
-
 // rootCmd is the base command of synopsyctl that all other commands are added to
 var rootCmd = &cobra.Command{
 	Use:   "synopsysctl",
@@ -72,10 +69,6 @@ var rootCmd = &cobra.Command{
 				os.Exit(1)
 			}
 			if err := setGlobalKubeClient(); err != nil {
-				log.Error(err)
-				os.Exit(1)
-			}
-			if err := setGlobalResourceClients(); err != nil {
 				log.Error(err)
 				os.Exit(1)
 			}

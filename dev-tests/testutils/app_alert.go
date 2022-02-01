@@ -136,25 +136,6 @@ func (t AlertTester) serviceWithNameExists(serviceName, namespace string) bool {
 	return found
 }
 
-func (t AlertTester) configMapWithNameExists(configMapName, namespace string) bool {
-	targetConfigMapID := configMapName
-
-	found := false
-
-	configMapList, err := util.ListConfigMaps(KubeClient, namespace, "")
-	if err != nil {
-		return false
-	}
-	for _, cm := range configMapList.Items {
-		configMapID := t.getIDHelper(cm.Name)
-		if configMapID == targetConfigMapID {
-			found = true
-			break
-		}
-	}
-	return found
-}
-
 func (t AlertTester) checkPersistentStorage() error {
 	pvcList, err := util.ListPVCs(KubeClient, t.Namespace, "")
 	if err != nil {

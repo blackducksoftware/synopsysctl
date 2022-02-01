@@ -45,14 +45,7 @@ var createBlackDuckCobraHelper blackduck.HelmValuesFromCobraFlags
 var createOpsSightCobraHelper opssight.HelmValuesFromCobraFlags
 var createBDBACobraHelper bdba.HelmValuesFromCobraFlags
 
-// Default Base Specs for Create
-var baseAlertSpec string
-var baseBlackDuckSpec string
-var baseOpsSightSpec string
-
 var namespace string
-
-var alertNativePVC bool
 
 // createCmd creates a Synopsys resource in the cluster
 var createCmd = &cobra.Command{

@@ -24,14 +24,11 @@ package synopsysctl
 import (
 	"fmt"
 
-	alertctl "github.com/blackducksoftware/synopsysctl/pkg/alert"
 	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
-
-var startAlertCobraHelper alertctl.HelmValuesFromCobraFlags
 
 // startCmd starts a Synopsys resource in the cluster
 var startCmd = &cobra.Command{
@@ -166,8 +163,6 @@ var startOpsSightCmd = &cobra.Command{
 }
 
 func init() {
-	startAlertCobraHelper = *alertctl.NewHelmValuesFromCobraFlags()
-
 	rootCmd.AddCommand(startCmd)
 
 	startAlertCmd.Flags().StringVarP(&namespace, "namespace", "n", namespace, "Namespace of the instance(s)")

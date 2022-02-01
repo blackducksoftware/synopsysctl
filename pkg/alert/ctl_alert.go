@@ -27,7 +27,6 @@ import (
 	"strings"
 
 	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
-	"github.com/blackducksoftware/synopsysctl/pkg/blackduck"
 	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
@@ -333,7 +332,7 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 				return
 			}
 			for k, v := range securityContexts {
-				util.SetHelmValueInMap(ctl.args, []string{k, "podSecurityContext"}, blackduck.CorePodSecurityContextToHelm(v))
+				util.SetHelmValueInMap(ctl.args, []string{k, "podSecurityContext"}, v)
 			}
 			// Postgres
 		case "postgres-external":

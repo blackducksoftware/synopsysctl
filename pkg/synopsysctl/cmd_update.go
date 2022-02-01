@@ -419,6 +419,12 @@ var updateBlackDuckCmd = &cobra.Command{
 				return err
 			}
 
+			// Upgrade the containerized PostgreSQL version if necessary
+			err = runPostgresMigration(blackDuckName, blackDuckNamespace, oldVersion, globals.BlackDuckVersion, helmValuesMap)
+			if err != nil {
+				return err
+			}
+
 			// Deploy resources
 			if err := util.UpdateWithHelm3(blackDuckName, blackDuckNamespace, globals.BlackDuckChartRepository, helmValuesMap, kubeConfigPath); err != nil {
 				return fmt.Errorf("failed to update Black Duck due to %+v", err)
@@ -475,6 +481,111 @@ var updateBlackDuckCmd = &cobra.Command{
 	},
 }
 
+func runPostgresMigration(blackDuckName string, blackDuckNamespace string, oldVersion string, newVersion string, helmValuesMap map[string]interface{}) error {
+	// If this instance is not using the PG container, do nothing and return
+	isExternal := util.GetHelmValueFromMap(helmValuesMap, []string{"postgres", "isExternal"})
+	if isExternal == nil {
+		return fmt.Errorf("postgres.isExternal must be specified")
+	}
+	if isExternal.(bool) {
+		return nil
+	}
+
+	// Check if oldVersion -> newVersion needs migration
+	if util.CompareVersions(oldVersion, "2022.2.0") >= 0 {
+		// if oldVersion >= 2022.2.0, it already has the latest PG version
+		return nil
+	}
+	if util.CompareVersions(newVersion, "2022.2.0") < 0 {
+		// if newVersion < 2022.2.0, there is no change to the PG version
+		return nil
+	}
+
+	// Black Duck must be stopped while the PG migration runs
+	err := stopBlackDuckInstance(blackDuckName, blackDuckNamespace, helmValuesMap)
+	if err != nil {
+		return fmt.Errorf("failed to stop Black Duck: %+v", err)
+	}
+
+	// Set the Helm values that the upgrade job expects
+	tmpValuesMap := make(map[string]interface{})
+	err = util.DeepCopyHelmValuesMap(helmValuesMap, tmpValuesMap) // don't update actual values so the Update Command won't try to run the migration
+	if err != nil {
+		return fmt.Errorf("failed to deep copy values for upgrading PostgreSQL: %+v", err)
+	}
+	util.SetHelmValueInMap(tmpValuesMap, []string{"status"}, "Stopped")
+	util.SetHelmValueInMap(tmpValuesMap, []string{"runPostgresMigration"}, true)
+
+	// Run the job
+	log.Infof("Running the PostgreSQL upgrader job...")
+	err = util.UpdateWithHelm3(blackDuckName, blackDuckNamespace, globals.BlackDuckChartRepository, tmpValuesMap, kubeConfigPath)
+	if err != nil {
+		return fmt.Errorf("failed to migrate PostgreSQL container: %+v", err)
+	}
+	err = waitForBlackDuckToStop(blackDuckName, blackDuckNamespace)
+	if err != nil {
+		return err
+	}
+	log.Infof("PostgreSQL upgrader job completed")
+
+	return nil
+}
+
+func stopBlackDuckInstance(blackDuckName string, blackDuckNamespace string, helmReleaseValues map[string]interface{}) error {
+	tmpValuesMap := make(map[string]interface{})
+	err := util.DeepCopyHelmValuesMap(helmReleaseValues, tmpValuesMap) // don't update actual values so the Update Command will restart the instance
+	if err != nil {
+		return fmt.Errorf("failed to deep copy values for stopping Black Duck: %+v", err)
+	}
+	util.SetHelmValueInMap(tmpValuesMap, []string{"status"}, "Stopped")
+	err = util.UpdateWithHelm3(blackDuckName, namespace, globals.BlackDuckChartRepository, tmpValuesMap, kubeConfigPath)
+	if err != nil {
+		return fmt.Errorf("failed to create Blackduck resources: %+v", err)
+	}
+
+	log.Infof("waiting for Black Duck to stop...")
+	err = waitForBlackDuckToStop(blackDuckName, blackDuckNamespace)
+	if err != nil {
+		return err
+	}
+	log.Infof("Black Duck is stopped")
+
+	return nil
+}
+
+func waitForBlackDuckToStop(blackDuckName string, blackDuckNamespace string) error {
+	waitCount := 0
+	for {
+		// ... wait for the Black Duck to stop
+		pods, err := util.ListPodsWithLabels(kubeClient, blackDuckNamespace, fmt.Sprintf("app=blackduck,name=%s", blackDuckName))
+		if err != nil {
+			return errors.Wrap(err, "failed to list pods to stop Black Duck for setting group ownership")
+		}
+		// Break if there are no pods or if all jobs are Succeeded
+		if len(pods.Items) == 0 {
+			log.Debugf("Black Duck is stopped - no remaining pods in namespace %+v", blackDuckNamespace)
+			break
+		} else {
+			foundAllSucceeded := true
+			for _, po := range pods.Items {
+				if po.Status.Phase != corev1.PodSucceeded {
+					foundAllSucceeded = false
+				}
+			}
+			if foundAllSucceeded {
+				log.Debugf("Black Duck is stopped - no remaining pods and all jobs are completed in namespace %+v", blackDuckNamespace)
+				break
+			}
+		}
+		time.Sleep(time.Second * 5)
+		waitCount = waitCount + 1
+		if waitCount%5 == 0 {
+			log.Debugf("waiting for Black Duck to stop - %d pods remaining", len(pods.Items))
+		}
+	}
+	return nil
+}
+
 func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion string, helmReleaseValues map[string]interface{}, flags *pflag.FlagSet) error {
 	newVersion := util.GetHelmValueFromMap(helmReleaseValues, []string{"imageTag"}).(string)
 	currState := util.GetHelmValueFromMap(helmReleaseValues, []string{"status"}).(string)
@@ -509,54 +620,14 @@ func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion
 		// Stop the BlackDuck instance
 		if strings.ToUpper(currState) != "STOPPED" {
 			log.Infof("stopping Black Duck to apply Security Context changes")
-			tmpValuesMap := make(map[string]interface{})
-			err = util.DeepCopyHelmValuesMap(helmReleaseValues, tmpValuesMap) // don't update actual values so the Update Command will restart the instance
-			if err != nil {
-				return fmt.Errorf("failed to deep copy values for stopping Black Duck: %+v", err)
-			}
-			util.SetHelmValueInMap(tmpValuesMap, []string{"status"}, "Stopped")
-			err = util.UpdateWithHelm3(blackDuckName, namespace, globals.BlackDuckChartRepository, tmpValuesMap, kubeConfigPath)
-			if err != nil {
-				return fmt.Errorf("failed to create Blackduck resources: %+v", err)
-			}
-			// Wait for Black Duck to Stop
-			log.Infof("waiting for Black Duck to stop...")
-			waitCount := 0
-			for {
-				// ... wait for the Black Duck to stop
-				pods, err := util.ListPodsWithLabels(kubeClient, blackDuckNamespace, fmt.Sprintf("app=blackduck,name=%s", blackDuckName))
-				if err != nil {
-					return errors.Wrap(err, "failed to list pods to stop Black Duck for setting group ownership")
-				}
-				// Break if there are no pods or if all jobs are Succeeded
-				if len(pods.Items) == 0 {
-					log.Debugf("Black Duck is stopped - no remaining pods in namespace %+v", blackDuckNamespace)
-					break
-				} else {
-					foundAllSucceeded := true
-					for _, po := range pods.Items {
-						if po.Status.Phase != corev1.PodSucceeded {
-							foundAllSucceeded = false
-						}
-					}
-					if foundAllSucceeded {
-						log.Debugf("Black Duck is stopped - no remaining pods and all jobs are completed in namespace %+v", blackDuckNamespace)
-						break
-					}
-				}
-				time.Sleep(time.Second * 5)
-				waitCount = waitCount + 1
-				if waitCount%5 == 0 {
-					log.Debugf("waiting for Black Duck to stop - %d pods remaining", len(pods.Items))
-				}
-			}
+			stopBlackDuckInstance(blackDuckName, blackDuckNamespace, helmReleaseValues)
 		}
 		// TODO delete job and its pod
 
 		// Get a list of Persistent Volumes based on Persistent Volume Claims
 		pvcList, err := util.ListPVCs(kubeClient, blackDuckNamespace, fmt.Sprintf("app=blackduck,component=pvc,name=%s", blackDuckName))
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to list PVCs to update the group ownership"))
+			return errors.Wrap(err, "failed to list PVCs to update the group ownership")
 		}
 
 		// Map the Persistent Volume to the respective Security Context File Ownership value

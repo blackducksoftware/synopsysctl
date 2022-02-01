@@ -485,6 +485,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 				securityContextIDNameToHelmPath := map[string][]string{
 					"blackduck-postgres":          {"postgres", "podSecurityContext"},
 					"blackduck-postgres-upgrader": {"postgresUpgrader", "podSecurityContext"},
+					"blackduck-postgres-waiter":   {"postgresWaiter", "securityContext"},
 					"blackduck-init":              {"init", "securityContext"},
 					"blackduck-authentication":    {"authentication", "podSecurityContext"},
 					"blackduck-binnaryscanner":    {"binaryscanner", "podSecurityContext"},

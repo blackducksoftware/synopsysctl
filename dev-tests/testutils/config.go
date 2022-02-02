@@ -46,8 +46,7 @@ type TestConfigStruct struct {
 	AbsolutePathToTestSuite string `json:"absolutePathToTestSuite"`
 
 	// Synopsysctl
-	SynopsysctlPath         string `json:"synopsysctlPath"`
-	SynopsysctlOperatorPath string `json:"synopsyctlOperatorPath"`
+	SynopsysctlPath string `json:"synopsysctlPath"`
 
 	// App Configs
 	Alert     AlertTestConfig     `json:"alert"`

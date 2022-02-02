@@ -27,8 +27,6 @@ import (
 	"strings"
 
 	"sigs.k8s.io/yaml"
-
-	"github.com/blackducksoftware/synopsysctl/pkg/api"
 )
 
 // PrintFormat represents the format to print the struct
@@ -39,12 +37,6 @@ const (
 	JSON PrintFormat = "JSON"
 	YAML PrintFormat = "YAML"
 )
-
-// PrintComponentListKube does
-func PrintComponentListKube(cList *api.ComponentList, format string) error {
-	kubeInterfaces := cList.GetKubeInterfaces()
-	return PrintComponents(kubeInterfaces, format)
-}
 
 // PrintComponents outputs components for a CRD in the correct format for 'kubectl create -f <file>'
 func PrintComponents(objs []interface{}, format string) error {

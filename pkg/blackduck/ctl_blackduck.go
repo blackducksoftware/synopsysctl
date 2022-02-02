@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"strings"
 
-	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/api"
 	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
@@ -417,7 +417,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 					foundErrors = true
 					return
 				}
-				pvcs := []blackduckv1.PVC{}
+				pvcs := []api.PVC{}
 				err = json.Unmarshal([]byte(data), &pvcs)
 				if err != nil {
 					log.Errorf("failed to unmarshal pvc structs: %+v", err)
@@ -458,7 +458,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 					foundErrors = true
 					return
 				}
-				nodeAffinities := map[string][]blackduckv1.NodeAffinity{}
+				nodeAffinities := map[string][]api.NodeAffinity{}
 				err = json.Unmarshal([]byte(data), &nodeAffinities)
 				if err != nil {
 					log.Errorf("failed to unmarshal node affinities: %+v", err)

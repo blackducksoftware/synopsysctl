@@ -30,16 +30,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	alertclientset "github.com/blackducksoftware/synopsysctl/pkg/alert/client/clientset/versioned"
-	blackduckclientset "github.com/blackducksoftware/synopsysctl/pkg/blackduck/client/clientset/versioned"
+	"github.com/blackducksoftware/synopsysctl/pkg/api"
 	"github.com/blackducksoftware/synopsysctl/pkg/globals"
-	opssightclientset "github.com/blackducksoftware/synopsysctl/pkg/opssight/client/clientset/versioned"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -49,10 +46,6 @@ import (
 
 var restconfig *rest.Config
 var kubeClient *kubernetes.Clientset
-var apiExtensionClient *apiextensionsclient.Clientset
-var alertClient *alertclientset.Clientset
-var blackDuckClient *blackduckclientset.Clientset
-var opsSightClient *opssightclientset.Clientset
 
 // setSynopsysctlLogLevel sets the binary's log level to the value stored in logLevelCtl
 func setSynopsysctlLogLevel() error {
@@ -131,29 +124,6 @@ func setGlobalKubeClient() error {
 	kubeClient, err = getKubeClient(restconfig)
 	if err != nil {
 		return err
-	}
-	return nil
-}
-
-// setGlobalResourceClients sets the global variables for the Kuberentes rest config
-// and the resource clients
-func setGlobalResourceClients() error {
-	var err error
-	apiExtensionClient, err = apiextensionsclient.NewForConfig(restconfig)
-	if err != nil {
-		return err
-	}
-	alertClient, err = alertclientset.NewForConfig(restconfig)
-	if err != nil {
-		log.Errorf("error creating Alert Clientset: %s", err)
-	}
-	blackDuckClient, err = blackduckclientset.NewForConfig(restconfig)
-	if err != nil {
-		log.Errorf("error creating Black Duck Clientset: %s", err)
-	}
-	opsSightClient, err = opssightclientset.NewForConfig(restconfig)
-	if err != nil {
-		log.Errorf("error creating OpsSight Clientset: %s", err)
 	}
 	return nil
 }
@@ -343,43 +313,6 @@ func KubectlDeleteRuntimeObjects(objects map[string]runtime.Object) error {
 	return nil
 }
 
-// getInstanceInfo provides the app and crd namespaces as well as the crd scope of the request custom resource instance
-func getInstanceInfo(crdName string, appName string, namespace string, name string) (string, string, apiextensions.ResourceScope, error) {
-	crdScope := apiextensions.ClusterScoped
-	crd, err := util.GetCustomResourceDefinition(apiExtensionClient, crdName)
-	if err != nil {
-		return "", "", "", fmt.Errorf("unable to get Custom Resource Definition '%s' in your cluster due to %+v", crdName, err)
-	}
-	crdScope = crd.Spec.Scope
-
-	// if the CRD scope is namespaced scope, then the user need to provide the namespace
-	if crdScope != apiextensions.ClusterScoped && len(namespace) == 0 {
-		return "", "", crdScope, fmt.Errorf("namespace needs to be provided. please use the 'namespace' option to set it")
-	}
-
-	crdNamespace := namespace
-	if crdScope == apiextensions.ClusterScoped {
-		crdNamespace = ""
-		if len(namespace) == 0 {
-			namespace = name
-			// update scenario to find out the namespace in case of cluster scope
-			if len(appName) > 0 {
-				ns, err := util.ListNamespaces(kubeClient, fmt.Sprintf("synopsys.com/%s.%s", appName, name))
-				if err != nil {
-					return "", "", crdScope, fmt.Errorf("unable to list the '%s' instance '%s' in namespace '%s' due to %+v", appName, name, namespace, err)
-				}
-				if len(ns.Items) > 0 {
-					namespace = ns.Items[0].Name
-				} else {
-					return "", "", crdScope, fmt.Errorf("unable to find the namespace of the '%s' instance '%s'", appName, name)
-				}
-			}
-		}
-	}
-
-	return namespace, crdNamespace, crdScope, nil
-}
-
 // UpdateHelmChartLocation uses --app-resources-path and chartVersion to update the value at *chartVariable. This value is originally set
 // when synopsysctl starts (see file pkg/globals/helmglobalvalues.go)
 func UpdateHelmChartLocation(flags *pflag.FlagSet, chartName, appVersion string, chartVariable *string) error {
@@ -403,4 +336,19 @@ func cleanAlertHelmError(errString, releaseName, alertName string) string {
 	instanceName := fmt.Sprintf("instance '%s'", alertName)
 	cleanErrorMsg := strings.Replace(errString, helmName, instanceName, 1)
 	return cleanErrorMsg
+}
+
+// NewPVCVolume creates a new Persistent Volume Claim volume object
+func NewPVCVolume(config api.PVCVolumeConfig) *api.Volume {
+	v := corev1.Volume{
+		Name: config.VolumeName,
+		VolumeSource: corev1.VolumeSource{
+			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+				ClaimName: config.PVCName,
+				ReadOnly:  config.ReadOnly,
+			},
+		},
+	}
+
+	return &api.Volume{&v}
 }

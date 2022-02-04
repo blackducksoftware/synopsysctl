@@ -27,17 +27,3 @@ type SecurityContext struct {
 	RunAsUser  *int64 `json:"runAsUser"`
 	RunAsGroup *int64 `json:"runAsGroup"`
 }
-
-// SetSecurityContextInPodConfig sets the Security Context fields in the PodConfig
-func SetSecurityContextInPodConfig(podConfig *PodConfig, securityContext *SecurityContext, isOpenshift bool) {
-	if securityContext != nil {
-		podConfig.RunAsUser = securityContext.RunAsUser
-		podConfig.RunAsGroup = securityContext.RunAsGroup
-		podConfig.FSGID = securityContext.FsGroup
-	} else {
-		// if not openshift and the user doesn't specify a securityContext, then FSGID still needs to be set to 0
-		if !isOpenshift {
-			podConfig.FSGID = IntToInt64(0)
-		}
-	}
-}

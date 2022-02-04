@@ -67,14 +67,6 @@ func SetBlackDuckRegistry(flagArgs []string) []string {
 	return flagArgs
 }
 
-// SynopsysctlOperator ...
-func SynopsysctlOperator(cmdString string, args ...interface{}) (string, error) {
-	fullCmdString := fmt.Sprintf(cmdString, args...)
-	cmdValues := strings.Fields(fullCmdString)
-	cmdValues = append([]string{TestConfig.SynopsysctlOperatorPath}, cmdValues...)
-	return ExecCmd(cmdValues...)
-}
-
 // Synospysctl ...
 func Synospysctl(cmdString string, args ...interface{}) (string, error) {
 	fullCmdString := fmt.Sprintf(cmdString, args...)

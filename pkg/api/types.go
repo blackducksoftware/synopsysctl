@@ -22,8 +22,8 @@ under the License.
 package api
 
 import (
-	"github.com/blackducksoftware/horizon/pkg/components"
 	routev1 "github.com/openshift/api/route/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Route defines the route component
@@ -37,54 +37,22 @@ type Route struct {
 	TLSTerminationType routev1.TLSTerminationType
 }
 
-// ComponentList defines the list of components for an app
-type ComponentList struct {
-	ReplicationControllers    []*components.ReplicationController
-	Services                  []*components.Service
-	ConfigMaps                []*components.ConfigMap
-	ServiceAccounts           []*components.ServiceAccount
-	ClusterRoleBindings       []*components.ClusterRoleBinding
-	ClusterRoles              []*components.ClusterRole
-	RoleBindings              []*components.RoleBinding
-	Roles                     []*components.Role
-	Deployments               []*components.Deployment
-	Secrets                   []*components.Secret
-	PersistentVolumeClaims    []*components.PersistentVolumeClaim
-	Routes                    []*Route
-	CustomResourceDefinitions []*components.CustomResourceDefinition
+// PVC will contain the specifications of a Persistent Volume Claim
+type PVC struct {
+	Name         string `json:"name"`
+	PVCName      string `json:"pvcName,omitempty"`
+	Size         string `json:"size,omitempty"`
+	StorageClass string `json:"storageClass,omitempty"`
+	VolumeName   string `json:"volumeName,omitempty"`
 }
 
-// GetKubeInterfaces returns a list of kube components as interfaces
-func (clist *ComponentList) GetKubeInterfaces() []interface{} {
-	components := []interface{}{}
-	for _, rc := range clist.ReplicationControllers {
-		components = append(components, rc.ReplicationController)
-	}
-	for _, svc := range clist.Services {
-		components = append(components, svc.Service)
-	}
-	for _, cm := range clist.ConfigMaps {
-		components = append(components, cm.ConfigMap)
-	}
-	for _, sa := range clist.ServiceAccounts {
-		components = append(components, sa.ServiceAccount)
-	}
-	for _, crb := range clist.ClusterRoleBindings {
-		components = append(components, crb.ClusterRoleBinding)
-	}
-	for _, cr := range clist.ClusterRoles {
-		components = append(components, cr.ClusterRole)
-	}
-	for _, d := range clist.Deployments {
-		components = append(components, d.Deployment)
-	}
-	for _, sec := range clist.Secrets {
-		components = append(components, sec.Secret)
-	}
-	for _, pvc := range clist.PersistentVolumeClaims {
-		components = append(components, pvc.PersistentVolumeClaim)
-	}
-	return components
+// NodeAffinity will contain the specifications of a node affinity
+// TODO: currently, keeping it simple, but can be modified in the future to take in complex scenarios
+type NodeAffinity struct {
+	AffinityType string   `json:"affinityType"`
+	Key          string   `json:"key"`
+	Op           string   `json:"op"`
+	Values       []string `json:"values"`
 }
 
 // RegistryConfiguration contains the registry configuration
@@ -133,4 +101,34 @@ type Resources struct {
 type Resource struct {
 	CPU    *string `json:"cpu,omitempty"`
 	Memory *string `json:"memory,omitempty"`
+}
+
+// Host configures the Black Duck hosts
+type Host struct {
+	Scheme              string `json:"scheme"`
+	Domain              string `json:"domain"` // it can be domain name or ip address
+	Port                int    `json:"port"`
+	User                string `json:"user"`
+	Password            string `json:"password"`
+	ConcurrentScanLimit int    `json:"concurrentScanLimit"`
+}
+
+// RegistryAuth will store the Secured Registries
+type RegistryAuth struct {
+	URL      string `json:"url"`
+	User     string `json:"user"`
+	Password string `json:"password"`
+	Token    string `json:"token"`
+}
+
+// PVCVolumeConfig will store the PVC Volume configuration
+type PVCVolumeConfig struct {
+	VolumeName string
+	PVCName    string
+	ReadOnly   bool
+}
+
+// Volume defines the volume component
+type Volume struct {
+	*corev1.Volume
 }

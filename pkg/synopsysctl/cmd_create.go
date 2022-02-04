@@ -22,6 +22,7 @@ under the License.
 package synopsysctl
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -33,10 +34,10 @@ import (
 	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/opssight"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Create Command CRSpecBuilderFromCobraFlagsInterface
@@ -149,7 +150,7 @@ var createAlertCmd = &cobra.Command{
 			customCertificateSecretName := "alert-custom-certificate"
 			customCertificateSecret := alert.GetAlertCustomCertificateSecret(namespace, customCertificateSecretName, certificateData, certificateKeyData)
 			util.SetHelmValueInMap(helmValuesMap, []string{"webserverCustomCertificatesSecretName"}, customCertificateSecretName)
-			if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&customCertificateSecret); err != nil && !k8serrors.IsAlreadyExists(err) {
+			if _, err := kubeClient.CoreV1().Secrets(namespace).Create(context.TODO(), &customCertificateSecret, metav1.CreateOptions{}); err != nil && !k8serrors.IsAlreadyExists(err) {
 				return fmt.Errorf("failed to create certifacte secret: %+v", err)
 			}
 		}
@@ -163,7 +164,7 @@ var createAlertCmd = &cobra.Command{
 			javaKeystoreSecretName := "alert-java-keystore"
 			javaKeystoreSecret := alert.GetAlertJavaKeystoreSecret(namespace, javaKeystoreSecretName, javaKeystoreData)
 			util.SetHelmValueInMap(helmValuesMap, []string{"javaKeystoreSecretName"}, javaKeystoreSecretName)
-			if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&javaKeystoreSecret); err != nil && !k8serrors.IsAlreadyExists(err) {
+			if _, err := kubeClient.CoreV1().Secrets(namespace).Create(context.TODO(), &javaKeystoreSecret, metav1.CreateOptions{}); err != nil && !k8serrors.IsAlreadyExists(err) {
 				return fmt.Errorf("failed to create javakeystore secret: %+v", err)
 			}
 		}
@@ -382,7 +383,7 @@ var createBlackDuckCmd = &cobra.Command{
 			return err
 		}
 		for _, v := range secrets {
-			if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&v); err != nil && !k8serrors.IsAlreadyExists(err) {
+			if _, err := kubeClient.CoreV1().Secrets(namespace).Create(context.TODO(), &v, metav1.CreateOptions{}); err != nil && !k8serrors.IsAlreadyExists(err) {
 				return fmt.Errorf("failed to create certifacte secret: %+v", err)
 			}
 		}

@@ -26,14 +26,13 @@ import (
 	"strings"
 
 	"github.com/blackducksoftware/synopsysctl/pkg/api"
-	v1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // OperatorAffinityToHelm ...
-func OperatorAffinityToHelm(opAffinity []v1.NodeAffinity) map[string]interface{} {
+func OperatorAffinityToHelm(opAffinity []api.NodeAffinity) map[string]interface{} {
 	hardTerms := make([]map[string]interface{}, 0)
 	softTerms := make([]map[string]interface{}, 0)
 	for _, aValue := range opAffinity {

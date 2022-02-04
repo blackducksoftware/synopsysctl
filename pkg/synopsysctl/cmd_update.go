@@ -22,6 +22,7 @@ under the License.
 package synopsysctl
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -32,14 +33,12 @@ import (
 	"sync"
 	"time"
 
-	horizonapi "github.com/blackducksoftware/horizon/pkg/api"
-	"github.com/blackducksoftware/horizon/pkg/components"
 	"github.com/blackducksoftware/synopsysctl/pkg/alert"
-	alertctl "github.com/blackducksoftware/synopsysctl/pkg/alert"
+	"github.com/blackducksoftware/synopsysctl/pkg/api"
 	"github.com/blackducksoftware/synopsysctl/pkg/bdba"
-	blackduck "github.com/blackducksoftware/synopsysctl/pkg/blackduck"
+	"github.com/blackducksoftware/synopsysctl/pkg/blackduck"
 	"github.com/blackducksoftware/synopsysctl/pkg/globals"
-	opssight "github.com/blackducksoftware/synopsysctl/pkg/opssight"
+	"github.com/blackducksoftware/synopsysctl/pkg/opssight"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -90,11 +89,9 @@ var updateAlertCmd = &cobra.Command{
 		alertName := args[0]
 		helmReleaseName := fmt.Sprintf("%s%s", alertName, globals.AlertPostSuffix)
 
-		// TODO verity we can download the chart
-		isOperatorBased := false
 		instance, err := util.GetWithHelm3(helmReleaseName, namespace, kubeConfigPath)
 		if err != nil {
-			isOperatorBased = true
+			return fmt.Errorf("unable to retrieve the existing Alert instance due to %+v", err)
 		}
 
 		if cmd.Flag("version").Changed {
@@ -107,32 +104,17 @@ var updateAlertCmd = &cobra.Command{
 			}
 		}
 
-		if !isOperatorBased && instance != nil {
-			// Update the Helm Chart Location
-			globals.AlertVersion = util.GetValueFromRelease(instance, []string{"alert", "imageTag"}).(string)
-			if cmd.Flags().Lookup("version").Changed {
-				globals.AlertVersion = cmd.Flags().Lookup("version").Value.String()
-			}
-			err = UpdateHelmChartLocation(cmd.Flags(), globals.AlertChartName, globals.AlertVersion, &globals.AlertChartRepository)
-			if err != nil {
-				return fmt.Errorf("failed to set the app resources location due to %+v", err)
-			}
-			err = updateAlertHelmBased(cmd, helmReleaseName, alertName)
-		} else if isOperatorBased {
-			versionFlag := cmd.Flag("version")
-			if !versionFlag.Changed {
-				return fmt.Errorf("you must upgrade this Alert version with --version to use this synopsysctl binary")
-			}
-			// // TODO: Make sure 6.0.0 is the correct Chart Version for Alert
-			// isGreaterThanOrEqualTo, err := util.IsNotDefaultVersionGreaterThanOrEqualTo(versionFlag.Value.String(), 6, 0, 0)
-			// if err != nil {
-			// 	return fmt.Errorf("failed to compare version: %+v", err)
-			// }
-			// if !isGreaterThanOrEqualTo {
-			// 	return fmt.Errorf("you must upgrade this Alert to version 6.0.0 or after in order to use this synopsysctl binary - you gave version %+v", versionFlag.Value.String())
-			// }
-			err = updateAlertOperatorBased(cmd, helmReleaseName, alertName)
+		// Update the Helm Chart Location
+		globals.AlertVersion = util.GetValueFromRelease(instance, []string{"alert", "imageTag"}).(string)
+		if cmd.Flags().Lookup("version").Changed {
+			globals.AlertVersion = cmd.Flags().Lookup("version").Value.String()
 		}
+		err = UpdateHelmChartLocation(cmd.Flags(), globals.AlertChartName, globals.AlertVersion, &globals.AlertChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
+		err = updateAlertHelmBased(cmd, helmReleaseName, alertName)
+
 		if err != nil {
 			return err
 		}
@@ -208,9 +190,9 @@ func updateAlertHelmBased(cmd *cobra.Command, helmReleaseName string, alertName 
 		customCertificateSecretName := "alert-custom-certificate"
 		customCertificateSecret := alert.GetAlertCustomCertificateSecret(namespace, customCertificateSecretName, certificateData, certificateKeyData)
 		util.SetHelmValueInMap(helmValuesMap, []string{"webserverCustomCertificatesSecretName"}, customCertificateSecretName)
-		if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&customCertificateSecret); err != nil {
+		if _, err := kubeClient.CoreV1().Secrets(namespace).Create(context.TODO(), &customCertificateSecret, metav1.CreateOptions{}); err != nil {
 			if k8serrors.IsAlreadyExists(err) {
-				if _, err := kubeClient.CoreV1().Secrets(namespace).Update(&customCertificateSecret); err != nil {
+				if _, err := kubeClient.CoreV1().Secrets(namespace).Update(context.TODO(), &customCertificateSecret, metav1.UpdateOptions{}); err != nil {
 					return fmt.Errorf("failed to update certificate secret: %+v", err)
 				}
 			} else {
@@ -227,9 +209,9 @@ func updateAlertHelmBased(cmd *cobra.Command, helmReleaseName string, alertName 
 		javaKeystoreSecretName := "alert-java-keystore"
 		javaKeystoreSecret := alert.GetAlertJavaKeystoreSecret(namespace, javaKeystoreSecretName, javaKeystoreData)
 		util.SetHelmValueInMap(helmValuesMap, []string{"javaKeystoreSecretName"}, javaKeystoreSecretName)
-		if _, err := kubeClient.CoreV1().Secrets(namespace).Create(&javaKeystoreSecret); err != nil {
+		if _, err := kubeClient.CoreV1().Secrets(namespace).Create(context.TODO(), &javaKeystoreSecret, metav1.CreateOptions{}); err != nil {
 			if k8serrors.IsAlreadyExists(err) {
-				if _, err := kubeClient.CoreV1().Secrets(namespace).Update(&javaKeystoreSecret); err != nil {
+				if _, err := kubeClient.CoreV1().Secrets(namespace).Update(context.TODO(), &javaKeystoreSecret, metav1.UpdateOptions{}); err != nil {
 					return fmt.Errorf("failed to update javakeystore secret: %+v", err)
 				}
 			} else {
@@ -253,37 +235,6 @@ func updateAlertHelmBased(cmd *cobra.Command, helmReleaseName string, alertName 
 	return nil
 }
 
-func updateAlertOperatorBased(cmd *cobra.Command, newReleaseName string, alertName string) error {
-	operatorNamespace := namespace
-	isClusterScoped := util.GetClusterScope(apiExtensionClient)
-	if isClusterScoped {
-		opNamespace, err := util.GetOperatorNamespace(kubeClient, metav1.NamespaceAll)
-		if err != nil {
-			return err
-		}
-		if len(opNamespace) > 1 {
-			return fmt.Errorf("more than 1 Synopsys Operator found in your cluster")
-		}
-		operatorNamespace = opNamespace[0]
-	}
-
-	crdNamespace := namespace
-	if isClusterScoped {
-		crdNamespace = metav1.NamespaceAll
-	}
-
-	currAlert, err := util.GetAlert(alertClient, crdNamespace, alertName, metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("error getting Alert '%s' in namespace '%s' due to %+v", alertName, crdNamespace, err)
-	}
-
-	if err := migrateAlert(currAlert, newReleaseName, operatorNamespace, crdNamespace, cmd.Flags()); err != nil {
-		// TODO restart operator if migration failed?
-		return err
-	}
-	return nil
-}
-
 // updateBlackDuckCmd updates a Black Duck instance
 var updateBlackDuckCmd = &cobra.Command{
 	Use:           "blackduck NAME -n NAMESPACE",
@@ -301,179 +252,136 @@ var updateBlackDuckCmd = &cobra.Command{
 		blackDuckName := args[0]
 		blackDuckNamespace := namespace
 
-		isOperatorBased := false
 		instance, err := util.GetWithHelm3(args[0], blackDuckNamespace, kubeConfigPath)
 		if err != nil {
-			isOperatorBased = true
+			return fmt.Errorf("unable to retrieve the existing Black Duck instance due to %+v", err)
 		}
 
-		if !isOperatorBased && instance != nil {
-			// Update the Helm Chart Location
-			globals.BlackDuckVersion = util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
-			if cmd.Flags().Lookup("version").Changed {
-				globals.BlackDuckVersion = cmd.Flags().Lookup("version").Value.String()
+		// Update the Helm Chart Location
+		globals.BlackDuckVersion = util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
+		if cmd.Flags().Lookup("version").Changed {
+			globals.BlackDuckVersion = cmd.Flags().Lookup("version").Value.String()
 
-				ok, err := util.IsVersionGreaterThanOrEqualTo(globals.BlackDuckVersion, 2020, time.April, 0)
-				if err != nil {
-					return err
-				}
-
-				if !ok {
-					return fmt.Errorf("upgrade of Black Duck instance is only suported for version 2020.4.0 and above")
-				}
-			}
-			err = UpdateHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, globals.BlackDuckVersion, &globals.BlackDuckChartRepository)
-			if err != nil {
-				return fmt.Errorf("failed to set the app resources location due to %+v", err)
-			}
-
-			oldVersion := util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
-			log.Debugf("old version: %+v", oldVersion)
-
-			var sizeYAMLFileNameInChart string
-			if cmd.Flag("size").Changed {
-				sizeYAMLFileNameInChart = fmt.Sprintf("%s.yaml", cmd.Flag("size").Value.String())
-			} else {
-				if size, found := instance.Config["size"]; found && len(size.(string)) > 0 {
-					sizeYAMLFileNameInChart = fmt.Sprintf("%s.yaml", size.(string))
-				}
-			}
-
-			sizeYAMLFileNameInChart = strings.ToLower(sizeYAMLFileNameInChart)
-
-			if len(sizeYAMLFileNameInChart) > 0 {
-				sizeValuesFromChart, err := util.ConvertFilesFromChartToMap(blackDuckNamespace, kubeConfigPath, globals.BlackDuckChartRepository, sizeYAMLFileNameInChart)
-				if err != nil {
-					return err
-				}
-				instance.Config = util.MergeMaps(instance.Config, sizeValuesFromChart)
-			}
-
-			updateBlackDuckCobraHelper.SetArgs(instance.Config)
-			helmValuesMap, err := updateBlackDuckCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
-			if err != nil {
-				return err
-			}
-
-			secrets, err := blackduck.GetCertsFromFlagsAndSetHelmValue(args[0], blackDuckNamespace, cmd.Flags(), helmValuesMap)
-			if err != nil {
-				return err
-			}
-
-			// Create or update the secret based on the certificate/password file path is set
-			isSecretUpdated := false
-			for _, v := range secrets {
-				if secret, err := util.GetSecret(kubeClient, blackDuckNamespace, v.Name); err == nil {
-					secret.Data = v.Data
-					secret.StringData = v.StringData
-					if _, err := util.UpdateSecret(kubeClient, blackDuckNamespace, secret); err != nil {
-						return fmt.Errorf("failed to update the %s secret due to %+v", v.Name, err)
-					}
-					log.Debugf("updated secret %s in namespace %s", secret.Name, blackDuckNamespace)
-				} else {
-					if _, err := kubeClient.CoreV1().Secrets(blackDuckNamespace).Create(&v); err != nil {
-						return fmt.Errorf("failed to create the %s secret due to %+v", v.Name, err)
-					}
-				}
-				isSecretUpdated = true
-			}
-
-			// Whenever the secrets are created/updated, delete the corresponding pods to input the created/updated secrets
-			if isSecretUpdated {
-				labelSelectors := []string{
-					fmt.Sprintf("name=%s,component=authentication", blackDuckName),
-					fmt.Sprintf("name=%s,component=bomengine", blackDuckName),
-					fmt.Sprintf("name=%s,component=matchengine", blackDuckName),
-					fmt.Sprintf("name=%s,component=jobrunner", blackDuckName),
-					fmt.Sprintf("name=%s,component=registration", blackDuckName),
-					fmt.Sprintf("name=%s,component=scan", blackDuckName),
-					fmt.Sprintf("name=%s,component=webapp-logstash", blackDuckName),
-					fmt.Sprintf("name=%s,component=webserver", blackDuckName),
-				}
-
-				for _, labelSelector := range labelSelectors {
-					podList, err := util.ListPodsWithLabels(kubeClient, blackDuckNamespace, labelSelector)
-					if err != nil {
-						log.Warnf("unable to list pods using %s label selector due to %+v", labelSelector, err)
-						continue
-					}
-					for _, pod := range podList.Items {
-						err = util.DeletePod(kubeClient, blackDuckNamespace, pod.Name)
-						if err != nil {
-							return fmt.Errorf("unable to delete %s pod due to %+v", pod.Name, err)
-						}
-					}
-				}
-			}
-
-			// Update Security Context Permissions
-			newVals := util.MergeMaps(instance.Chart.Values, helmValuesMap)
-			err = runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion, newVals, cmd.Flags())
-			if err != nil {
-				return fmt.Errorf("failed to update File Ownerships in PVs: %+v", err)
-			}
-
-			// validations
-			err = createBlackDuckCobraHelper.VerifyChartVersionSupportsChangedFlags(cmd.Flags(), globals.BlackDuckVersion)
-			if err != nil {
-				return err
-			}
-
-			// Upgrade the containerized PostgreSQL version if necessary
-			err = runPostgresMigration(blackDuckName, blackDuckNamespace, oldVersion, globals.BlackDuckVersion, helmValuesMap)
-			if err != nil {
-				return err
-			}
-
-			// Deploy resources
-			if err := util.UpdateWithHelm3(blackDuckName, blackDuckNamespace, globals.BlackDuckChartRepository, helmValuesMap, kubeConfigPath); err != nil {
-				return fmt.Errorf("failed to update Black Duck due to %+v", err)
-			}
-
-			err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, blackDuckNamespace, args[0], helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], cmd.Flags().Lookup("expose-ui").Changed)
-			if err != nil {
-				return err
-			}
-
-		} else if isOperatorBased {
-			if !cmd.Flag("version").Changed {
-				return fmt.Errorf("you must upgrade this Blackduck version with --version 2020.4.0 and above to use this synopsysctl binary")
-			}
-			ok, err := util.IsVersionGreaterThanOrEqualTo(cmd.Flag("version").Value.String(), 2020, time.April, 0)
+			ok, err := util.IsVersionGreaterThanOrEqualTo(globals.BlackDuckVersion, 2020, time.April, 0)
 			if err != nil {
 				return err
 			}
 
 			if !ok {
-				return fmt.Errorf("migration is only suported for version 2020.4.0 and above")
+				return fmt.Errorf("upgrade of Black Duck instance is only suported for version 2020.4.0 and above")
 			}
+		}
+		err = UpdateHelmChartLocation(cmd.Flags(), globals.BlackDuckChartName, globals.BlackDuckVersion, &globals.BlackDuckChartRepository)
+		if err != nil {
+			return fmt.Errorf("failed to set the app resources location due to %+v", err)
+		}
 
-			operatorNamespace := namespace
-			isClusterScoped := util.GetClusterScope(apiExtensionClient)
-			if isClusterScoped {
-				opNamespace, err := util.GetOperatorNamespace(kubeClient, metav1.NamespaceAll)
-				if err != nil {
-					return err
-				}
-				if len(opNamespace) > 1 {
-					return fmt.Errorf("more than 1 Synopsys Operator found in your cluster")
-				}
-				operatorNamespace = opNamespace[0]
+		oldVersion := util.GetValueFromRelease(instance, []string{"imageTag"}).(string)
+		log.Debugf("old version: %+v", oldVersion)
+
+		var sizeYAMLFileNameInChart string
+		if cmd.Flag("size").Changed {
+			sizeYAMLFileNameInChart = fmt.Sprintf("%s.yaml", cmd.Flag("size").Value.String())
+		} else {
+			if size, found := instance.Config["size"]; found && len(size.(string)) > 0 {
+				sizeYAMLFileNameInChart = fmt.Sprintf("%s.yaml", size.(string))
 			}
+		}
 
-			blackDuckName := args[0]
-			crdNamespace := namespace
-			if isClusterScoped {
-				crdNamespace = metav1.NamespaceAll
-			}
+		sizeYAMLFileNameInChart = strings.ToLower(sizeYAMLFileNameInChart)
 
-			currBlackDuck, err := util.GetBlackduck(blackDuckClient, crdNamespace, blackDuckName, metav1.GetOptions{})
+		if len(sizeYAMLFileNameInChart) > 0 {
+			sizeValuesFromChart, err := util.ConvertFilesFromChartToMap(blackDuckNamespace, kubeConfigPath, globals.BlackDuckChartRepository, sizeYAMLFileNameInChart)
 			if err != nil {
-				return fmt.Errorf("error getting Black Duck '%s' in namespace '%s' due to %+v", blackDuckName, crdNamespace, err)
-			}
-			if err := migrate(currBlackDuck, operatorNamespace, crdNamespace, cmd.Flags()); err != nil {
 				return err
 			}
+			instance.Config = util.MergeMaps(instance.Config, sizeValuesFromChart)
+		}
+
+		updateBlackDuckCobraHelper.SetArgs(instance.Config)
+		helmValuesMap, err := updateBlackDuckCobraHelper.GenerateHelmFlagsFromCobraFlags(cmd.Flags())
+		if err != nil {
+			return err
+		}
+
+		secrets, err := blackduck.GetCertsFromFlagsAndSetHelmValue(args[0], blackDuckNamespace, cmd.Flags(), helmValuesMap)
+		if err != nil {
+			return err
+		}
+
+		// Create or update the secret based on the certificate/password file path is set
+		isSecretUpdated := false
+		for _, v := range secrets {
+			if secret, err := util.GetSecret(kubeClient, blackDuckNamespace, v.Name); err == nil {
+				secret.Data = v.Data
+				secret.StringData = v.StringData
+				if _, err := util.UpdateSecret(kubeClient, blackDuckNamespace, secret); err != nil {
+					return fmt.Errorf("failed to update the %s secret due to %+v", v.Name, err)
+				}
+				log.Debugf("updated secret %s in namespace %s", secret.Name, blackDuckNamespace)
+			} else {
+				if _, err := kubeClient.CoreV1().Secrets(blackDuckNamespace).Create(context.TODO(), &v, metav1.CreateOptions{}); err != nil {
+					return fmt.Errorf("failed to create the %s secret due to %+v", v.Name, err)
+				}
+			}
+			isSecretUpdated = true
+		}
+
+		// Whenever the secrets are created/updated, delete the corresponding pods to input the created/updated secrets
+		if isSecretUpdated {
+			labelSelectors := []string{
+				fmt.Sprintf("name=%s,component=authentication", blackDuckName),
+				fmt.Sprintf("name=%s,component=bomengine", blackDuckName),
+				fmt.Sprintf("name=%s,component=matchengine", blackDuckName),
+				fmt.Sprintf("name=%s,component=jobrunner", blackDuckName),
+				fmt.Sprintf("name=%s,component=registration", blackDuckName),
+				fmt.Sprintf("name=%s,component=scan", blackDuckName),
+				fmt.Sprintf("name=%s,component=webapp-logstash", blackDuckName),
+				fmt.Sprintf("name=%s,component=webserver", blackDuckName),
+			}
+
+			for _, labelSelector := range labelSelectors {
+				podList, err := util.ListPodsWithLabels(kubeClient, blackDuckNamespace, labelSelector)
+				if err != nil {
+					log.Warnf("unable to list pods using %s label selector due to %+v", labelSelector, err)
+					continue
+				}
+				for _, pod := range podList.Items {
+					err = util.DeletePod(kubeClient, blackDuckNamespace, pod.Name)
+					if err != nil {
+						return fmt.Errorf("unable to delete %s pod due to %+v", pod.Name, err)
+					}
+				}
+			}
+		}
+
+		// Update Security Context Permissions
+		newVals := util.MergeMaps(instance.Chart.Values, helmValuesMap)
+		err = runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion, newVals, cmd.Flags())
+		if err != nil {
+			return fmt.Errorf("failed to update File Ownerships in PVs: %+v", err)
+		}
+
+		// validations
+		err = createBlackDuckCobraHelper.VerifyChartVersionSupportsChangedFlags(cmd.Flags(), globals.BlackDuckVersion)
+		if err != nil {
+			return err
+		}
+
+		// Upgrade the containerized PostgreSQL version if necessary
+		err = runPostgresMigration(blackDuckName, blackDuckNamespace, oldVersion, globals.BlackDuckVersion, helmValuesMap)
+		if err != nil {
+			return err
+		}
+
+		// Deploy resources
+		if err := util.UpdateWithHelm3(blackDuckName, blackDuckNamespace, globals.BlackDuckChartRepository, helmValuesMap, kubeConfigPath); err != nil {
+			return fmt.Errorf("failed to update Black Duck due to %+v", err)
+		}
+
+		err = blackduck.CRUDServiceOrRoute(restconfig, kubeClient, blackDuckNamespace, args[0], helmValuesMap["exposeui"], helmValuesMap["exposedServiceType"], cmd.Flags().Lookup("expose-ui").Changed)
+		if err != nil {
+			return err
 		}
 
 		log.Infof("Black Duck has been successfully Updated in namespace '%s'!", blackDuckNamespace)
@@ -695,7 +603,7 @@ func runBlackDuckFileOwnershipJobs(blackDuckName, blackDuckNamespace, oldVersion
 // setBlackDuckFileOwnershipJob that sets the Owner of the files
 func setBlackDuckFileOwnershipJob(namespace string, name string, pvcName string, ownership int64, wg *sync.WaitGroup) error {
 	busyBoxImage := globals.DefaultBusyBoxImage
-	volumeClaim := components.NewPVCVolume(horizonapi.PVCVolumeConfig{PVCName: pvcName})
+	volumeClaim := NewPVCVolume(api.PVCVolumeConfig{PVCName: pvcName})
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("set-file-ownership-%s", pvcName),
@@ -724,7 +632,7 @@ func setBlackDuckFileOwnershipJob(namespace string, name string, pvcName string,
 	}
 	defer wg.Done()
 
-	job, err := kubeClient.BatchV1().Jobs(namespace).Create(job)
+	job, err := kubeClient.BatchV1().Jobs(namespace).Create(context.TODO(), job, metav1.CreateOptions{})
 	if err != nil {
 		panic(fmt.Sprintf("failed to create job for setting group ownership due to %s", err))
 	}
@@ -740,7 +648,7 @@ func setBlackDuckFileOwnershipJob(namespace string, name string, pvcName string,
 			return fmt.Errorf("failed to set the group ownership of files for PV '%s' in namespace '%s'", pvcName, namespace)
 
 		case <-ticker.C:
-			job, err = kubeClient.BatchV1().Jobs(job.Namespace).Get(job.Name, metav1.GetOptions{})
+			job, err = kubeClient.BatchV1().Jobs(job.Namespace).Get(context.TODO(), job.Name, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
@@ -749,7 +657,7 @@ func setBlackDuckFileOwnershipJob(namespace string, name string, pvcName string,
 
 				// Delete the Job
 				deletePodsPolicy := metav1.DeletePropagationBackground
-				err = kubeClient.BatchV1().Jobs(job.Namespace).Delete(job.Name, &metav1.DeleteOptions{PropagationPolicy: &deletePodsPolicy})
+				err = kubeClient.BatchV1().Jobs(job.Namespace).Delete(context.TODO(), job.Name, metav1.DeleteOptions{PropagationPolicy: &deletePodsPolicy})
 				if err != nil {
 					log.Warnf("failed to delete Security Context Jobs '%s' due to %s", job.Name, err)
 				}
@@ -1354,7 +1262,7 @@ var updateBDBACmd = &cobra.Command{
 func init() {
 	// initialize global resource ctl structs for commands to use
 
-	updateAlertCobraHelper = *alertctl.NewHelmValuesFromCobraFlags()
+	updateAlertCobraHelper = *alert.NewHelmValuesFromCobraFlags()
 	updateOpsSightCobraHelper = *opssight.NewHelmValuesFromCobraFlags()
 	updateBlackDuckCobraHelper = *blackduck.NewHelmValuesFromCobraFlags()
 	updateBDBACobraHelper = *bdba.NewHelmValuesFromCobraFlags()

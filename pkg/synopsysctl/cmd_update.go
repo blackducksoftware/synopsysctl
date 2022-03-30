@@ -391,11 +391,8 @@ var updateBlackDuckCmd = &cobra.Command{
 
 func runPostgresMigration(blackDuckName string, blackDuckNamespace string, oldVersion string, newVersion string, helmValuesMap map[string]interface{}) error {
 	// If this instance is not using the PG container, do nothing and return
-	isExternal := util.GetHelmValueFromMap(helmValuesMap, []string{"postgres", "isExternal"})
-	if isExternal == nil {
-		return fmt.Errorf("postgres.isExternal must be specified")
-	}
-	if isExternal.(bool) {
+	isExternal := util.GetHelmValueFromMap(helmValuesMap, []string{"postgres", "host"}) != nil
+	if isExternal {
 		return nil
 	}
 

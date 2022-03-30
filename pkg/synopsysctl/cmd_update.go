@@ -369,7 +369,7 @@ var updateBlackDuckCmd = &cobra.Command{
 		}
 
 		// Upgrade the containerized PostgreSQL version if necessary
-		err = runPostgresMigration(blackDuckName, blackDuckNamespace, oldVersion, globals.BlackDuckVersion, helmValuesMap)
+		err = runPostgresMigration(blackDuckName, blackDuckNamespace, oldVersion, globals.BlackDuckVersion, helmValuesMap, instance)
 		if err != nil {
 			return err
 		}
@@ -389,9 +389,9 @@ var updateBlackDuckCmd = &cobra.Command{
 	},
 }
 
-func runPostgresMigration(blackDuckName string, blackDuckNamespace string, oldVersion string, newVersion string, helmValuesMap map[string]interface{}) error {
+func runPostgresMigration(blackDuckName string, blackDuckNamespace string, oldVersion string, newVersion string, helmValuesMap map[string]interface{}, release *release.Release) error {
 	// If this instance is not using the PG container, do nothing and return
-	isExternal := util.GetHelmValueFromMap(helmValuesMap, []string{"postgres", "isExternal"})
+	isExternal := util.GetValueFromRelease(release, []string{"postgres", "isExternal"})
 	if isExternal == nil {
 		return fmt.Errorf("postgres.isExternal must be specified")
 	}

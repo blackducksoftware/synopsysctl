@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"strings"
 
-	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/api"
 	"github.com/blackducksoftware/synopsysctl/pkg/blackduck"
 	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
@@ -278,7 +278,7 @@ func (ctl *HelmValuesFromCobraFlags) AddHelmValueByCobraFlag(f *pflag.Flag) {
 			if err != nil {
 				log.Fatalf("failed to read pvc file: %+v", err)
 			}
-			pvcs := []blackduckv1.PVC{}
+			pvcs := []api.PVC{}
 			err = json.Unmarshal([]byte(data), &pvcs)
 			if err != nil {
 				log.Fatalf("failed to unmarshal pvc structs: %+v", err)

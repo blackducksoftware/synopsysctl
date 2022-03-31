@@ -28,7 +28,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	opssightapi "github.com/blackducksoftware/synopsysctl/pkg/api/opssight/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/api"
 	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
@@ -307,7 +307,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 				if err != nil {
 					log.Fatalf("failed to read external hosts file: %+v", err)
 				}
-				hostStructs := []opssightapi.Host{}
+				hostStructs := []api.Host{}
 				err = json.Unmarshal([]byte(data), &hostStructs)
 				if err != nil {
 					log.Fatalf("failed to unmarshal external host structs: %+v", err)
@@ -334,7 +334,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 				if err != nil {
 					log.Fatalf("failed to read secured registires file: %+v", err)
 				}
-				securedRegistries := []opssightapi.RegistryAuth{}
+				securedRegistries := []api.RegistryAuth{}
 				err = json.Unmarshal([]byte(data), &securedRegistries)
 				if err != nil {
 					log.Fatalf("failed to unmarshal internal registry structs: %+v", err)

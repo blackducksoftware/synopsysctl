@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"strings"
 
-	blackduckv1 "github.com/blackducksoftware/synopsysctl/pkg/api/blackduck/v1"
+	"github.com/blackducksoftware/synopsysctl/pkg/api"
 	"github.com/blackducksoftware/synopsysctl/pkg/globals"
 	"github.com/blackducksoftware/synopsysctl/pkg/util"
 	log "github.com/sirupsen/logrus"
@@ -60,6 +60,7 @@ type FlagTree struct {
 	ExposeService   string
 	ExposedNodePort string
 
+	RunPostgresMigration          bool
 	ExternalPostgresHost          string
 	ExternalPostgresPort          int
 	ExternalPostgresAdmin         string
@@ -96,7 +97,7 @@ type FlagTree struct {
 	NodeAffinityFilePath    string
 	SecurityContextFilePath string
 
-	IsAzure	bool
+	IsAzure bool
 }
 
 // DefaultFlagTree ...
@@ -112,6 +113,7 @@ var DefaultFlagTree = FlagTree{
 	// Expose UI
 	ExposeService: util.NONE,
 	// Postgres
+	RunPostgresMigration: false,
 	ExternalPostgresPort: 5432,
 	ExternalPostgresUser: "blackduck_user",
 	ExternalPostgresSsl:  "true",
@@ -330,6 +332,7 @@ func (ctl *HelmValuesFromCobraFlags) VerifyChartVersionSupportsChangedFlags(flag
 	if flagset.Lookup("is-azure").Changed && (util.CompareVersions(version, "2021.2.1") < 0) {
 		return fmt.Errorf("--is-azure is not supported in Black Duck versions before 2021.2.1")
 	}
+
 	return nil
 }
 
@@ -414,7 +417,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 					foundErrors = true
 					return
 				}
-				pvcs := []blackduckv1.PVC{}
+				pvcs := []api.PVC{}
 				err = json.Unmarshal([]byte(data), &pvcs)
 				if err != nil {
 					log.Errorf("failed to unmarshal pvc structs: %+v", err)
@@ -455,7 +458,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 					foundErrors = true
 					return
 				}
-				nodeAffinities := map[string][]blackduckv1.NodeAffinity{}
+				nodeAffinities := map[string][]api.NodeAffinity{}
 				err = json.Unmarshal([]byte(data), &nodeAffinities)
 				if err != nil {
 					log.Errorf("failed to unmarshal node affinities: %+v", err)
@@ -480,24 +483,27 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 					return
 				}
 				securityContextIDNameToHelmPath := map[string][]string{
-					"blackduck-postgres":       {"postgres", "podSecurityContext"},
-					"blackduck-init":           {"init", "securityContext"},
-					"blackduck-authentication": {"authentication", "podSecurityContext"},
-					"blackduck-binnaryscanner": {"binaryscanner", "podSecurityContext"},
-					"blackduck-cfssl":          {"cfssl", "podSecurityContext"},
-					"blackduck-documentation":  {"documentation", "podSecurityContext"},
-					"blackduck-jobrunner":      {"jobrunner", "podSecurityContext"},
-					"blackduck-rabbitmq":       {"rabbitmq", "podSecurityContext"},
-					"blackduck-registration":   {"registration", "podSecurityContext"},
-					"blackduck-scan":           {"scan", "podSecurityContext"},
-					"blackduck-uploadcache":    {"uploadcache", "podSecurityContext"},
-					"blackduck-webapp":         {"webapp", "podSecurityContext"},
-					"blackduck-logstash":       {"logstash", "securityContext"},
-					"blackduck-nginx":          {"webserver", "podSecurityContext"},
-					"appcheck-worker":          {"binaryscanner", "podSecurityContext"},
-					"blackduck-redis":          {"redis", "podSecurityContext"},
-					"blackduck-bomengine":      {"bomengine", "podSecurityContext"},
-					"blackduck-webui":          {"webui", "podSecurityContext"},
+					"blackduck-postgres":          {"postgres", "podSecurityContext"},
+					"blackduck-postgres-upgrader": {"postgresUpgrader", "podSecurityContext"},
+					"blackduck-postgres-waiter":   {"postgresWaiter", "securityContext"},
+					"blackduck-init":              {"init", "securityContext"},
+					"blackduck-authentication":    {"authentication", "podSecurityContext"},
+					"blackduck-binnaryscanner":    {"binaryscanner", "podSecurityContext"},
+					"blackduck-cfssl":             {"cfssl", "podSecurityContext"},
+					"blackduck-documentation":     {"documentation", "podSecurityContext"},
+					"blackduck-jobrunner":         {"jobrunner", "podSecurityContext"},
+					"blackduck-rabbitmq":          {"rabbitmq", "podSecurityContext"},
+					"blackduck-registration":      {"registration", "podSecurityContext"},
+					"blackduck-scan":              {"scan", "podSecurityContext"},
+					"blackduck-uploadcache":       {"uploadcache", "podSecurityContext"},
+					"blackduck-webapp":            {"webapp", "podSecurityContext"},
+					"blackduck-logstash":          {"logstash", "securityContext"},
+					"blackduck-nginx":             {"webserver", "podSecurityContext"},
+					"appcheck-worker":             {"binaryscanner", "podSecurityContext"},
+					"blackduck-redis":             {"redis", "podSecurityContext"},
+					"blackduck-bomengine":         {"bomengine", "podSecurityContext"},
+					"blackduck-matchengine":       {"matchengine", "podSecurityContext"},
+					"blackduck-webui":             {"webui", "podSecurityContext"},
 				}
 				for k, v := range securityContexts {
 					pathToHelmValue := []string{k, "podSecurityContext"}                  // default path for new pods
@@ -555,23 +561,27 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 // in the Helm Chart for each image in imageRegistries
 func SetBlackDuckImageRegistriesInHelmValuesMap(helmValues map[string]interface{}, imageRegistries []string) {
 	imageNameToHelmPath := map[string][]string{
-		"postgresql-96-centos7":    {"postgres"},
-		"synopsys-init":            {"init"},
-		"blackduck-authentication": {"authentication"},
-		"bdba-worker":              {"binaryscanner"},
-		"blackduck-cfssl":          {"cfssl"},
-		"blackduck-documentation":  {"documentation"},
-		"blackduck-jobrunner":      {"jobrunner"},
-		"rabbitmq":                 {"rabbitmq"},
-		"blackduck-registration":   {"registration"},
-		"blackduck-scan":           {"scan"},
-		"blackduck-upload-cache":   {"uploadcache"},
-		"blackduck-webapp":         {"webapp"},
-		"blackduck-logstash":       {"logstash"},
-		"blackduck-nginx":          {"webserver"},
-		"blackduck-redis":          {"redis"},
-		"blackduck-bomengine":      {"bomengine"},
-		"blackduck-webui":          {"webui"},
+		"postgresql-96-centos7":       {"postgres"},
+		"synopsys-init":               {"init"},
+		"blackduck-postgres":          {"postgres"},
+		"blackduck-postgres-upgrader": {"postgresUpgrader"},
+		"blackduck-postgres-waiter":   {"postgresWaiter"},
+		"blackduck-authentication":    {"authentication"},
+		"bdba-worker":                 {"binaryscanner"},
+		"blackduck-cfssl":             {"cfssl"},
+		"blackduck-documentation":     {"documentation"},
+		"blackduck-jobrunner":         {"jobrunner"},
+		"rabbitmq":                    {"rabbitmq"},
+		"blackduck-registration":      {"registration"},
+		"blackduck-scan":              {"scan"},
+		"blackduck-upload-cache":      {"uploadcache"},
+		"blackduck-webapp":            {"webapp"},
+		"blackduck-logstash":          {"logstash"},
+		"blackduck-nginx":             {"webserver"},
+		"blackduck-redis":             {"redis"},
+		"blackduck-bomengine":         {"bomengine"},
+		"blackduck-matchengine":       {"matchengine"},
+		"blackduck-webui":             {"webui"},
 	}
 
 	for _, image := range imageRegistries {

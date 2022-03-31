@@ -116,25 +116,6 @@ func (t OpsSightTester) deploymentWithNameExists(deploymentName, namespace strin
 	return found
 }
 
-func (t OpsSightTester) podWithNameExists(podName, namespace string) bool {
-	targetPoID := podName
-
-	found := false
-
-	podList, err := util.ListPodsWithLabels(KubeClient, namespace, "")
-	if err != nil {
-		return false
-	}
-	for _, po := range podList.Items {
-		poID := t.getIDHelper(po.Name)
-		if poID == targetPoID {
-			found = true
-			break
-		}
-	}
-	return found
-}
-
 func (t OpsSightTester) serviceWithNameExists(serviceName, namespace string) bool {
 	targetServiceID := serviceName
 

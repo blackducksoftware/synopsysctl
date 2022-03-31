@@ -21,9 +21,9 @@ binary: clean ${OUTDIR}
 	$(foreach p,${PLATFORM}, \
 		echo "creating synopsysctl binary for $(p) platform" && \
 		if [ "$(p)" = "${WINDOWS}" ]; then \
-			docker run --rm -e CGO_ENABLED=0 -e GOOS=$(p) -e GOARCH=amd64 -v "${CURRENT_DIR}":/go/src/github.com/blackducksoftware/synopsysctl -w /go/src/github.com/blackducksoftware/synopsysctl/cmd/synopsysctl golang:1.13 go build -ldflags "-X main.version=${TAG}" -o /go/src/github.com/blackducksoftware/synopsysctl/${OUTDIR}/$(p)/synopsysctl.exe; \
+			docker run --rm -e CGO_ENABLED=0 -e GOOS=$(p) -e GOARCH=amd64 -v "${CURRENT_DIR}":/go/src/github.com/blackducksoftware/synopsysctl -w /go/src/github.com/blackducksoftware/synopsysctl/cmd/synopsysctl golang:1.17 go build -ldflags "-X main.version=${TAG}" -o /go/src/github.com/blackducksoftware/synopsysctl/${OUTDIR}/$(p)/synopsysctl.exe; \
 		else \
-			docker run --rm -e CGO_ENABLED=0 -e GOOS=$(p) -e GOARCH=amd64 -v "${CURRENT_DIR}":/go/src/github.com/blackducksoftware/synopsysctl -w /go/src/github.com/blackducksoftware/synopsysctl/cmd/synopsysctl golang:1.13 go build -ldflags "-X main.version=${TAG}" -o /go/src/github.com/blackducksoftware/synopsysctl/${OUTDIR}/$(p)/synopsysctl; \
+			docker run --rm -e CGO_ENABLED=0 -e GOOS=$(p) -e GOARCH=amd64 -v "${CURRENT_DIR}":/go/src/github.com/blackducksoftware/synopsysctl -w /go/src/github.com/blackducksoftware/synopsysctl/cmd/synopsysctl golang:1.17 go build -ldflags "-X main.version=${TAG}" -o /go/src/github.com/blackducksoftware/synopsysctl/${OUTDIR}/$(p)/synopsysctl; \
 		fi && \
 		echo "completed synopsysctl binary for $(p) platform"; \
 	)

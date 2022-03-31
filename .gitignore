@@ -6,3 +6,4 @@ pkg/api/.DS_Store
 .vscode/*
 cmd/synopsysctl/*.key
 _output/*
+synopsysctl

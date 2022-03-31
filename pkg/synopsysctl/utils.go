@@ -350,5 +350,5 @@ func NewPVCVolume(config api.PVCVolumeConfig) *api.Volume {
 		},
 	}
 
-	return &api.Volume{&v}
+	return &api.Volume{Volume: &v}
 }

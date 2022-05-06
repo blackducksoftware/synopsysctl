@@ -96,6 +96,18 @@ func TestSetCRSpecFieldByFlag(t *testing.T) {
 		},
 		// case
 		{
+			flagName: "size",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					Size: "10sph",
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"size": "10sph",
+			},
+		},
+		// case
+		{
 			flagName: "expose-ui",
 			changedCtl: &HelmValuesFromCobraFlags{
 				flagTree: FlagTree{

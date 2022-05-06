@@ -693,3 +693,49 @@ func setStringPtrInHelmValueInMap(valueMapPointer map[string]interface{}, keyLis
 		SetHelmValueInMap(valueMapPointer, keyList, *value)
 	}
 }
+
+func isValidGen02Size(size string) bool {
+	switch strings.ToLower(size) {
+	case
+		"small",
+		"medium",
+		"large",
+		"x-large":
+		return true
+	}
+	return false
+}
+
+func isValidGen03Size(size string) bool {
+	switch strings.ToLower(size) {
+	case
+		"10sph",
+		"120sph",
+		"250sph",
+		"500sph",
+		"1000sph",
+		"1500sph",
+		"2000sph":
+		return true
+	}
+	return false
+}
+
+func GetSizeYAMLFileName(size string, version string) (string, error) {
+	if CompareVersions(version, "2022.4.0") < 0 {
+		if isValidGen02Size(size) {
+			return fmt.Sprintf("%s.yaml", strings.ToLower(size)), nil
+		} else {
+			return "", fmt.Errorf("size must be 'small', 'medium', 'large' or 'x-large'")
+		}
+	} else {
+		if isValidGen02Size(size) {
+			return fmt.Sprintf("sizes-gen02/%s.yaml", strings.ToLower(size)), nil
+		} else if isValidGen03Size(size) {
+			return fmt.Sprintf("sizes-gen03/%s.yaml", strings.ToLower(size)), nil
+		} else {
+			return "", fmt.Errorf("sizes-gen02 must be 'small', 'medium', 'large' or 'x-large'; " +
+				"sizes-gen03 must be '10sph', '120sph', '250sph', '500sph', '1000sph', '1500sph' or '2000sph'")
+		}
+	}
+}

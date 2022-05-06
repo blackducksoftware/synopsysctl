@@ -39,7 +39,7 @@ go run main.go create blackduck $NS \
   --certificate-file-path tls.crt \
   --certificate-key-file-path tls.key \
   --verbose-level trace \
-  --size small
+  --size 10sph
 ```
 
 This will take a few minutes, so please be patient and watch `kubectl get pods -A`!

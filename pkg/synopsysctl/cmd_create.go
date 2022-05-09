@@ -374,7 +374,11 @@ var createBlackDuckCmd = &cobra.Command{
 		}
 		size, found := helmValuesMap["size"]
 		if found && len(size.(string)) > 0 {
-			extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", strings.ToLower(size.(string))))
+			yml, err := util.GetSizeYAMLFileName(size.(string), globals.BlackDuckVersion)
+			if err != nil {
+				return err
+			}
+			extraFiles = append(extraFiles, yml)
 		}
 
 		// Create initial resources
@@ -493,7 +497,11 @@ var createBlackDuckNativeCmd = &cobra.Command{
 		}
 		size, found := helmValuesMap["size"]
 		if found && len(size.(string)) > 0 {
-			extraFiles = append(extraFiles, fmt.Sprintf("%s.yaml", strings.ToLower(size.(string))))
+			yml, err := util.GetSizeYAMLFileName(size.(string), globals.BlackDuckVersion)
+			if err != nil {
+				return err
+			}
+			extraFiles = append(extraFiles, yml)
 		}
 
 		// Create initial resources

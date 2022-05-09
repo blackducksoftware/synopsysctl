@@ -142,3 +142,78 @@ func TestCreateBlackDuck_NoPersistentStorage_LoadBalancer_BinaryAnalysis_SourceC
 		return
 	}
 }
+
+// TestCreateBlackDuck_SizesTest ...
+func TestCreateBlackDuck_SizesTest(t *testing.T) {
+
+	var tests = []struct {
+		version				string
+		size				string
+		appResourcesPath	string
+	} {
+		// case
+		{
+			version: "2022.2.0",
+			size: "small",
+			appResourcesPath: "https://sig-repo.synopsys.com/artifactory/sig-cloudnative/blackduck/blackduck-2022.2.0.tgz",
+		},
+		// case
+		{
+			version: "2022.4.0",
+			size: "small",
+			appResourcesPath: "https://sig-repo.synopsys.com/artifactory/sig-cloudnative/blackduck/blackduck-2022.4.0.tgz",
+		},
+		// case
+		{
+			version: "2022.4.0",
+			size: "10sph",
+			appResourcesPath: "https://sig-repo.synopsys.com/artifactory/sig-cloudnative/blackduck/blackduck-2022.4.0.tgz",
+		},
+	}
+
+	for _, test := range tests {
+		fmt.Printf("Testing BlackDuck Version '%s', Size '%s':\n", test.version, test.size)
+
+		blackDuckTester := tu.NewBlackDuckTester()
+
+		// Set Up
+		fmt.Printf("Creating Namespace\n")
+		_, err := util.CreateNamespace(tu.KubeClient, blackDuckTester.Namespace)
+		if err != nil {
+			t.Errorf("%s", err)
+		}
+
+		// Test
+		fmt.Printf("Creating Black Duck\n")
+
+		_, err = tu.Synospysctl("create blackduck %s -n %s --version %s --admin-password pass --user-password pass --seal-key abcdefghijklmnopqrstuvwxyz123456 --certificate-file-path %s --certificate-key-file-path %s --app-resources-path %s --size %s", blackDuckTester.Name, blackDuckTester.Namespace, test.version, tu.GetBlackDuckTLSCertPath(), tu.GetBlackDuckTLSKeyPath(), test.appResourcesPath, test.size)
+		if err != nil {
+			t.Errorf("%s", err)
+			return
+		}
+		blackDuckTester.WaitUntilReady()
+
+		fmt.Printf("Verifying Black Duck Configuration\n")
+		err = blackDuckTester.Verify()
+		if err != nil {
+			t.Errorf("%s", err)
+			return
+		}
+
+		// Tear Down
+		fmt.Printf("Deleting Black Duck\n")
+		_, err = tu.Synospysctl("delete blackduck %s -n %s", blackDuckTester.Name, blackDuckTester.Namespace)
+		if err != nil {
+			t.Errorf("%s", err)
+			return
+		}
+
+		fmt.Printf("Deleting Namespace\n")
+		err = util.DeleteNamespace(tu.KubeClient, blackDuckTester.Namespace)
+		if err != nil {
+			t.Errorf("%s", err)
+			return
+		}
+	}
+
+}

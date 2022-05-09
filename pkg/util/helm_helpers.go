@@ -734,8 +734,7 @@ func GetSizeYAMLFileName(size string, version string) (string, error) {
 		} else if isValidGen03Size(size) {
 			return fmt.Sprintf("sizes-gen03/%s.yaml", strings.ToLower(size)), nil
 		} else {
-			return "", fmt.Errorf("sizes-gen02 must be 'small', 'medium', 'large' or 'x-large'; " +
-				"sizes-gen03 must be '10sph', '120sph', '250sph', '500sph', '1000sph', '1500sph' or '2000sph'")
+			return "", fmt.Errorf("size must be 'small', 'medium', 'large', 'x-large', '10sph', '120sph', '250sph', '500sph', '1000sph', '1500sph' or '2000sph'")
 		}
 	}
 }

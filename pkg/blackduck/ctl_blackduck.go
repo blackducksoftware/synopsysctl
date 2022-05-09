@@ -184,7 +184,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 		cmd.Flags().StringVar(&ctl.flagTree.PersistentStorage, "persistent-storage", defaults.PersistentStorage, "If true, Black Duck has persistent storage [true|false]")
 		cmd.Flags().StringVar(&ctl.flagTree.PVCFilePath, "pvc-file-path", defaults.PVCFilePath, "Absolute path to a file containing a list of PVC json structs")
 	}
-	cmd.Flags().StringVar(&ctl.flagTree.Size, "size", defaults.Size, "Size of Black Duck [10sph|120sph|250sph|500sph|1000sph|1500sph|2000sph]")
+	cmd.Flags().StringVar(&ctl.flagTree.Size, "size", defaults.Size, "Size of Black Duck [small|medium|large|x-large|10sph|120sph|250sph|500sph|1000sph|1500sph|2000sph]")
 	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", defaults.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs\n")
 
 	// Expose UI

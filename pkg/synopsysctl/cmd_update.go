@@ -281,10 +281,18 @@ var updateBlackDuckCmd = &cobra.Command{
 
 		var sizeYAMLFileNameInChart string
 		if cmd.Flag("size").Changed {
-			sizeYAMLFileNameInChart = fmt.Sprintf("%s.yaml", cmd.Flag("size").Value.String())
+			yml, err := util.GetSizeYAMLFileName(cmd.Flag("size").Value.String(), globals.BlackDuckVersion)
+			if err != nil {
+				return err
+			}
+			sizeYAMLFileNameInChart = yml
 		} else {
 			if size, found := instance.Config["size"]; found && len(size.(string)) > 0 {
-				sizeYAMLFileNameInChart = fmt.Sprintf("%s.yaml", size.(string))
+				yml, err := util.GetSizeYAMLFileName(size.(string), globals.BlackDuckVersion)
+				if err != nil {
+					return err
+				}
+				sizeYAMLFileNameInChart = yml
 			}
 		}
 

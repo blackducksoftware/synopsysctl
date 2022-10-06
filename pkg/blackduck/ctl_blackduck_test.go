@@ -484,6 +484,18 @@ func TestSetCRSpecFieldByFlag(t *testing.T) {
 				"isAzure": false,
 			},
 		},
+		// case
+		{
+			flagName: "max-total-source-size-mb",
+			changedCtl: &HelmValuesFromCobraFlags{
+				flagTree: FlagTree{
+					MaxTotalSourceSizeInMB: 4096,
+				},
+			},
+			changedArgs: map[string]interface{}{
+				"maxTotalSourceSizeinMB": 4096,
+			},
+		},
 	}
 
 	// get the flagset

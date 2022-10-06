@@ -39,7 +39,7 @@ go run main.go create blackduck $NS \
   --certificate-file-path tls.crt \
   --certificate-key-file-path tls.key \
   --verbose-level trace \
-  --size small
+  --size 10sph
 ```
 
 This will take a few minutes, so please be patient and watch `kubectl get pods -A`!
@@ -71,3 +71,6 @@ For customers using native command to deploy Black Duck, when upgrading Black Du
 kubectl -n <namespace> delete deployment <namespace>-blackduck-webui
 kubectl -n <namespace> delete service <namespace>-blackduck-webui
 ```
+
+### Upgrade to 2022.4.0 and above
+Black Duck version 2022.4.0 introduces new resource guidance. Synopsysctl 3.0.1 and above must be used, when upgrading Black Duck to version 2022.4.0 and above.

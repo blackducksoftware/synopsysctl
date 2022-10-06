@@ -281,10 +281,18 @@ var updateBlackDuckCmd = &cobra.Command{
 
 		var sizeYAMLFileNameInChart string
 		if cmd.Flag("size").Changed {
-			sizeYAMLFileNameInChart = fmt.Sprintf("%s.yaml", cmd.Flag("size").Value.String())
+			yml, err := util.GetSizeYAMLFileName(cmd.Flag("size").Value.String(), globals.BlackDuckVersion)
+			if err != nil {
+				return err
+			}
+			sizeYAMLFileNameInChart = yml
 		} else {
 			if size, found := instance.Config["size"]; found && len(size.(string)) > 0 {
-				sizeYAMLFileNameInChart = fmt.Sprintf("%s.yaml", size.(string))
+				yml, err := util.GetSizeYAMLFileName(size.(string), globals.BlackDuckVersion)
+				if err != nil {
+					return err
+				}
+				sizeYAMLFileNameInChart = yml
 			}
 		}
 
@@ -368,8 +376,8 @@ var updateBlackDuckCmd = &cobra.Command{
 			return err
 		}
 
-		// Upgrade the containerized PostgreSQL version if necessary
-		err = runPostgresMigration(blackDuckName, blackDuckNamespace, oldVersion, globals.BlackDuckVersion, helmValuesMap, instance)
+		// Run job to upgrade the containerized PostgresSQL version if necessary
+		err = runPostgresMigrationJob(blackDuckName, blackDuckNamespace, oldVersion, globals.BlackDuckVersion, helmValuesMap, instance)
 		if err != nil {
 			return err
 		}
@@ -389,7 +397,7 @@ var updateBlackDuckCmd = &cobra.Command{
 	},
 }
 
-func runPostgresMigration(blackDuckName string, blackDuckNamespace string, oldVersion string, newVersion string, helmValuesMap map[string]interface{}, release *release.Release) error {
+func runPostgresMigrationJob(blackDuckName string, blackDuckNamespace string, oldVersion string, newVersion string, helmValuesMap map[string]interface{}, release *release.Release) error {
 	// If this instance is not using the PG container, do nothing and return
 	isExternal := util.GetValueFromRelease(release, []string{"postgres", "isExternal"})
 	if isExternal == nil {
@@ -404,8 +412,9 @@ func runPostgresMigration(blackDuckName string, blackDuckNamespace string, oldVe
 		// if oldVersion >= 2022.2.0, it already has the latest PG version
 		return nil
 	}
-	if util.CompareVersions(newVersion, "2022.2.0") < 0 {
+	if util.CompareVersions(newVersion, "2022.2.0") < 0 || util.CompareVersions(newVersion, "2022.10.0") >= 0 {
 		// if newVersion < 2022.2.0, there is no change to the PG version
+		// if newVersion >= 2022.10.0, PG upgrade is converted to an init container, no more upgrade job needed
 		return nil
 	}
 

@@ -187,7 +187,7 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 		cmd.Flags().StringVar(&ctl.flagTree.PersistentStorage, "persistent-storage", defaults.PersistentStorage, "If true, Black Duck has persistent storage [true|false]")
 		cmd.Flags().StringVar(&ctl.flagTree.PVCFilePath, "pvc-file-path", defaults.PVCFilePath, "Absolute path to a file containing a list of PVC json structs")
 	}
-	cmd.Flags().StringVar(&ctl.flagTree.Size, "size", defaults.Size, "Size of Black Duck [small|medium|large|x-large]")
+	cmd.Flags().StringVar(&ctl.flagTree.Size, "size", defaults.Size, "Size of Black Duck [small|medium|large|x-large|10sph|120sph|250sph|500sph|1000sph|1500sph|2000sph]")
 	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", defaults.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs")
 	cmd.Flags().IntVar(&ctl.flagTree.MaxTotalSourceSizeInMB, "max-total-source-size-mb", defaults.MaxTotalSourceSizeInMB, "Maximum size of total source file size in MB\n")
 
@@ -242,24 +242,14 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().BoolVar(&ctl.flagTree.IsAzure, "is-azure", defaults.IsAzure, "If true, deployment will be configured for Azure")
 }
 
-func isValidSize(size string) bool {
-	switch strings.ToLower(size) {
-	case
-		"",
-		"small",
-		"medium",
-		"large",
-		"x-large":
-		return true
-	}
-	return false
-}
-
 // CheckValuesFromFlags returns an error if a value stored in the struct will not be able to be used
-func (ctl *HelmValuesFromCobraFlags) CheckValuesFromFlags(flagset *pflag.FlagSet) error {
+func (ctl *HelmValuesFromCobraFlags) CheckValuesFromFlags(flagset *pflag.FlagSet, version string) error {
 	if FlagWasSet(flagset, "size") {
-		if !isValidSize(ctl.flagTree.Size) {
-			return fmt.Errorf("size must be 'small', 'medium', 'large' or 'x-large'")
+		if len(ctl.flagTree.Size) > 0 {
+			_, err := util.GetSizeYAMLFileName(ctl.flagTree.Size, version)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if FlagWasSet(flagset, "expose-ui") {
@@ -351,7 +341,7 @@ func FlagWasSet(flagset *pflag.FlagSet, flagName string) bool {
 // GenerateHelmFlagsFromCobraFlags checks each flag in synopsysctl and updates the map to
 // contain the corresponding helm chart field and value
 func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pflag.FlagSet) (map[string]interface{}, error) {
-	err := ctl.CheckValuesFromFlags(flagset)
+	err := ctl.CheckValuesFromFlags(flagset, globals.BlackDuckVersion)
 	if err != nil {
 		return nil, err
 	}

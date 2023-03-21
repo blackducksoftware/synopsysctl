@@ -429,6 +429,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 					"blackduck-webapp":           {"webapp"},
 					"blackduck-logstash":         {"logstash"},
 					"blackduck-uploadcache-data": {"uploadcache"},
+					"blackduck-storage-data":     {"storage"},
 				}
 				for _, pvc := range pvcs {
 					pvcIDName := pvc.Name
@@ -498,6 +499,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 					"blackduck-bomengine":         {"bomengine", "podSecurityContext"},
 					"blackduck-matchengine":       {"matchengine", "podSecurityContext"},
 					"blackduck-webui":             {"webui", "podSecurityContext"},
+					"blackduck-storage":           {"storage", "podSecurityContext"},
 				}
 				for k, v := range securityContexts {
 					pathToHelmValue := []string{k, "podSecurityContext"}                  // default path for new pods
@@ -578,6 +580,7 @@ func SetBlackDuckImageRegistriesInHelmValuesMap(helmValues map[string]interface{
 		"blackduck-bomengine":         {"bomengine"},
 		"blackduck-matchengine":       {"matchengine"},
 		"blackduck-webui":             {"webui"},
+		"blackduck-storage":           {"storage"},
 	}
 
 	for _, image := range imageRegistries {

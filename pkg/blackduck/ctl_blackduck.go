@@ -24,6 +24,7 @@ package blackduck
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/blackducksoftware/synopsysctl/pkg/api"
@@ -99,6 +100,8 @@ type FlagTree struct {
 	SecurityContextFilePath string
 
 	IsAzure bool
+
+	StorageProvidersConfigPath string
 }
 
 // DefaultFlagTree ...
@@ -135,6 +138,8 @@ var DefaultFlagTree = FlagTree{
 	IsAzure: false,
 	// Maximum size of total source file size in MB
 	MaxTotalSourceSizeInMB: 4000,
+	// Path to provider configuration for storage service. Defaults to ""
+	StorageProvidersConfigPath: "",
 }
 
 // GetDefaultFlagTree ...
@@ -240,6 +245,9 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 	cmd.Flags().StringVar(&ctl.flagTree.NodeAffinityFilePath, "node-affinity-file-path", defaults.NodeAffinityFilePath, "Absolute path to a file containing a list of node affinities")
 	cmd.Flags().StringVar(&ctl.flagTree.SecurityContextFilePath, "security-context-file-path", defaults.SecurityContextFilePath, "Absolute path to a file containing a map of pod names to security contexts runAsUser, fsGroup, and runAsGroup")
 	cmd.Flags().BoolVar(&ctl.flagTree.IsAzure, "is-azure", defaults.IsAzure, "If true, deployment will be configured for Azure")
+
+	// Flag for providing storage provider configuration through file
+	cmd.Flags().StringVar(&ctl.flagTree.StorageProvidersConfigPath, "storage-provider-config", defaults.StorageProvidersConfigPath, "Absolute path to a file containing provider configuration for storage service")
 }
 
 // CheckValuesFromFlags returns an error if a value stored in the struct will not be able to be used
@@ -268,6 +276,11 @@ func (ctl *HelmValuesFromCobraFlags) CheckValuesFromFlags(flagset *pflag.FlagSet
 	if FlagWasSet(flagset, "seal-key") {
 		if len(ctl.flagTree.SealKey) != 32 {
 			return fmt.Errorf("seal key should be of length 32")
+		}
+	}
+	if FlagWasSet(flagset, "storage-provider-config") {
+		if _, err := os.Stat(ctl.flagTree.StorageProvidersConfigPath); err != nil {
+			return fmt.Errorf("unable to read provider config file from the path: %v check for the file existance or read permissions", ctl.flagTree.StorageProvidersConfigPath)
 		}
 	}
 	return nil

@@ -93,6 +93,7 @@ type FlagTree struct {
 	EnableBinaryAnalysis   bool
 	EnableSourceCodeUpload bool
 	EnableInitContainer    string
+	MaxTotalSourceSizeInMB int
 
 	NodeAffinityFilePath    string
 	SecurityContextFilePath string
@@ -132,6 +133,8 @@ var DefaultFlagTree = FlagTree{
 	EnableInitContainer: "true",
 	// Extra Config Settings
 	IsAzure: false,
+	// Maximum size of total source file size in MB
+	MaxTotalSourceSizeInMB: 4000,
 }
 
 // GetDefaultFlagTree ...
@@ -185,7 +188,8 @@ func (ctl *HelmValuesFromCobraFlags) AddCobraFlagsToCommand(cmd *cobra.Command, 
 		cmd.Flags().StringVar(&ctl.flagTree.PVCFilePath, "pvc-file-path", defaults.PVCFilePath, "Absolute path to a file containing a list of PVC json structs")
 	}
 	cmd.Flags().StringVar(&ctl.flagTree.Size, "size", defaults.Size, "Size of Black Duck [small|medium|large|x-large|10sph|120sph|250sph|500sph|1000sph|1500sph|2000sph]")
-	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", defaults.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs\n")
+	cmd.Flags().StringVar(&ctl.flagTree.DeploymentResourcesFilePath, "deployment-resources-file-path", defaults.DeploymentResourcesFilePath, "Absolute path to a file containing a list of deployment Resources json structs")
+	cmd.Flags().IntVar(&ctl.flagTree.MaxTotalSourceSizeInMB, "max-total-source-size-mb", defaults.MaxTotalSourceSizeInMB, "Maximum size of total source file size in MB\n")
 
 	// Expose UI
 	cmd.Flags().StringVar(&ctl.flagTree.ExposeService, "expose-ui", defaults.ExposeService, "Service type of Black Duck webserver's user interface [NODEPORT|LOADBALANCER|OPENSHIFT|NONE]\n")
@@ -425,6 +429,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 					"blackduck-webapp":           {"webapp"},
 					"blackduck-logstash":         {"logstash"},
 					"blackduck-uploadcache-data": {"uploadcache"},
+					"blackduck-storage-data":     {"storage"},
 				}
 				for _, pvc := range pvcs {
 					pvcIDName := pvc.Name
@@ -494,6 +499,7 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 					"blackduck-bomengine":         {"bomengine", "podSecurityContext"},
 					"blackduck-matchengine":       {"matchengine", "podSecurityContext"},
 					"blackduck-webui":             {"webui", "podSecurityContext"},
+					"blackduck-storage":           {"storage", "podSecurityContext"},
 				}
 				for k, v := range securityContexts {
 					pathToHelmValue := []string{k, "podSecurityContext"}                  // default path for new pods
@@ -532,6 +538,8 @@ func (ctl *HelmValuesFromCobraFlags) GenerateHelmFlagsFromCobraFlags(flagset *pf
 				util.SetHelmValueInMap(ctl.args, []string{"redis", "maxIdle"}, ctl.flagTree.RedisMaxIdleConnection)
 			case "is-azure":
 				util.SetHelmValueInMap(ctl.args, []string{"isAzure"}, ctl.flagTree.IsAzure)
+			case "max-total-source-size-mb":
+				util.SetHelmValueInMap(ctl.args, []string{"maxTotalSourceSizeinMB"}, ctl.flagTree.MaxTotalSourceSizeInMB)
 			default:
 				log.Debugf("flag '%s': NOT FOUND", f.Name)
 			}
@@ -572,6 +580,7 @@ func SetBlackDuckImageRegistriesInHelmValuesMap(helmValues map[string]interface{
 		"blackduck-bomengine":         {"bomengine"},
 		"blackduck-matchengine":       {"matchengine"},
 		"blackduck-webui":             {"webui"},
+		"blackduck-storage":           {"storage"},
 	}
 
 	for _, image := range imageRegistries {

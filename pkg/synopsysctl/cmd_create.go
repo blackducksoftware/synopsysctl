@@ -381,6 +381,11 @@ var createBlackDuckCmd = &cobra.Command{
 			extraFiles = append(extraFiles, yml)
 		}
 
+		// if storage provider config file set, include the file under extra values files
+		if storageProviderConfig := cmd.Flags().Lookup("storage-provider-config"); storageProviderConfig.Changed {
+			extraFiles = append(extraFiles, storageProviderConfig.Value.String())
+		}
+
 		// Create initial resources
 		secrets, err := blackduck.GetCertsFromFlagsAndSetHelmValue(args[0], namespace, cmd.Flags(), helmValuesMap)
 		if err != nil {
@@ -502,6 +507,11 @@ var createBlackDuckNativeCmd = &cobra.Command{
 				return err
 			}
 			extraFiles = append(extraFiles, yml)
+		}
+
+		// if storage provider config file set, include the file under extra values files
+		if storageProviderConfig := cmd.Flags().Lookup("storage-provider-config"); storageProviderConfig.Changed {
+			extraFiles = append(extraFiles, storageProviderConfig.Value.String())
 		}
 
 		// Create initial resources

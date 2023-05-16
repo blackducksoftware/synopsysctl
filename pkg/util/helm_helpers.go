@@ -28,6 +28,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -565,6 +566,20 @@ func mergeValuesWithExtraFilesFromChart(ch *chart.Chart, vals map[string]interfa
 			}
 		}
 		if !found {
+			data, err := os.ReadFile(fileName)
+			if err != nil {
+				return fmt.Errorf("couldn't find file '%s' outside the chart context", fileName)
+			}
+			found = true
+			patch := make(map[string]interface{})
+			if err := yaml.Unmarshal(data, &patch); err != nil {
+				return err
+			}
+			if err := mergo.Merge(&vals, patch, mergo.WithOverride); err != nil {
+				return err
+			}
+		}
+		if !found {
 			return fmt.Errorf("couldn't find file '%s' in release resources", fileName)
 		}
 	}
@@ -574,7 +589,8 @@ func mergeValuesWithExtraFilesFromChart(ch *chart.Chart, vals map[string]interfa
 // SetHelmValueInMap adds the finalValue into the valueMapPointer at the location specified
 // by the keyList
 // valueMapPointer - a map for helm values (maps are pointers in Golang)
-//  - it is used to track the current map being updated
+//   - it is used to track the current map being updated
+//
 // keyList - an ordered list of keys that lead to the location in the valueMapPointer to place the finalValue
 // finalValue - the value to set in the map
 func SetHelmValueInMap(valueMapPointer map[string]interface{}, keyList []string, finalValue interface{}) {

@@ -382,8 +382,14 @@ var updateBlackDuckCmd = &cobra.Command{
 			return err
 		}
 
+		// if storage provider config file set, include the file under extra values files
+		var extraFiles []string
+		if storageProviderConfig := cmd.Flags().Lookup("storage-provider-config"); storageProviderConfig.Changed {
+			extraFiles = append(extraFiles, storageProviderConfig.Value.String())
+		}
+
 		// Deploy resources
-		if err := util.UpdateWithHelm3(blackDuckName, blackDuckNamespace, globals.BlackDuckChartRepository, helmValuesMap, kubeConfigPath); err != nil {
+		if err := util.UpdateWithHelm3(blackDuckName, blackDuckNamespace, globals.BlackDuckChartRepository, helmValuesMap, kubeConfigPath, extraFiles...); err != nil {
 			return fmt.Errorf("failed to update Black Duck due to %+v", err)
 		}
 

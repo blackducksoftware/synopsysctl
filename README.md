@@ -1,3 +1,9 @@
+# DEPRECATED
+
+This project is no longer actively maintained or supported by BlackDuckSoftware.
+
+
+
 # synopsysctl
 Cloud native tool to deploy Synopsys applications in Kubernetes and OpenShift
 
